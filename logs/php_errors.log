@@ -985,3 +985,5 @@
 [13-Sep-2025 11:28:21 UTC] PHP Deprecated:  htmlspecialchars(): Passing null to parameter #1 ($string) of type string is deprecated in /var/www/html/KJ/views/receptionist/medicine.php on line 233
 [13-Sep-2025 11:28:21 UTC] PHP Deprecated:  htmlspecialchars(): Passing null to parameter #1 ($string) of type string is deprecated in /var/www/html/KJ/views/receptionist/medicine.php on line 225
 [13-Sep-2025 11:28:21 UTC] PHP Deprecated:  htmlspecialchars(): Passing null to parameter #1 ($string) of type string is deprecated in /var/www/html/KJ/views/receptionist/medicine.php on line 233
+[13-Sep-2025 12:19:21 UTC] Error in controller: SQLSTATE[42S22]: Column not found: 1054 Unknown column 'test_name' in 'field list'
+[13-Sep-2025 12:30:29 UTC] PHP Deprecated:  date_create(): Passing null to parameter #1 ($datetime) of type string is deprecated in /var/www/html/KJ/views/doctor/dashboard.php on line 216

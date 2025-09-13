@@ -136,7 +136,7 @@
                                     <?php echo htmlspecialchars($patient['first_name'] . ' ' . $patient['last_name']); ?>
                                 </h4>
                                 <p class="text-sm text-neutral-600">
-                                    Tests: <?php echo htmlspecialchars($patient['test_name'] ?? 'Lab results available'); ?>
+                                    Tests: <?php echo htmlspecialchars($patient['test_names'] ?? 'Lab results available'); ?>
                                 </p>
                                 <?php if (isset($patient['result_date'])): ?>
                                 <span class="text-xs text-neutral-500">

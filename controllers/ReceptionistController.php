@@ -238,17 +238,49 @@ class ReceptionistController extends BaseController {
         $stmt->execute();
         $pending_patients = $stmt->fetchAll();
 
-        // Get all medicines for inventory management
+        // Get all medicines for inventory management (include expiry)
         $stmt = $this->pdo->prepare("
             SELECT m.id, m.name, m.generic_name, m.supplier AS category, m.unit_price, m.stock_quantity,
+                   m.expiry_date,
                    COALESCE(SUM(ma.quantity), 0) as total_prescribed
             FROM medicines m
             LEFT JOIN medicine_allocations ma ON m.id = ma.medicine_id
-            GROUP BY m.id, m.name, m.generic_name, m.supplier, m.unit_price, m.stock_quantity
+            GROUP BY m.id, m.name, m.generic_name, m.supplier, m.unit_price, m.stock_quantity, m.expiry_date
             ORDER BY m.name
         ");
         $stmt->execute();
         $medicines = $stmt->fetchAll();
+
+        // Build expiry notifications (expired or within 60 days)
+        $notifications = [];
+        $today = new DateTime('today');
+        foreach ($medicines as $med) {
+            if (!empty($med['expiry_date'])) {
+                try {
+                    $exp = new DateTime($med['expiry_date']);
+                    $diff = (int)$today->diff($exp)->format('%r%a'); // negative if expired
+                    if ($diff < 0) {
+                        $notifications[] = [
+                            'type' => 'error',
+                            'icon' => 'fa-skull-crossbones',
+                            'title' => 'Medicine expired',
+                            'message' => $med['name'] . ' expired ' . abs($diff) . ' day(s) ago',
+                        ];
+                    } elseif ($diff <= 60) {
+                        // Near expiry tiers
+                        $tier = $diff <= 7 ? 'warning' : ($diff <= 30 ? 'warning' : 'info');
+                        $notifications[] = [
+                            'type' => $tier,
+                            'icon' => 'fa-exclamation-triangle',
+                            'title' => 'Medicine near expiry',
+                            'message' => $med['name'] . ' expires in ' . $diff . ' day(s)',
+                        ];
+                    }
+                } catch (Exception $e) {
+                    // ignore bad date
+                }
+            }
+        }
 
         // Get medicine categories
     $categories = $this->pdo->query("SELECT DISTINCT supplier FROM medicines ORDER BY supplier")->fetchAll(PDO::FETCH_COLUMN);
@@ -274,7 +306,8 @@ class ReceptionistController extends BaseController {
             'medicines' => $medicines,
             'categories' => $categories,
             'recent_transactions' => $recent_transactions,
-            'csrf_token' => $this->generateCSRF()
+            'csrf_token' => $this->generateCSRF(),
+            'notifications' => $notifications
         ]);
     }
 
@@ -404,7 +437,9 @@ class ReceptionistController extends BaseController {
         try {
             $name = trim($_POST['name']);
             $generic_name = trim($_POST['generic_name'] ?? '');
-            $category = trim($_POST['category']);
+            $category = trim($_POST['category']); // UI category; we map to supplier field
+            $supplier = trim($_POST['supplier'] ?? $category);
+            $expiry_date = trim($_POST['expiry_date'] ?? '');
             $unit_price = floatval($_POST['unit_price']);
             $stock_quantity = intval($_POST['stock_quantity']);
             $description = trim($_POST['description'] ?? '');
@@ -413,11 +448,17 @@ class ReceptionistController extends BaseController {
                 throw new Exception('Please fill all required fields with valid values');
             }
 
+            // Validate expiry date format (YYYY-MM-DD) or allow empty
+            if ($expiry_date !== '' && !preg_match('/^\d{4}-\d{2}-\d{2}$/', $expiry_date)) {
+                throw new Exception('Invalid expiry date format');
+            }
+
+            // Schema uses supplier and expiry_date; category is displayed from supplier
             $stmt = $this->pdo->prepare("
-                INSERT INTO medicines (name, generic_name, category, unit_price, stock_quantity, description, created_at)
-                VALUES (?, ?, ?, ?, ?, ?, NOW())
+                INSERT INTO medicines (name, generic_name, description, stock_quantity, unit_price, expiry_date, supplier, created_at)
+                VALUES (?, ?, ?, ?, ?, ?, ?, NOW())
             ");
-            $stmt->execute([$name, $generic_name, $category, $unit_price, $stock_quantity, $description]);
+            $stmt->execute([$name, $generic_name, $description, $stock_quantity, $unit_price, ($expiry_date ?: null), ($supplier ?: null)]);
 
             $_SESSION['success'] = 'Medicine added successfully';
         } catch (Exception $e) {

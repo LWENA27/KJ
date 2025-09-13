@@ -246,6 +246,23 @@ $recentTransactions = $recent_transactions ?? [];
                                     </div>
                                 </div>
 
+                                    <?php if (!empty($medicine['expiry_date'])): ?>
+                                        <?php 
+                                            $expDate = new DateTime($medicine['expiry_date']);
+                                            $today = new DateTime('today');
+                                            $days = (int)$today->diff($expDate)->format('%r%a');
+                                        ?>
+                                        <div class="mb-3 flex items-center justify-between">
+                                            <div class="text-sm text-gray-600">Expiry</div>
+                                            <div class="text-sm font-medium <?= $days < 0 ? 'text-red-600' : ($days <= 30 ? 'text-yellow-600' : 'text-gray-800') ?>">
+                                                <?= htmlspecialchars($medicine['expiry_date']) ?>
+                                                <span class="ml-2 text-xs <?= $days < 0 ? 'text-red-600' : ($days <= 30 ? 'text-yellow-600' : 'text-gray-500') ?>">
+                                                    (<?= $days < 0 ? ('expired ' . abs($days) . 'd ago') : ('in ' . $days . 'd') ?>)
+                                                </span>
+                                            </div>
+                                        </div>
+                                    <?php endif; ?>
+
                                 <?php if ($medicine['stock_quantity'] <= 10): ?>
                                     <div class="bg-red-50 border border-red-200 rounded-lg p-2 mb-3">
                                         <div class="flex items-center text-red-700">
@@ -378,6 +395,18 @@ $recentTransactions = $recent_transactions ?? [];
                 </select>
             </div>
             
+            <div class="grid grid-cols-2 gap-4">
+                <div class="form-group">
+                    <label class="form-label">Expiry Date</label>
+                    <input type="date" name="expiry_date" class="form-input" min="<?= date('Y-m-d') ?>">
+                    <p class="text-xs text-gray-500 mt-1">Leave empty if unknown. You'll get alerts 60/30/7 days before expiry.</p>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Supplier</label>
+                    <input type="text" name="supplier" class="form-input" placeholder="e.g., MediSupplies Ltd">
+                </div>
+            </div>
+
             <div class="grid grid-cols-2 gap-4">
                 <div class="form-group">
                     <label class="form-label">Unit Price (TSh) *</label>

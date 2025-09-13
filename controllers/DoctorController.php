@@ -50,19 +50,25 @@ class DoctorController extends BaseController {
         $stmt->execute([$doctor_id]);
         $stats = $stmt->fetch();
 
-        // Patients waiting for lab results review
+    // Patients waiting for lab results review (join lab_results with tests to get names)
         $stmt = $this->pdo->prepare("
-            SELECT p.*, ws.current_step, lr.test_name, lr.results, lr.created_at as result_date
+            SELECT p.*, ws.current_step,
+                   ag.test_names,
+                   ag.latest_result_date as result_date
             FROM patients p
             JOIN workflow_status ws ON p.id = ws.patient_id
             LEFT JOIN (
-                SELECT patient_id, GROUP_CONCAT(test_name) as test_name, 
-                       GROUP_CONCAT(results) as results, MAX(created_at) as created_at
-                FROM lab_results 
-                GROUP BY patient_id
-            ) lr ON p.id = lr.patient_id
+                SELECT c.patient_id,
+               GROUP_CONCAT(t.name SEPARATOR ', ') AS test_names,
+               MAX(lr.created_at) AS latest_result_date
+                FROM lab_results lr
+                JOIN consultations c ON lr.consultation_id = c.id
+        JOIN tests t ON lr.test_id = t.id
+        WHERE lr.status = 'completed'
+                GROUP BY c.patient_id
+            ) ag ON p.id = ag.patient_id
             WHERE ws.current_step = 'results_review'
-            ORDER BY lr.created_at DESC
+            ORDER BY ag.latest_result_date DESC
         ");
         $stmt->execute();
         $pending_results = $stmt->fetchAll();

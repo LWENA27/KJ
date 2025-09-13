@@ -907,47 +907,40 @@
                             
                             <!-- Notifications -->
                             <div class="relative" id="notificationDropdown">
+                                <?php $notifCount = isset($notifications) ? count($notifications) : 0; ?>
                                 <button class="header-action-btn" onclick="toggleNotifications()" title="Notifications">
                                     <i class="fas fa-bell text-lg"></i>
-                                    <span class="notification-badge" id="notificationCount">3</span>
+                                    <?php if ($notifCount > 0): ?>
+                                        <span class="notification-badge" id="notificationCount"><?= $notifCount ?></span>
+                                    <?php endif; ?>
                                 </button>
                                 
                                 <div class="user-menu" id="notificationMenu" style="min-width: 300px;">
                                     <div class="px-3 py-2 border-b border-neutral-200">
                                         <h3 class="font-semibold text-neutral-800">Notifications</h3>
-                                        <p class="text-xs text-neutral-500">You have 3 unread notifications</p>
+                                        <p class="text-xs text-neutral-500">
+                                            <?= $notifCount > 0 ? ("You have $notifCount notification" . ($notifCount>1?'s':'')) : 'No notifications' ?>
+                                        </p>
                                     </div>
-                                    
+
                                     <div class="max-h-64 overflow-y-auto">
-                                        <a href="#" class="user-menu-item hover:bg-blue-50">
-                                            <div class="flex-shrink-0 w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center mr-3">
-                                                <i class="fas fa-user-plus text-blue-600 text-xs"></i>
-                                            </div>
-                                            <div class="flex-1">
-                                                <p class="text-sm font-medium text-neutral-800">New patient registered</p>
-                                                <p class="text-xs text-neutral-500">2 minutes ago</p>
-                                            </div>
-                                        </a>
-                                        
-                                        <a href="#" class="user-menu-item hover:bg-green-50">
-                                            <div class="flex-shrink-0 w-8 h-8 bg-green-100 rounded-full flex items-center justify-center mr-3">
-                                                <i class="fas fa-pills text-green-600 text-xs"></i>
-                                            </div>
-                                            <div class="flex-1">
-                                                <p class="text-sm font-medium text-neutral-800">Medicine stock low</p>
-                                                <p class="text-xs text-neutral-500">5 minutes ago</p>
-                                            </div>
-                                        </a>
-                                        
-                                        <a href="#" class="user-menu-item hover:bg-yellow-50">
-                                            <div class="flex-shrink-0 w-8 h-8 bg-yellow-100 rounded-full flex items-center justify-center mr-3">
-                                                <i class="fas fa-calendar text-yellow-600 text-xs"></i>
-                                            </div>
-                                            <div class="flex-1">
-                                                <p class="text-sm font-medium text-neutral-800">Appointment reminder</p>
-                                                <p class="text-xs text-neutral-500">10 minutes ago</p>
-                                            </div>
-                                        </a>
+                                        <?php if (!empty($notifications)): ?>
+                                            <?php foreach ($notifications as $n): ?>
+                                                <div class="user-menu-item">
+                                                    <div class="flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center mr-3"
+                                                         style="background: <?= ($n['type'] ?? 'info') === 'error' ? '#fee2e2' : ((($n['type'] ?? 'info') === 'warning') ? '#fef3c7' : '#dbeafe') ?>;">
+                                                        <i class="fas <?= htmlspecialchars($n['icon'] ?? 'fa-info-circle') ?> text-xs"
+                                                           style="color: <?= ($n['type'] ?? 'info') === 'error' ? '#ef4444' : ((($n['type'] ?? 'info') === 'warning') ? '#f59e0b' : '#2563eb') ?>;"></i>
+                                                    </div>
+                                                    <div class="flex-1">
+                                                        <p class="text-sm font-medium text-neutral-800"><?= htmlspecialchars($n['title'] ?? 'Notification') ?></p>
+                                                        <p class="text-xs text-neutral-500"><?= htmlspecialchars($n['message'] ?? '') ?></p>
+                                                    </div>
+                                                </div>
+                                            <?php endforeach; ?>
+                                        <?php else: ?>
+                                            <div class="px-3 py-4 text-xs text-neutral-500">All caught up.</div>
+                                        <?php endif; ?>
                                     </div>
                                     
                                     <div class="px-3 py-2 border-t border-neutral-200">
