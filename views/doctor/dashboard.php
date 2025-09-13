@@ -145,7 +145,7 @@
                                 <?php endif; ?>
                             </div>
                         </div>
-                        <a href="<?php echo htmlspecialchars($BASE_PATH); ?>/doctor/lab_results_view?patient_id=<?php echo $patient['id']; ?>" 
+                        <a href="<?php echo htmlspecialchars($BASE_PATH); ?>/doctor/view_lab_results?id=<?php echo $patient['id']; ?>" 
                            class="btn btn-warning">
                             <i class="fas fa-eye mr-2"></i>Review Results
                         </a>
@@ -213,7 +213,15 @@
                                 <?php echo htmlspecialchars($patient['first_name'] . ' ' . $patient['last_name']); ?>
                             </p>
                             <p class="text-sm text-gray-600">
-                                Age: <?php echo date_diff(date_create($patient['date_of_birth']), date_create('today'))->y; ?> |
+                                Age: <?php
+                                    $dob = $patient['date_of_birth'] ?? null;
+                                    if (!empty($dob)) {
+                                        $age = date_diff(date_create($dob), date_create('today'))->y;
+                                        echo (int)$age;
+                                    } else {
+                                        echo 'N/A';
+                                    }
+                                ?> |
                                 Phone: <?php echo htmlspecialchars($patient['phone'] ?? 'N/A'); ?> |
                                 Visits: <?php echo $patient['consultation_count']; ?>
                             </p>

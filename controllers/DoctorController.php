@@ -150,7 +150,11 @@ class DoctorController extends BaseController {
         ]);
     }
 
-    public function view_patient($patient_id) {
+    public function view_patient($patient_id = null) {
+        // Accept either path param or ?id= fallback
+        if ($patient_id === null) {
+            $patient_id = filter_input(INPUT_GET, 'id', FILTER_VALIDATE_INT) ?: null;
+        }
         if (!$patient_id) {
             $this->redirect('doctor/patients');
         }
@@ -336,7 +340,10 @@ class DoctorController extends BaseController {
         $this->redirect('doctor/view_patient/' . $patient_id);
     }
 
-    public function patient_journey($patient_id) {
+    public function patient_journey($patient_id = null) {
+        if ($patient_id === null) {
+            $patient_id = filter_input(INPUT_GET, 'id', FILTER_VALIDATE_INT) ?: null;
+        }
         if (!$patient_id) {
             $this->redirect('doctor/patients');
         }
@@ -440,7 +447,10 @@ class DoctorController extends BaseController {
         exit;
     }
 
-    public function view_lab_results($patient_id) {
+    public function view_lab_results($patient_id = null) {
+        if ($patient_id === null) {
+            $patient_id = filter_input(INPUT_GET, 'id', FILTER_VALIDATE_INT) ?: null;
+        }
         if (!$patient_id) {
             $this->redirect('doctor/patients');
         }

@@ -37,8 +37,21 @@
             <div>
                 <label class="block text-sm font-medium text-gray-700 mb-2">Date of Birth</label>
                 <p class="text-gray-900 bg-gray-50 px-3 py-2 rounded-md">
-                    <?php echo date('M j, Y', strtotime($patient['date_of_birth'])); ?>
-                    (<?php echo date_diff(date_create($patient['date_of_birth']), date_create('today'))->y; ?> years old)
+                    <?php
+                    $dob = $patient['date_of_birth'] ?? null;
+                    if (!empty($dob)) {
+                        $ts = strtotime($dob);
+                        if ($ts !== false) {
+                            echo date('M j, Y', $ts);
+                            $age = date_diff(date_create($dob), date_create('today'))->y;
+                            echo " ({$age} years old)";
+                        } else {
+                            echo 'Not provided';
+                        }
+                    } else {
+                        echo 'Not provided';
+                    }
+                    ?>
                 </p>
             </div>
             <div>

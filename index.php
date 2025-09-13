@@ -104,18 +104,21 @@ if (!class_exists($controllerClass)) {
 
 try {
     $controllerInstance = new $controllerClass();
-    
+
     // Check if action method exists
     if (!method_exists($controllerInstance, $action)) {
         http_response_code(404);
         echo "Action not found: " . htmlspecialchars($action);
         exit;
     }
-    
-    // Call the action
-    $controllerInstance->$action();
-    
-} catch (Exception $e) {
+
+    // Collect any additional URL segments as parameters for the action
+    $params = array_slice($segments, 2);
+
+    // Call the action with parameters
+    call_user_func_array([$controllerInstance, $action], $params);
+
+} catch (Throwable $e) { // Catch all errors and exceptions
     Logger::error("Error in controller: " . $e->getMessage(), [
         'controller' => $controller,
         'action' => $action,
@@ -123,7 +126,7 @@ try {
         'line' => $e->getLine(),
         'trace' => $e->getTraceAsString()
     ]);
-    
+
     error_log("Error in controller: " . $e->getMessage());
     http_response_code(500);
     echo "Internal server error";
