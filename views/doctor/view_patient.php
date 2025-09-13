@@ -1,7 +1,12 @@
-<div class="space-y-6">
+<!-- Print Medical Record Form -->
+<div class="mb-6 no-print">
     <div class="flex items-center justify-between">
-        <h1 class="text-3xl font-bold text-gray-900">Patient Details</h1>
+        <h1 class="text-3xl font-bold text-gray-900">Patient Medical Record</h1>
         <div class="flex space-x-3">
+            <button onclick="printMedicalRecord()"
+                    class="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-md">
+                <i class="fas fa-print mr-2"></i>Print Record
+            </button>
             <button onclick="attendPatient(<?php echo $patient['id']; ?>)"
                     class="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded-md">
                 <i class="fas fa-stethoscope mr-2"></i>Attend Patient
@@ -19,192 +24,284 @@
             </a>
         </div>
     </div>
+</div>
 
-    <!-- Patient Information -->
-    <div class="bg-white rounded-lg shadow p-6">
-        <h3 class="text-xl font-semibold text-gray-900 mb-4 flex items-center">
-            <i class="fas fa-user mr-3 text-blue-600"></i>Patient Information
-        </h3>
-        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            <div>
-                <label class="block text-sm font-medium text-gray-700 mb-2">First Name</label>
-                <p class="text-gray-900 bg-gray-50 px-3 py-2 rounded-md"><?php echo htmlspecialchars($patient['first_name']); ?></p>
-            </div>
-            <div>
-                <label class="block text-sm font-medium text-gray-700 mb-2">Last Name</label>
-                <p class="text-gray-900 bg-gray-50 px-3 py-2 rounded-md"><?php echo htmlspecialchars($patient['last_name']); ?></p>
-            </div>
-            <div>
-                <label class="block text-sm font-medium text-gray-700 mb-2">Date of Birth</label>
-                <p class="text-gray-900 bg-gray-50 px-3 py-2 rounded-md">
-                    <?php
-                    $dob = $patient['date_of_birth'] ?? null;
-                    if (!empty($dob)) {
-                        $ts = strtotime($dob);
-                        if ($ts !== false) {
-                            echo date('M j, Y', $ts);
-                            $age = date_diff(date_create($dob), date_create('today'))->y;
-                            echo " ({$age} years old)";
-                        } else {
-                            echo 'Not provided';
-                        }
-                    } else {
-                        echo 'Not provided';
-                    }
-                    ?>
-                </p>
-            </div>
-            <div>
-                <label class="block text-sm font-medium text-gray-700 mb-2">Gender</label>
-                <p class="text-gray-900 bg-gray-50 px-3 py-2 rounded-md"><?php echo ucfirst(htmlspecialchars($patient['gender'] ?? 'Not specified')); ?></p>
-            </div>
-            <div>
-                <label class="block text-sm font-medium text-gray-700 mb-2">Phone Number</label>
-                <p class="text-gray-900 bg-gray-50 px-3 py-2 rounded-md"><?php echo htmlspecialchars($patient['phone'] ?? 'Not provided'); ?></p>
-            </div>
-            <div>
-                <label class="block text-sm font-medium text-gray-700 mb-2">Email</label>
-                <p class="text-gray-900 bg-gray-50 px-3 py-2 rounded-md"><?php echo htmlspecialchars($patient['email'] ?? 'Not provided'); ?></p>
-            </div>
-            <div class="md:col-span-2 lg:col-span-3">
-                <label class="block text-sm font-medium text-gray-700 mb-2">Address</label>
-                <p class="text-gray-900 bg-gray-50 px-3 py-2 rounded-md"><?php echo htmlspecialchars($patient['address'] ?? 'Not provided'); ?></p>
-            </div>
-            <div>
-                <label class="block text-sm font-medium text-gray-700 mb-2">Occupation</label>
-                <p class="text-gray-900 bg-gray-50 px-3 py-2 rounded-md"><?php echo htmlspecialchars($patient['occupation'] ?? 'Not specified'); ?></p>
-            </div>
+<!-- Medical Record Form (Printable) -->
+<div id="medicalRecord" class="bg-white border-2 border-gray-300 p-8 max-w-5xl mx-auto print:border-none print:p-4">
+    <!-- Header -->
+    <div class="text-center mb-6 border-b-2 border-gray-400 pb-4">
+        <h1 class="text-2xl font-bold text-gray-900 mb-2">KJ DISPENSARY</h1>
+        <p class="text-sm text-gray-700">P.O.BOX 149, MBEYA</p>
+        <p class="text-sm text-gray-700">PHONE 0776992746; centidispensary@gmail.com</p>
+        <div class="flex justify-between mt-4 text-sm">
+            <div>TOTAL………………………………………</div>
+            <div>CASH PAID………….……………………….</div>
+            <div>DEBIT………………………………………….</div>
         </div>
     </div>
 
-    <!-- Emergency Contact -->
-    <div class="bg-white rounded-lg shadow p-6">
-        <h3 class="text-xl font-semibold text-gray-900 mb-4 flex items-center">
-            <i class="fas fa-phone mr-3 text-red-600"></i>Emergency Contact
-        </h3>
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-                <label class="block text-sm font-medium text-gray-700 mb-2">Contact Name</label>
-                <p class="text-gray-900 bg-gray-50 px-3 py-2 rounded-md"><?php echo htmlspecialchars($patient['emergency_contact_name'] ?? 'Not provided'); ?></p>
+    <!-- Patient Record Header -->
+    <div class="mb-6">
+        <h2 class="text-xl font-bold text-center mb-4 underline">PATIENT RECORD</h2>
+        
+        <div class="grid grid-cols-2 gap-4 mb-4 text-sm">
+            <div class="flex items-center">
+                <span class="font-medium mr-2">DATE:</span>
+                <span class="border-b border-gray-400 flex-1 px-2"><?php echo date('d/m/Y'); ?></span>
             </div>
-            <div>
-                <label class="block text-sm font-medium text-gray-700 mb-2">Contact Phone</label>
-                <p class="text-gray-900 bg-gray-50 px-3 py-2 rounded-md"><?php echo htmlspecialchars($patient['emergency_contact_phone'] ?? 'Not provided'); ?></p>
+            <div class="flex items-center">
+                <span class="font-medium mr-2">REG NO:</span>
+                <span class="border-b border-gray-400 flex-1 px-2"><?php echo str_pad($patient['id'], 6, '0', STR_PAD_LEFT); ?></span>
+            </div>
+        </div>
+
+        <div class="grid grid-cols-3 gap-4 mb-4 text-sm">
+            <div class="col-span-2 flex items-center">
+                <span class="font-medium mr-2">PATIENT NAME:</span>
+                <span class="border-b border-gray-400 flex-1 px-2"><?php echo htmlspecialchars($patient['first_name'] . ' ' . $patient['last_name']); ?></span>
+            </div>
+            <div class="flex items-center">
+                <span class="font-medium mr-2">AGE:</span>
+                <span class="border-b border-gray-400 flex-1 px-2 mr-4">
+                    <?php
+                    $dob = $patient['date_of_birth'] ?? null;
+                    if (!empty($dob)) {
+                        $age = date_diff(date_create($dob), date_create('today'))->y;
+                        echo $age;
+                    } else {
+                        echo 'N/A';
+                    }
+                    ?>
+                </span>
+                <span class="font-medium mr-2">SEX:</span>
+                <span class="border-b border-gray-400 px-2"><?php echo strtoupper(substr($patient['gender'] ?? 'U', 0, 1)); ?></span>
+            </div>
+        </div>
+
+        <div class="grid grid-cols-3 gap-4 mb-6 text-sm">
+            <div class="flex items-center">
+                <span class="font-medium mr-2">ADDRESS:</span>
+                <span class="border-b border-gray-400 flex-1 px-2"><?php echo htmlspecialchars($patient['address'] ?? ''); ?></span>
+            </div>
+            <div class="flex items-center">
+                <span class="font-medium mr-2">OCCUPATION:</span>
+                <span class="border-b border-gray-400 flex-1 px-2"><?php echo htmlspecialchars($patient['occupation'] ?? ''); ?></span>
+            </div>
+            <div class="flex items-center">
+                <span class="font-medium mr-2">PHONE NO:</span>
+                <span class="border-b border-gray-400 flex-1 px-2"><?php echo htmlspecialchars($patient['phone'] ?? ''); ?></span>
             </div>
         </div>
     </div>
 
     <!-- Vital Signs -->
-    <div class="bg-white rounded-lg shadow p-6">
-        <h3 class="text-xl font-semibold text-gray-900 mb-4 flex items-center">
-            <i class="fas fa-heartbeat mr-3 text-red-600"></i>Vital Signs (Collected by Receptionist)
-        </h3>
-        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            <div>
-                <label class="block text-sm font-medium text-gray-700 mb-2">Temperature</label>
-                <p class="text-gray-900 bg-gray-50 px-3 py-2 rounded-md">
-                    <?php echo htmlspecialchars($patient['temperature'] ?? 'Not recorded'); ?>
+    <div class="mb-6">
+        <div class="grid grid-cols-5 gap-4 text-sm">
+            <div class="text-center">
+                <div class="font-medium mb-1">Temperature</div>
+                <div class="border border-gray-400 h-20 p-2 text-center">
+                    <?php echo htmlspecialchars($patient['temperature'] ?? ''); ?>
                     <?php if (!empty($patient['temperature'])) echo '°C'; ?>
-                </p>
+                </div>
             </div>
-            <div>
-                <label class="block text-sm font-medium text-gray-700 mb-2">Blood Pressure</label>
-                <p class="text-gray-900 bg-gray-50 px-3 py-2 rounded-md">
-                    <?php echo htmlspecialchars($patient['blood_pressure'] ?? 'Not recorded'); ?>
-                </p>
+            <div class="text-center">
+                <div class="font-medium mb-1">Blood Pressure</div>
+                <div class="border border-gray-400 h-20 p-2 text-center">
+                    <?php echo htmlspecialchars($patient['blood_pressure'] ?? ''); ?>
+                </div>
             </div>
-            <div>
-                <label class="block text-sm font-medium text-gray-700 mb-2">Pulse Rate</label>
-                <p class="text-gray-900 bg-gray-50 px-3 py-2 rounded-md">
-                    <?php echo htmlspecialchars($patient['pulse_rate'] ?? 'Not recorded'); ?>
+            <div class="text-center">
+                <div class="font-medium mb-1">Pulse Rate</div>
+                <div class="border border-gray-400 h-20 p-2 text-center">
+                    <?php echo htmlspecialchars($patient['pulse_rate'] ?? ''); ?>
                     <?php if (!empty($patient['pulse_rate'])) echo ' bpm'; ?>
-                </p>
+                </div>
             </div>
-            <div>
-                <label class="block text-sm font-medium text-gray-700 mb-2">Body Weight</label>
-                <p class="text-gray-900 bg-gray-50 px-3 py-2 rounded-md">
-                    <?php echo htmlspecialchars($patient['body_weight'] ?? 'Not recorded'); ?>
+            <div class="text-center">
+                <div class="font-medium mb-1">Body Weight</div>
+                <div class="border border-gray-400 h-20 p-2 text-center">
+                    <?php echo htmlspecialchars($patient['body_weight'] ?? ''); ?>
                     <?php if (!empty($patient['body_weight'])) echo ' kg'; ?>
-                </p>
+                </div>
             </div>
-            <div>
-                <label class="block text-sm font-medium text-gray-700 mb-2">Height</label>
-                <p class="text-gray-900 bg-gray-50 px-3 py-2 rounded-md">
-                    <?php echo htmlspecialchars($patient['height'] ?? 'Not recorded'); ?>
+            <div class="text-center">
+                <div class="font-medium mb-1">Height</div>
+                <div class="border border-gray-400 h-20 p-2 text-center">
+                    <?php echo htmlspecialchars($patient['height'] ?? ''); ?>
                     <?php if (!empty($patient['height'])) echo ' cm'; ?>
-                </p>
+                </div>
             </div>
-            <?php if (!empty($patient['body_weight']) && !empty($patient['height'])): ?>
-            <div>
-                <label class="block text-sm font-medium text-gray-700 mb-2">BMI</label>
-                <p class="text-gray-900 bg-gray-50 px-3 py-2 rounded-md">
-                    <?php
-                    $bmi = $patient['body_weight'] / (($patient['height'] / 100) ** 2);
-                    echo number_format($bmi, 1);
-                    ?>
-                </p>
-            </div>
-            <?php endif; ?>
         </div>
     </div>
 
-    <!-- Consultation History -->
-    <?php if (!empty($consultations)): ?>
-    <div class="bg-white rounded-lg shadow p-6">
-        <h3 class="text-xl font-semibold text-gray-900 mb-4 flex items-center">
-            <i class="fas fa-history mr-3 text-purple-600"></i>Consultation History
-        </h3>
-        <div class="space-y-4">
-            <?php foreach ($consultations as $consultation): ?>
-            <div class="border border-gray-200 rounded-lg p-4">
-                <div class="flex justify-between items-start">
-                    <div>
-                        <p class="font-medium text-gray-900">
-                            <?php echo date('M j, Y \a\t H:i', strtotime($consultation['appointment_date'])); ?>
-                        </p>
-                        <?php if (!empty($consultation['main_complaint'])): ?>
-                        <p class="text-sm text-gray-600 mt-1">
-                            <strong>M/C:</strong> <?php echo htmlspecialchars($consultation['main_complaint']); ?>
-                        </p>
-                        <?php endif; ?>
-                        <?php if (!empty($consultation['final_diagnosis'])): ?>
-                        <p class="text-sm text-gray-600 mt-1">
-                            <strong>Diagnosis:</strong> <?php echo htmlspecialchars($consultation['final_diagnosis']); ?>
-                        </p>
-                        <?php endif; ?>
-                        <?php if (!empty($consultation['prescription'])): ?>
-                        <p class="text-sm text-gray-600 mt-1">
-                            <strong>RX:</strong> <?php echo htmlspecialchars($consultation['prescription']); ?>
-                        </p>
-                        <?php endif; ?>
+    <!-- Clinical Examination -->
+    <div class="mb-6">
+        <div class="grid grid-cols-1 gap-4 text-sm">
+            <?php
+            // Get latest consultation for this patient
+            $latest_consultation = null;
+            if (!empty($consultations)) {
+                $latest_consultation = $consultations[0];
+            }
+            ?>
+            
+            <div class="grid grid-cols-2 gap-4">
+                <div>
+                    <div class="font-medium mb-1">M/C</div>
+                    <div class="border border-gray-400 h-16 p-2">
+                        <?php echo htmlspecialchars($latest_consultation['main_complaint'] ?? ''); ?>
                     </div>
-                    <span class="inline-flex px-2 py-1 text-xs font-medium rounded-full
-                        <?php
-                        switch ($consultation['status']) {
-                            case 'scheduled':
-                                echo 'bg-yellow-100 text-yellow-800';
-                                break;
-                            case 'in_progress':
-                                echo 'bg-blue-100 text-blue-800';
-                                break;
-                            case 'completed':
-                                echo 'bg-green-100 text-green-800';
-                                break;
-                            case 'cancelled':
-                                echo 'bg-red-100 text-red-800';
-                                break;
-                            default:
-                                echo 'bg-gray-100 text-gray-800';
-                        }
-                        ?>">
-                        <?php echo ucfirst($consultation['status']); ?>
-                    </span>
+                </div>
+                <div>
+                    <div class="font-medium mb-1">O/E</div>
+                    <div class="border border-gray-400 h-16 p-2">
+                        <?php echo htmlspecialchars($latest_consultation['on_examination'] ?? ''); ?>
+                    </div>
                 </div>
             </div>
-            <?php endforeach; ?>
+            
+            <div class="grid grid-cols-2 gap-4">
+                <div>
+                    <div class="font-medium mb-1">Preliminary Dx</div>
+                    <div class="border border-gray-400 h-16 p-2">
+                        <?php echo htmlspecialchars($latest_consultation['preliminary_diagnosis'] ?? ''); ?>
+                    </div>
+                </div>
+                <div>
+                    <div class="font-medium mb-1">Final Dx</div>
+                    <div class="border border-gray-400 h-16 p-2">
+                        <?php echo htmlspecialchars($latest_consultation['final_diagnosis'] ?? ''); ?>
+                    </div>
+                </div>
+            </div>
+            
+            <div>
+                <div class="font-medium mb-1">Lab Investigation</div>
+                <div class="border border-gray-400 h-16 p-2">
+                    <?php echo htmlspecialchars($latest_consultation['lab_investigation'] ?? ''); ?>
+                </div>
+            </div>
+            
+            <div>
+                <div class="font-medium mb-1">RX</div>
+                <div class="border border-gray-400 h-20 p-2">
+                    <?php echo htmlspecialchars($latest_consultation['prescription'] ?? ''); ?>
+                </div>
+            </div>
+        </div>
+        
+        <div class="grid grid-cols-2 gap-4 mt-4 text-sm">
+            <div class="flex items-center">
+                <span class="font-medium mr-2">DATE:</span>
+                <span class="border-b border-gray-400 flex-1 px-2">
+                    <?php echo $latest_consultation ? date('d/m/Y', strtotime($latest_consultation['appointment_date'])) : ''; ?>
+                </span>
+            </div>
+            <div class="flex items-center">
+                <span class="font-medium mr-2">Dr Signature:</span>
+                <span class="border-b border-gray-400 flex-1 px-2"></span>
+            </div>
         </div>
     </div>
-    <?php endif; ?>
+
+    <!-- Laboratory Results Grid -->
+    <div class="mb-6 text-xs">
+        <div class="grid grid-cols-2 gap-6">
+            <!-- Left Column -->
+            <div class="space-y-4">
+                <!-- Parasitology -->
+                <div class="border border-gray-400 p-3">
+                    <h4 class="font-bold mb-2">Parasitology</h4>
+                    <div class="space-y-1">
+                        <div>• mRDT…………………………………………………</div>
+                        <div>• Blood Slide Smear……………………………….</div>
+                        <div>……………………………………………………………………….</div>
+                        <div>• Urine sedimentary</div>
+                        <div>Urine appearance……………………………………………</div>
+                        <div>Urine microscopic report………………………………</div>
+                        <div>……………………………………………………………………….</div>
+                        <div>• Urine Chemistry</div>
+                        <div class="grid grid-cols-2 gap-2">
+                            <div>Leucocytes…………………….</div>
+                            <div>PH………………………….</div>
+                            <div>Protein………………………….</div>
+                            <div>Blood……………………...</div>
+                        </div>
+                        <div>• Stool analysis</div>
+                        <div>Stool appearance……………………………………………</div>
+                        <div>Stool microscopic report…………………………………</div>
+                        <div>………………………………………………………………………</div>
+                    </div>
+                </div>
+
+                <!-- Hematology -->
+                <div class="border border-gray-400 p-3">
+                    <h4 class="font-bold mb-2">Hematology</h4>
+                    <div class="space-y-1">
+                        <div>• Hemoglobin……………………………….g/dL</div>
+                        <div>• ESR…………………………………………………….</div>
+                        <div>• Full blood picture……………………………….</div>
+                        <div>Others………………………………………………………</div>
+                    </div>
+                </div>
+
+                <!-- Clinical Chemistry -->
+                <div class="border border-gray-400 p-3">
+                    <h4 class="font-bold mb-2">Clinical chemistry</h4>
+                    <div class="space-y-1">
+                        <div>• Blood sugar………………………….…mmol/L</div>
+                        <div>• Blood uric acid……………………………………</div>
+                        <div>• Rheumatoid factor………………………………</div>
+                        <div>• Others……………………………………………….</div>
+                        <div>…………………………………………………………..</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Right Column -->
+            <div class="space-y-4">
+                <!-- Serology -->
+                <div class="border border-gray-400 p-3">
+                    <h4 class="font-bold mb-2">Serology</h4>
+                    <div class="space-y-1">
+                        <div>• H.Pylori antigen………………………………….</div>
+                        <div>• H.Pylori antibody.……………………………….</div>
+                        <div>• RPP/Syphilis……………………………………...</div>
+                        <div>• UPT……………………………………………………</div>
+                        <div>• Salmonella typhi/parathyphiantigen…..</div>
+                        <div>…………………………………………………………..</div>
+                        <div class="grid grid-cols-2 gap-2">
+                            <div>• STO …………………………..</div>
+                            <div>STH………………...</div>
+                        </div>
+                        <div>• Rheumatoid Factor…………………………….</div>
+                        <div>Others…………………………………………………….</div>
+                        <div>……………………………………………………………….</div>
+                    </div>
+                </div>
+
+                <!-- Blood Transfusion -->
+                <div class="border border-gray-400 p-3">
+                    <h4 class="font-bold mb-2">Blood transfusion</h4>
+                    <div class="space-y-1">
+                        <div class="grid grid-cols-2 gap-2">
+                            <div>• Blood group……………</div>
+                            <div>Rhesus…………….</div>
+                        </div>
+                        <div>Others…………………………………………………….</div>
+                    </div>
+                </div>
+
+                <!-- Test Signature -->
+                <div class="border border-gray-400 p-3">
+                    <div class="grid grid-cols-2 gap-2 text-sm">
+                        <div>Test performed by ……………………………………………………</div>
+                        <div>Signature ……………………………..……………</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
 </div>
 
 <!-- Attend Patient Modal -->
@@ -833,4 +930,96 @@ document.getElementById('attendModal').addEventListener('click', function(e) {
         closeAttendModal();
     }
 });
+
+// Print function for medical record
+function printMedicalRecord() {
+    // Hide no-print elements
+    const noPrintElements = document.querySelectorAll('.no-print');
+    noPrintElements.forEach(el => el.style.display = 'none');
+    
+    // Print the page
+    window.print();
+    
+    // Show no-print elements again
+    noPrintElements.forEach(el => el.style.display = '');
+}
 </script>
+
+<style>
+@media print {
+    .no-print {
+        display: none !important;
+    }
+    
+    body {
+        font-size: 12px;
+        line-height: 1.3;
+    }
+    
+    #medicalRecord {
+        border: none !important;
+        padding: 0 !important;
+        margin: 0 !important;
+        max-width: none !important;
+    }
+    
+    .grid {
+        display: grid !important;
+    }
+    
+    .border {
+        border: 1px solid #000 !important;
+    }
+    
+    .border-b {
+        border-bottom: 1px solid #000 !important;
+    }
+    
+    .text-center {
+        text-align: center !important;
+    }
+    
+    .font-bold {
+        font-weight: bold !important;
+    }
+    
+    .font-medium {
+        font-weight: 500 !important;
+    }
+    
+    .underline {
+        text-decoration: underline !important;
+    }
+    
+    .p-2 {
+        padding: 4px !important;
+    }
+    
+    .p-3 {
+        padding: 6px !important;
+    }
+    
+    .mb-1 {
+        margin-bottom: 2px !important;
+    }
+    
+    .mb-2 {
+        margin-bottom: 4px !important;
+    }
+    
+    .mb-4 {
+        margin-bottom: 8px !important;
+    }
+    
+    .mb-6 {
+        margin-bottom: 12px !important;
+    }
+    
+    .space-y-1 > * + * {
+        margin-top: 2px !important;
+    }
+    
+    .space-y-4 > * + * {
+        margin-top: 8px !important;
+    }
+}

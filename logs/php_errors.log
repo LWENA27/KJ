@@ -991,3 +991,5 @@
 [13-Sep-2025 13:52:50 UTC] PHP Deprecated:  date_create(): Passing null to parameter #1 ($datetime) of type string is deprecated in /var/www/html/KJ/views/doctor/dashboard.php on line 216
 [13-Sep-2025 13:53:00 UTC] PHP Deprecated:  strtotime(): Passing null to parameter #1 ($datetime) of type string is deprecated in /var/www/html/KJ/views/doctor/view_patient.php on line 40
 [13-Sep-2025 13:53:00 UTC] PHP Deprecated:  date_create(): Passing null to parameter #1 ($datetime) of type string is deprecated in /var/www/html/KJ/views/doctor/view_patient.php on line 41
+[13-Sep-2025 14:06:15 UTC] PHP Deprecated:  date_create(): Passing null to parameter #1 ($datetime) of type string is deprecated in /var/www/html/KJ/views/doctor/lab_results_view.php on line 24
+[13-Sep-2025 14:06:15 UTC] PHP Deprecated:  ucfirst(): Passing null to parameter #1 ($string) of type string is deprecated in /var/www/html/KJ/views/doctor/lab_results_view.php on line 28

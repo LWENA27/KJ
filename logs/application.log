@@ -5,3 +5,5 @@
 [2025-09-13 13:52:50] ERROR: date_create(): Passing null to parameter #1 ($datetime) of type string is deprecated | Context: {"errno":8192,"file":"\/var\/www\/html\/KJ\/views\/doctor\/dashboard.php","line":216}
 [2025-09-13 13:53:00] ERROR: strtotime(): Passing null to parameter #1 ($datetime) of type string is deprecated | Context: {"errno":8192,"file":"\/var\/www\/html\/KJ\/views\/doctor\/view_patient.php","line":40}
 [2025-09-13 13:53:00] ERROR: date_create(): Passing null to parameter #1 ($datetime) of type string is deprecated | Context: {"errno":8192,"file":"\/var\/www\/html\/KJ\/views\/doctor\/view_patient.php","line":41}
+[2025-09-13 14:06:15] ERROR: date_create(): Passing null to parameter #1 ($datetime) of type string is deprecated | Context: {"errno":8192,"file":"\/var\/www\/html\/KJ\/views\/doctor\/lab_results_view.php","line":24}
+[2025-09-13 14:06:15] ERROR: ucfirst(): Passing null to parameter #1 ($string) of type string is deprecated | Context: {"errno":8192,"file":"\/var\/www\/html\/KJ\/views\/doctor\/lab_results_view.php","line":28}
