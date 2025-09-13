@@ -607,9 +607,9 @@
         }
 
         /* Modal z-index fix and display control */
-        .modal, [id*="modal"], [class*="modal"] {
+        .modal {
             z-index: 60 !important;
-            display: none !important;
+            display: none !important; /* hidden by default */
             position: fixed;
             top: 0;
             left: 0;
@@ -621,11 +621,12 @@
         }
 
         .modal.show {
-            display: flex !important;
+            display: flex !important; /* show when toggled */
         }
 
-        .modal-content {
-            background: white;
+        /* Ensure only direct modal content is styled, not any element with 'modal' in its class */
+        .modal > .modal-content {
+            background: #ffffff;
             border-radius: 8px;
             box-shadow: 0 10px 25px rgba(0, 0, 0, 0.3);
             max-height: 90vh;
