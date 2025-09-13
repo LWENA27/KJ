@@ -386,5 +386,71 @@ class LabController extends BaseController {
         }
         exit;
     }
+
+    public function samples() {
+        $technician_id = $_SESSION['user_id'];
+
+        // Get samples to be collected
+        $stmt = $this->pdo->prepare("
+            SELECT lr.*, t.name as test_name, t.category, p.first_name, p.last_name, c.appointment_date,
+                   ws.consultation_registration_paid, ws.lab_tests_paid
+            FROM lab_results lr
+            JOIN tests t ON lr.test_id = t.id
+            JOIN consultations c ON lr.consultation_id = c.id
+            JOIN patients p ON c.patient_id = p.id
+            LEFT JOIN workflow_status ws ON p.id = ws.patient_id
+            WHERE lr.technician_id = ? AND lr.status IN ('pending', 'sample_collected')
+            ORDER BY lr.status ASC, lr.created_at ASC
+        ");
+        $stmt->execute([$technician_id]);
+        $samples = $stmt->fetchAll();
+
+        $this->render('lab/samples', [
+            'samples' => $samples,
+            'csrf_token' => $this->generateCSRF()
+        ]);
+    }
+
+    public function equipment() {
+        $this->render('lab/equipment', [
+            'csrf_token' => $this->generateCSRF()
+        ]);
+    }
+
+    public function inventory() {
+        $this->render('lab/inventory', [
+            'csrf_token' => $this->generateCSRF()
+        ]);
+    }
+
+    public function quality() {
+        $this->render('lab/quality', [
+            'csrf_token' => $this->generateCSRF()
+        ]);
+    }
+
+    public function reports() {
+        $technician_id = $_SESSION['user_id'];
+
+        // Get report statistics
+        $stmt = $this->pdo->prepare("
+            SELECT 
+                COUNT(*) as total_tests,
+                COUNT(CASE WHEN status = 'completed' THEN 1 END) as completed_tests,
+                COUNT(CASE WHEN status = 'pending' THEN 1 END) as pending_tests,
+                COUNT(CASE WHEN DATE(created_at) = CURDATE() THEN 1 END) as today_tests,
+                COUNT(CASE WHEN DATE(created_at) >= DATE_SUB(CURDATE(), INTERVAL 7 DAY) THEN 1 END) as week_tests,
+                COUNT(CASE WHEN DATE(created_at) >= DATE_SUB(CURDATE(), INTERVAL 30 DAY) THEN 1 END) as month_tests
+            FROM lab_results 
+            WHERE technician_id = ?
+        ");
+        $stmt->execute([$technician_id]);
+        $stats = $stmt->fetch();
+
+        $this->render('lab/reports', [
+            'stats' => $stats,
+            'csrf_token' => $this->generateCSRF()
+        ]);
+    }
 }
 ?>

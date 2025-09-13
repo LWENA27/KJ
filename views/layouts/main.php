@@ -12,6 +12,29 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    
+    <!-- PWA Manifest -->
+    <link rel="manifest" href="/KJ/manifest.json">
+    <meta name="theme-color" content="#4facfe">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <meta name="apple-mobile-web-app-title" content="KJ Healthcare">
+    <link rel="apple-touch-icon" href="/KJ/assets/icons/icon-192x192.png">
+    
+    <!-- Service Worker Registration -->
+    <script>
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('/KJ/sw.js')
+                    .then(registration => {
+                        console.log('SW registered: ', registration);
+                    })
+                    .catch(registrationError => {
+                        console.log('SW registration failed: ', registrationError);
+                    });
+            });
+        }
+    </script>
     <style>
         /* Healthcare Design System */
         :root {
@@ -251,6 +274,91 @@
         .custom-scrollbar::-webkit-scrollbar-track {
             background: var(--neutral-100);
             border-radius: 3px;
+        }
+
+        /* Dark Mode Support */
+        [data-theme="dark"] {
+            --primary-50: #1e3a8a;
+            --primary-500: #60a5fa;
+            --primary-600: #3b82f6;
+            --neutral-50: #1f2937;
+            --neutral-100: #374151;
+            --neutral-200: #4b5563;
+            --neutral-300: #6b7280;
+            --neutral-600: #d1d5db;
+            --neutral-700: #e5e7eb;
+            --neutral-800: #f3f4f6;
+            --neutral-900: #ffffff;
+            --success-500: #10b981;
+            --warning-500: #f59e0b;
+            --error-500: #ef4444;
+        }
+
+        [data-theme="dark"] body {
+            background-color: var(--neutral-50);
+            color: var(--neutral-700);
+        }
+
+        [data-theme="dark"] .sidebar {
+            background-color: var(--neutral-100);
+            border-color: var(--neutral-200);
+        }
+
+        [data-theme="dark"] .card,
+        [data-theme="dark"] .bg-white {
+            background-color: var(--neutral-100);
+            border-color: var(--neutral-200);
+        }
+
+        /* Advanced Animations */
+        @keyframes slideInFromLeft {
+            0% { transform: translateX(-100%); opacity: 0; }
+            100% { transform: translateX(0); opacity: 1; }
+        }
+
+        @keyframes slideInFromRight {
+            0% { transform: translateX(100%); opacity: 0; }
+            100% { transform: translateX(0); opacity: 1; }
+        }
+
+        @keyframes bounceIn {
+            0% { transform: scale(0.3); opacity: 0; }
+            50% { transform: scale(1.05); }
+            70% { transform: scale(0.9); }
+            100% { transform: scale(1); opacity: 1; }
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.7; }
+        }
+
+        .animate-slide-in-left { animation: slideInFromLeft 0.5s ease-out; }
+        .animate-slide-in-right { animation: slideInFromRight 0.5s ease-out; }
+        .animate-bounce-in { animation: bounceIn 0.6s ease-out; }
+        .animate-pulse { animation: pulse 2s infinite; }
+
+        /* Advanced hover effects */
+        .hover-lift {
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        .hover-lift:hover {
+            transform: translateY(-4px) scale(1.02);
+            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+        }
+
+        /* Glassmorphism effects */
+        .glass-card {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.37);
+        }
+
+        /* Advanced focus states */
+        .focus-ring:focus {
+            outline: none;
+            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1), 0 0 0 1px rgba(59, 130, 246, 0.5);
         }
 
         /* Loading states */
@@ -776,9 +884,14 @@
                         ];
                     } elseif ($role === 'lab_technician') {
                         $menu_items = [
-                            ['url' => 'lab/dashboard', 'icon' => 'fas fa-chart-line', 'text' => 'Dashboard'],
-                            ['url' => 'lab/tests', 'icon' => 'fas fa-vial', 'text' => 'Test Queue'],
-                            ['url' => 'lab/results', 'icon' => 'fas fa-clipboard-check', 'text' => 'Record Results'],
+                            ['url' => 'lab/dashboard', 'icon' => 'fas fa-chart-line', 'text' => 'Dashboard', 'badge' => '', 'color' => 'blue'],
+                            ['url' => 'lab/tests', 'icon' => 'fas fa-vial', 'text' => 'Test Queue', 'badge' => '3', 'color' => 'yellow'],
+                            ['url' => 'lab/results', 'icon' => 'fas fa-clipboard-check', 'text' => 'Record Results', 'badge' => '', 'color' => 'green'],
+                            ['url' => 'lab/samples', 'icon' => 'fas fa-test-tube', 'text' => 'Sample Collection', 'badge' => '2', 'color' => 'purple'],
+                            ['url' => 'lab/equipment', 'icon' => 'fas fa-microscope', 'text' => 'Equipment', 'badge' => '1', 'color' => 'indigo'],
+                            ['url' => 'lab/inventory', 'icon' => 'fas fa-boxes', 'text' => 'Inventory', 'badge' => '!', 'color' => 'orange'],
+                            ['url' => 'lab/quality', 'icon' => 'fas fa-check-double', 'text' => 'Quality Control', 'badge' => '', 'color' => 'emerald'],
+                            ['url' => 'lab/reports', 'icon' => 'fas fa-chart-bar', 'text' => 'Reports', 'badge' => '', 'color' => 'rose'],
                         ];
                     }
                     ?>
@@ -798,12 +911,25 @@
 
                     <?php foreach ($menu_items as $item):
                         $is_active = (strpos($current_path, $item['url']) !== false);
+                        $color = isset($item['color']) ? $item['color'] : 'blue';
+                        $badge = isset($item['badge']) ? $item['badge'] : '';
                     ?>
                     <a href="<?php echo htmlspecialchars($BASE_PATH); ?>/<?php echo $item['url']; ?>" 
-                       class="sidebar-link <?php echo $is_active ? 'active' : ''; ?>"
+                       class="group flex items-center justify-between px-3 py-2.5 rounded-lg transition-all duration-200 <?php echo $is_active ? 'bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 text-blue-700 shadow-sm' : 'text-neutral-600 hover:bg-gradient-to-r hover:from-neutral-50 hover:to-neutral-100 hover:text-neutral-800'; ?>"
                        onclick="closeSidebarOnMobile()">
-                        <i class="<?php echo $item['icon']; ?> link-icon"></i>
-                        <span class="font-medium"><?php echo $item['text']; ?></span>
+                        <div class="flex items-center space-x-3">
+                            <div class="w-8 h-8 rounded-lg flex items-center justify-center transition-all duration-200 <?php echo $is_active ? 'bg-gradient-to-br from-blue-500 to-indigo-600 text-white shadow-sm' : 'bg-neutral-100 text-neutral-500 group-hover:bg-gradient-to-br group-hover:from-' . $color . '-500 group-hover:to-' . $color . '-600 group-hover:text-white'; ?>">
+                                <i class="<?php echo $item['icon']; ?> text-sm"></i>
+                            </div>
+                            <span class="font-medium text-sm"><?php echo $item['text']; ?></span>
+                        </div>
+                        <?php if ($badge): ?>
+                        <div class="flex items-center">
+                            <span class="<?php echo $badge === '!' ? 'bg-red-500 text-white' : 'bg-' . $color . '-500 text-white'; ?> text-xs font-bold px-2 py-1 rounded-full min-w-[20px] h-5 flex items-center justify-center">
+                                <?php echo $badge; ?>
+                            </span>
+                        </div>
+                        <?php endif; ?>
                     </a>
                     <?php endforeach; ?>
                 </nav>
@@ -881,10 +1007,20 @@
 
                         <!-- Right: Actions -->
                         <div class="flex items-center space-x-2">
-                            <!-- Search (optional, can be hidden for now) -->
-                            <button class="header-action-btn hidden lg:flex" title="Search">
-                                <i class="fas fa-search text-lg"></i>
-                            </button>
+                            <!-- Theme Toggle -->
+                            <div class="relative" id="themeDropdown">
+                                <button class="header-action-btn" onclick="toggleTheme()" title="Toggle Theme">
+                                    <i id="themeIcon" class="fas fa-moon text-lg"></i>
+                                </button>
+                            </div>
+
+                            <!-- Search (Enhanced) -->
+                            <div class="relative hidden lg:flex" id="globalSearch">
+                                <input type="text" id="searchInput" placeholder="Search patients, tests..." 
+                                       class="w-64 px-4 py-2 pl-10 pr-4 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                                <i class="fas fa-search absolute left-3 top-3 text-gray-400"></i>
+                                <div id="searchResults" class="absolute top-full left-0 right-0 bg-white border border-gray-200 rounded-lg shadow-lg mt-1 hidden z-50"></div>
+                            </div>
                             
                             <!-- Language Switch -->
                             <div class="relative" id="languageDropdown">
@@ -1117,35 +1253,182 @@
             }
         }
 
-        function switchLanguage(lang) {
-            const currentLang = document.getElementById('currentLanguage');
-            const options = document.querySelectorAll('.language-option');
+        // Dark mode toggle functionality
+        function toggleTheme() {
+            const currentTheme = localStorage.getItem('theme') || 'light';
+            const newTheme = currentTheme === 'light' ? 'dark' : 'light';
             
-            // Update current language display
-            if (currentLang) {
-                currentLang.textContent = lang.toUpperCase();
+            document.documentElement.setAttribute('data-theme', newTheme);
+            localStorage.setItem('theme', newTheme);
+            
+            const themeIcon = document.getElementById('themeIcon');
+            if (themeIcon) {
+                themeIcon.className = newTheme === 'dark' ? 'fas fa-sun text-lg' : 'fas fa-moon text-lg';
             }
             
-            // Update active state
-            options.forEach(option => {
-                option.classList.remove('active');
-                if (option.onclick.toString().includes(lang)) {
-                    option.classList.add('active');
-                }
-            });
-            
-            // Store language preference
-            localStorage.setItem('preferred_language', lang);
-            
-            // Close dropdown
-            const dropdown = document.getElementById('languageMenu');
-            if (dropdown) {
-                dropdown.classList.remove('show');
-            }
-            
-            // You can add actual language switching logic here
-            showToast(`Language switched to ${lang === 'en' ? 'English' : 'Kiswahili'}`, 'success');
+            showToast(`Switched to ${newTheme} mode`, 'success');
         }
+
+        // Global search functionality
+        function initializeGlobalSearch() {
+            const searchInput = document.getElementById('searchInput');
+            const searchResults = document.getElementById('searchResults');
+            let searchTimeout;
+
+            if (searchInput) {
+                searchInput.addEventListener('input', function(e) {
+                    clearTimeout(searchTimeout);
+                    const query = e.target.value.trim();
+                    
+                    if (query.length < 2) {
+                        searchResults.classList.add('hidden');
+                        return;
+                    }
+
+                    searchTimeout = setTimeout(() => {
+                        performGlobalSearch(query);
+                    }, 300);
+                });
+
+                searchInput.addEventListener('focus', function() {
+                    if (this.value.length >= 2) {
+                        searchResults.classList.remove('hidden');
+                    }
+                });
+
+                document.addEventListener('click', function(e) {
+                    if (!searchInput.contains(e.target) && !searchResults.contains(e.target)) {
+                        searchResults.classList.add('hidden');
+                    }
+                });
+            }
+        }
+
+        function performGlobalSearch(query) {
+            // Simulate search results (in real implementation, this would be an AJAX call)
+            const searchResults = document.getElementById('searchResults');
+            const mockResults = [
+                { type: 'patient', name: 'John Doe', id: 'P-001', info: 'Age 45, Last visit: Today' },
+                { type: 'test', name: 'Blood Sugar', id: 'T-001', info: 'Category: Blood Tests' },
+                { type: 'medicine', name: 'Paracetamol', id: 'M-001', info: 'Stock: 500 tablets' }
+            ].filter(item => item.name.toLowerCase().includes(query.toLowerCase()));
+
+            let resultsHTML = '';
+            if (mockResults.length > 0) {
+                mockResults.forEach(result => {
+                    const icon = result.type === 'patient' ? 'fa-user' : 
+                                result.type === 'test' ? 'fa-flask' : 'fa-pills';
+                    resultsHTML += `
+                        <div class="p-3 hover:bg-gray-50 cursor-pointer border-b border-gray-100 last:border-b-0">
+                            <div class="flex items-center space-x-3">
+                                <i class="fas ${icon} text-gray-400"></i>
+                                <div>
+                                    <div class="font-medium text-gray-900">${result.name}</div>
+                                    <div class="text-sm text-gray-500">${result.info}</div>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                });
+            } else {
+                resultsHTML = '<div class="p-3 text-gray-500 text-center">No results found</div>';
+            }
+
+            searchResults.innerHTML = resultsHTML;
+            searchResults.classList.remove('hidden');
+        }
+
+        // Enhanced notification system with action buttons
+        function showAdvancedNotification(title, message, type = 'info', actions = []) {
+            const notification = document.createElement('div');
+            notification.className = `fixed top-4 right-4 z-50 p-4 rounded-lg shadow-lg text-white max-w-sm animate-slide-in-right`;
+            
+            const bgColors = {
+                success: 'bg-gradient-to-r from-green-500 to-green-600',
+                error: 'bg-gradient-to-r from-red-500 to-red-600',
+                warning: 'bg-gradient-to-r from-yellow-500 to-yellow-600',
+                info: 'bg-gradient-to-r from-blue-500 to-blue-600'
+            };
+            
+            notification.classList.add(bgColors[type] || bgColors.info);
+            
+            let actionsHTML = '';
+            if (actions.length > 0) {
+                actionsHTML = '<div class="mt-3 flex space-x-2">';
+                actions.forEach(action => {
+                    actionsHTML += `<button onclick="${action.onclick}" class="px-3 py-1 bg-white bg-opacity-20 rounded text-sm hover:bg-opacity-30">${action.text}</button>`;
+                });
+                actionsHTML += '</div>';
+            }
+            
+            notification.innerHTML = `
+                <div class="flex items-start justify-between">
+                    <div class="flex-1">
+                        <div class="font-medium">${title}</div>
+                        <div class="text-sm opacity-90 mt-1">${message}</div>
+                        ${actionsHTML}
+                    </div>
+                    <button onclick="this.parentElement.parentElement.remove()" class="ml-3 opacity-70 hover:opacity-100">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+            `;
+            
+            document.body.appendChild(notification);
+            
+            setTimeout(() => {
+                if (notification.parentNode) {
+                    notification.style.opacity = '0';
+                    notification.style.transform = 'translateX(100%)';
+                    setTimeout(() => notification.remove(), 300);
+                }
+            }, 7000);
+        }
+
+        // Keyboard shortcuts
+        document.addEventListener('keydown', function(e) {
+            // Ctrl/Cmd + K for global search
+            if ((e.ctrlKey || e.metaKey) && e.key === 'k') {
+                e.preventDefault();
+                const searchInput = document.getElementById('searchInput');
+                if (searchInput) {
+                    searchInput.focus();
+                }
+            }
+            
+            // Ctrl/Cmd + D for dark mode toggle
+            if ((e.ctrlKey || e.metaKey) && e.key === 'd') {
+                e.preventDefault();
+                toggleTheme();
+            }
+        });
+
+        // Initialize enhanced features
+        document.addEventListener('DOMContentLoaded', function() {
+            // Load saved theme
+            const savedTheme = localStorage.getItem('theme') || 'light';
+            document.documentElement.setAttribute('data-theme', savedTheme);
+            
+            const themeIcon = document.getElementById('themeIcon');
+            if (themeIcon) {
+                themeIcon.className = savedTheme === 'dark' ? 'fas fa-sun text-lg' : 'fas fa-moon text-lg';
+            }
+            
+            // Initialize global search
+            initializeGlobalSearch();
+            
+            // Add loading states to forms
+            const forms = document.querySelectorAll('form');
+            forms.forEach(form => {
+                form.addEventListener('submit', function() {
+                    const submitBtn = form.querySelector('button[type="submit"]');
+                    if (submitBtn) {
+                        submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>Processing...';
+                        submitBtn.disabled = true;
+                    }
+                });
+            });
+        });
 
         // Close dropdowns when clicking outside
         document.addEventListener('click', function(event) {

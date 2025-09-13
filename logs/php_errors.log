@@ -993,3 +993,21 @@
 [13-Sep-2025 13:53:00 UTC] PHP Deprecated:  date_create(): Passing null to parameter #1 ($datetime) of type string is deprecated in /var/www/html/KJ/views/doctor/view_patient.php on line 41
 [13-Sep-2025 14:06:15 UTC] PHP Deprecated:  date_create(): Passing null to parameter #1 ($datetime) of type string is deprecated in /var/www/html/KJ/views/doctor/lab_results_view.php on line 24
 [13-Sep-2025 14:06:15 UTC] PHP Deprecated:  ucfirst(): Passing null to parameter #1 ($string) of type string is deprecated in /var/www/html/KJ/views/doctor/lab_results_view.php on line 28
+[13-Sep-2025 14:19:31 UTC] Error in controller: syntax error, unexpected token "endforeach", expecting end of file
+[13-Sep-2025 14:25:55 UTC] PHP Warning:  Undefined array key "REQUEST_URI" in /var/www/html/KJ/index.php on line 29
+[13-Sep-2025 14:25:55 UTC] PHP Deprecated:  parse_url(): Passing null to parameter #1 ($url) of type string is deprecated in /var/www/html/KJ/index.php on line 30
+[13-Sep-2025 14:25:55 UTC] PHP Warning:  Cannot modify header information - headers already sent by (output started at /var/www/html/KJ/index.php:29) in /var/www/html/KJ/index.php on line 47
+[13-Sep-2025 14:40:56 UTC] PHP Warning:  include(/var/www/html/KJ/includes/../views/lab/inventory.php): Failed to open stream: No such file or directory in /var/www/html/KJ/includes/BaseController.php on line 19
+[13-Sep-2025 14:40:56 UTC] PHP Warning:  include(): Failed opening '/var/www/html/KJ/includes/../views/lab/inventory.php' for inclusion (include_path='.:/usr/share/php') in /var/www/html/KJ/includes/BaseController.php on line 19
+[13-Sep-2025 14:41:00 UTC] PHP Warning:  include(/var/www/html/KJ/includes/../views/lab/equipment.php): Failed to open stream: No such file or directory in /var/www/html/KJ/includes/BaseController.php on line 19
+[13-Sep-2025 14:41:00 UTC] PHP Warning:  include(): Failed opening '/var/www/html/KJ/includes/../views/lab/equipment.php' for inclusion (include_path='.:/usr/share/php') in /var/www/html/KJ/includes/BaseController.php on line 19
+[13-Sep-2025 14:41:04 UTC] PHP Warning:  include(/var/www/html/KJ/includes/../views/lab/samples.php): Failed to open stream: No such file or directory in /var/www/html/KJ/includes/BaseController.php on line 19
+[13-Sep-2025 14:41:04 UTC] PHP Warning:  include(): Failed opening '/var/www/html/KJ/includes/../views/lab/samples.php' for inclusion (include_path='.:/usr/share/php') in /var/www/html/KJ/includes/BaseController.php on line 19
+[13-Sep-2025 14:43:18 UTC] PHP Warning:  include(/var/www/html/KJ/includes/../views/lab/samples.php): Failed to open stream: No such file or directory in /var/www/html/KJ/includes/BaseController.php on line 19
+[13-Sep-2025 14:43:18 UTC] PHP Warning:  include(): Failed opening '/var/www/html/KJ/includes/../views/lab/samples.php' for inclusion (include_path='.:/usr/share/php') in /var/www/html/KJ/includes/BaseController.php on line 19
+[13-Sep-2025 14:43:52 UTC] PHP Warning:  include(/var/www/html/KJ/includes/../views/lab/quality.php): Failed to open stream: No such file or directory in /var/www/html/KJ/includes/BaseController.php on line 19
+[13-Sep-2025 14:43:52 UTC] PHP Warning:  include(): Failed opening '/var/www/html/KJ/includes/../views/lab/quality.php' for inclusion (include_path='.:/usr/share/php') in /var/www/html/KJ/includes/BaseController.php on line 19
+[13-Sep-2025 14:43:56 UTC] PHP Warning:  include(/var/www/html/KJ/includes/../views/lab/inventory.php): Failed to open stream: No such file or directory in /var/www/html/KJ/includes/BaseController.php on line 19
+[13-Sep-2025 14:43:56 UTC] PHP Warning:  include(): Failed opening '/var/www/html/KJ/includes/../views/lab/inventory.php' for inclusion (include_path='.:/usr/share/php') in /var/www/html/KJ/includes/BaseController.php on line 19
+[13-Sep-2025 14:46:33 UTC] PHP Warning:  include(/var/www/html/KJ/includes/../views/lab/samples.php): Failed to open stream: No such file or directory in /var/www/html/KJ/includes/BaseController.php on line 19
+[13-Sep-2025 14:46:33 UTC] PHP Warning:  include(): Failed opening '/var/www/html/KJ/includes/../views/lab/samples.php' for inclusion (include_path='.:/usr/share/php') in /var/www/html/KJ/includes/BaseController.php on line 19
