@@ -6,8 +6,8 @@
     <title><?php echo isset($title) ? htmlspecialchars($title) . ' - ' : ''; ?>Healthcare Management System</title>
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
-    <!-- Font Awesome -->
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <!-- Font Awesome (Local) -->
+    <link rel="stylesheet" href="/KJ/assets/css/fontawesome.min.css">
     <!-- Google Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -869,11 +869,12 @@
                         ];
                     } elseif ($role === 'receptionist') {
                         $menu_items = [
-                            ['url' => 'receptionist/dashboard', 'icon' => 'fas fa-chart-line', 'text' => 'Dashboard'],
-                            ['url' => 'receptionist/patients', 'icon' => 'fas fa-users', 'text' => 'Patients'],
-                            ['url' => 'receptionist/medicine', 'icon' => 'fas fa-pills', 'text' => 'Medicine'],
-                            ['url' => 'receptionist/appointments', 'icon' => 'fas fa-calendar-check', 'text' => 'Appointments'],
-                            ['url' => 'receptionist/payments', 'icon' => 'fas fa-credit-card', 'text' => 'Payments'],
+                            ['url' => 'receptionist/dashboard', 'icon' => 'fas fa-chart-line', 'text' => 'Dashboard', 'badge' => '', 'color' => 'blue'],
+                            ['url' => 'receptionist/patients', 'icon' => 'fas fa-users', 'text' => 'Patients', 'badge' => isset($sidebar_data['pending_patients']) ? $sidebar_data['pending_patients'] : '0', 'color' => 'blue'],
+                            ['url' => 'receptionist/appointments', 'icon' => 'fas fa-calendar-check', 'text' => 'Appointments', 'badge' => isset($sidebar_data['upcoming_appointments']) ? $sidebar_data['upcoming_appointments'] : '0', 'color' => 'green'],
+                            ['url' => 'receptionist/payments', 'icon' => 'fas fa-credit-card', 'text' => 'Payments', 'badge' => '', 'color' => 'purple'],
+                            ['url' => 'receptionist/medicines', 'icon' => 'fas fa-pills', 'text' => 'Medicine', 'badge' => isset($sidebar_data['low_stock_medicines']) && $sidebar_data['low_stock_medicines'] > 0 ? '!' : '', 'color' => 'yellow'],
+                            ['url' => 'receptionist/reports', 'icon' => 'fas fa-chart-bar', 'text' => 'Reports', 'badge' => '', 'color' => 'indigo'],
                         ];
                     } elseif ($role === 'doctor') {
                         $menu_items = [

@@ -36,7 +36,13 @@
                                         <?php echo htmlspecialchars($consultation['first_name'] . ' ' . $consultation['last_name']); ?>
                                     </div>
                                     <div class="text-sm text-gray-500">
-                                        Age: <?php echo date_diff(date_create($consultation['date_of_birth']), date_create('today'))->y; ?>
+                                        Age: <?php 
+                                        if (!empty($consultation['date_of_birth'])) {
+                                            echo date_diff(date_create($consultation['date_of_birth']), date_create('today'))->y;
+                                        } else {
+                                            echo 'N/A';
+                                        }
+                                        ?>
                                     </div>
                                 </div>
                             </div>

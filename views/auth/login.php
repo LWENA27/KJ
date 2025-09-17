@@ -27,8 +27,14 @@
             <label for="password" class="block text-sm font-medium text-gray-700 mb-2">
                 <i class="fas fa-lock mr-2"></i>Password
             </label>
-            <input type="password" id="password" name="password" required 
-                   class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+            <div class="relative">
+                <input type="password" id="password" name="password" required 
+                       class="w-full px-3 py-2 pr-12 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                <button type="button" id="togglePassword" class="absolute inset-y-0 right-0 flex items-center justify-center w-12 h-full text-gray-500 hover:text-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500 rounded-r-md transition-colors duration-200 bg-gray-50 hover:bg-blue-50">
+                    <i id="eyeIcon" class="fas fa-eye text-lg"></i>
+                    <span id="eyeFallback" style="display: none;">👁️</span>
+                </button>
+            </div>
         </div>
 
         <button type="submit" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium py-3 px-4 rounded-md transition duration-200 shadow-sm hover:shadow-md">
@@ -44,3 +50,104 @@
         <p>Lab Tech: lab1 / password</p>
     </div>
 </div>
+
+<script>
+// Password visibility toggle functionality
+document.addEventListener('DOMContentLoaded', function() {
+    const togglePassword = document.getElementById('togglePassword');
+    const passwordField = document.getElementById('password');
+    const eyeIcon = document.getElementById('eyeIcon');
+    const eyeFallback = document.getElementById('eyeFallback');
+
+    if (togglePassword && passwordField) {
+        // Check if Font Awesome is loaded, if not use emoji fallback
+        const checkFontAwesome = () => {
+            const testIcon = document.createElement('i');
+            testIcon.className = 'fas fa-eye';
+            testIcon.style.position = 'absolute';
+            testIcon.style.left = '-9999px';
+            document.body.appendChild(testIcon);
+            
+            const computedStyle = window.getComputedStyle(testIcon, ':before');
+            const isLoaded = computedStyle.getPropertyValue('content') !== 'none' && computedStyle.getPropertyValue('content') !== '';
+            
+            document.body.removeChild(testIcon);
+            return isLoaded;
+        };
+
+        // Set up icon display
+        setTimeout(() => {
+            if (!checkFontAwesome() && eyeFallback) {
+                eyeIcon.style.display = 'none';
+                eyeFallback.style.display = 'inline';
+            }
+        }, 100);
+
+        // Add CSS for smooth transitions
+        const style = document.createElement('style');
+        style.textContent = `
+            #togglePassword {
+                transition: all 0.2s ease;
+                border-left: 1px solid #e5e7eb;
+            }
+            #togglePassword:hover {
+                background-color: rgba(59, 130, 246, 0.1) !important;
+                color: #2563eb !important;
+            }
+            #eyeIcon, #eyeFallback {
+                transition: transform 0.2s ease;
+            }
+        `;
+        document.head.appendChild(style);
+
+        togglePassword.addEventListener('click', function() {
+            // Toggle the password field type
+            const type = passwordField.getAttribute('type') === 'password' ? 'text' : 'password';
+            passwordField.setAttribute('type', type);
+            
+            // Toggle the icon with animation
+            const activeIcon = eyeIcon.style.display !== 'none' ? eyeIcon : eyeFallback;
+            activeIcon.style.transform = 'scale(0.8)';
+            
+            setTimeout(() => {
+                if (eyeIcon.style.display !== 'none') {
+                    // Using Font Awesome icons
+                    if (type === 'password') {
+                        eyeIcon.classList.remove('fa-eye-slash');
+                        eyeIcon.classList.add('fa-eye');
+                        togglePassword.setAttribute('title', 'Show password');
+                    } else {
+                        eyeIcon.classList.remove('fa-eye');
+                        eyeIcon.classList.add('fa-eye-slash');
+                        togglePassword.setAttribute('title', 'Hide password');
+                    }
+                } else {
+                    // Using emoji fallback
+                    if (type === 'password') {
+                        eyeFallback.textContent = '👁️';
+                        togglePassword.setAttribute('title', 'Show password');
+                    } else {
+                        eyeFallback.textContent = '🙈';
+                        togglePassword.setAttribute('title', 'Hide password');
+                    }
+                }
+                activeIcon.style.transform = 'scale(1)';
+            }, 100);
+        });
+
+        // Set initial tooltip
+        togglePassword.setAttribute('title', 'Show password');
+        
+        // Add click feedback
+        togglePassword.addEventListener('mousedown', function() {
+            const activeIcon = eyeIcon.style.display !== 'none' ? eyeIcon : eyeFallback;
+            activeIcon.style.transform = 'scale(0.9)';
+        });
+        
+        togglePassword.addEventListener('mouseup', function() {
+            const activeIcon = eyeIcon.style.display !== 'none' ? eyeIcon : eyeFallback;
+            activeIcon.style.transform = 'scale(1)';
+        });
+    }
+});
+</script>
