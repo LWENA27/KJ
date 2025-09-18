@@ -1,0 +1,26 @@
+{
+  "name": "kj",
+  "version": "1.0.0",
+  "description": "",
+  "main": "sw.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/LWENA27/KJ.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/LWENA27/KJ/issues"
+  },
+  "homepage": "https://github.com/LWENA27/KJ#readme",
+  "devDependencies": {
+    "tailwindcss": "^4.1.13"
+  },
+  "dependencies": {
+    "@tailwindcss/cli": "^4.1.13"
+  }
+}

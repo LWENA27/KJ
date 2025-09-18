@@ -4,28 +4,25 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title><?php echo isset($title) ? htmlspecialchars($title) . ' - ' : ''; ?>Healthcare Management System</title>
-    <!-- Tailwind CSS -->
-    <script src="https://cdn.tailwindcss.com"></script>
-    <!-- Font Awesome (Local) -->
-    <link rel="stylesheet" href="/KJ/assets/css/fontawesome.min.css">
-    <!-- Google Fonts -->
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <!-- Local CSS Files -->
+    <link rel="stylesheet" href="/assets/css/tailwind.css">
+    <link rel="stylesheet" href="/assets/css/fontawesome.min.css">
+    <link rel="stylesheet" href="/assets/css/fonts.css">
     
-    <!-- PWA Manifest -->
-    <link rel="manifest" href="/KJ/manifest.json">
+    <!-- PWA Manifest - Optional -->
+    <!-- <link rel="manifest" href="/manifest.json"> -->
     <meta name="theme-color" content="#4facfe">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="default">
     <meta name="apple-mobile-web-app-title" content="KJ Healthcare">
-    <link rel="apple-touch-icon" href="/KJ/assets/icons/icon-192x192.png">
+    <!-- <link rel="apple-touch-icon" href="/assets/icons/icon-192x192.png"> -->
     
-    <!-- Service Worker Registration -->
+    <!-- Service Worker Registration - Optional -->
+    <!--
     <script>
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', () => {
-                navigator.serviceWorker.register('/KJ/sw.js')
+                navigator.serviceWorker.register('/sw.js')
                     .then(registration => {
                         console.log('SW registered: ', registration);
                     })
@@ -35,6 +32,7 @@
             });
         }
     </script>
+    -->
     <style>
         /* Healthcare Design System */
         :root {
@@ -873,7 +871,7 @@
                             ['url' => 'receptionist/patients', 'icon' => 'fas fa-users', 'text' => 'Patients', 'badge' => isset($sidebar_data['pending_patients']) ? $sidebar_data['pending_patients'] : '0', 'color' => 'blue'],
                             ['url' => 'receptionist/appointments', 'icon' => 'fas fa-calendar-check', 'text' => 'Appointments', 'badge' => isset($sidebar_data['upcoming_appointments']) ? $sidebar_data['upcoming_appointments'] : '0', 'color' => 'green'],
                             ['url' => 'receptionist/payments', 'icon' => 'fas fa-credit-card', 'text' => 'Payments', 'badge' => '', 'color' => 'purple'],
-                            ['url' => 'receptionist/medicines', 'icon' => 'fas fa-pills', 'text' => 'Medicine', 'badge' => isset($sidebar_data['low_stock_medicines']) && $sidebar_data['low_stock_medicines'] > 0 ? '!' : '', 'color' => 'yellow'],
+                            ['url' => 'receptionist/medicine', 'icon' => 'fas fa-pills', 'text' => 'Medicine', 'badge' => isset($sidebar_data['low_stock_medicines']) && $sidebar_data['low_stock_medicines'] > 0 ? '!' : '', 'color' => 'yellow'],
                             ['url' => 'receptionist/reports', 'icon' => 'fas fa-chart-bar', 'text' => 'Reports', 'badge' => '', 'color' => 'indigo'],
                         ];
                     } elseif ($role === 'doctor') {

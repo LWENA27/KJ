@@ -79,7 +79,7 @@
         </div>
 
         <!-- Low Stock Medicines -->
-        <div class="bg-gradient-to-r from-yellow-500 to-orange-500 rounded-lg shadow-lg p-6 text-white transform hover:scale-105 transition-all duration-300 cursor-pointer group" onclick="window.location.href='/KJ/receptionist/medicines'">
+        <div class="bg-gradient-to-r from-yellow-500 to-orange-500 rounded-lg shadow-lg p-6 text-white transform hover:scale-105 transition-all duration-300 cursor-pointer group" onclick="window.location.href='/KJ/receptionist/medicine'">>
             <div class="flex items-center justify-between">
                 <div>
                     <p class="text-yellow-100 text-sm font-medium">Low Stock Alert</p>
@@ -106,10 +106,24 @@
             <div class="flex items-center justify-between">
                 <div>
                     <p class="text-purple-100 text-sm font-medium">Payments Today</p>
-                    <p class="text-3xl font-bold">$2,450</p>
+                    <p class="text-3xl font-bold"><?php 
+                        $amount = $payments_today['total_today'] ?: 0;
+                        echo 'Tsh ' . number_format($amount, 0, '.', ','); 
+                    ?></p>
                     <div class="flex items-center mt-2">
                         <i class="fas fa-money-bill-wave mr-2 text-purple-200"></i>
-                        <span class="text-sm text-purple-200">+15% vs yesterday</span>
+                        <span class="text-sm text-purple-200">
+                            <?php 
+                            $change = round($percentage_change, 1);
+                            if ($change > 0) {
+                                echo "+{$change}% vs yesterday";
+                            } elseif ($change < 0) {
+                                echo "{$change}% vs yesterday";
+                            } else {
+                                echo "No change vs yesterday";
+                            }
+                            ?>
+                        </span>
                     </div>
                 </div>
                 <div class="bg-purple-400 bg-opacity-30 rounded-full p-3 group-hover:bg-opacity-50 transition-all">
@@ -288,7 +302,14 @@
                     </div>
                     <div class="flex items-center justify-between">
                         <span class="text-indigo-100">Payments:</span>
-                        <span class="font-bold">$2,450</span>
+                        <span class="font-bold"><?php 
+                            $amount = $payments_today['total_today'] ?: 0;
+                            echo 'Tsh ' . number_format($amount, 0, '.', ','); 
+                        ?></span>
+                    </div>
+                    <div class="flex items-center justify-between">
+                        <span class="text-indigo-100">Payment Count:</span>
+                        <span class="font-bold"><?php echo $payments_today['payment_count'] ?: 0; ?> transactions</span>
                     </div>
                 </div>
                 <div class="mt-4 pt-4 border-t border-indigo-400">

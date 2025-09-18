@@ -1011,3 +1011,5 @@
 [13-Sep-2025 14:43:56 UTC] PHP Warning:  include(): Failed opening '/var/www/html/KJ/includes/../views/lab/inventory.php' for inclusion (include_path='.:/usr/share/php') in /var/www/html/KJ/includes/BaseController.php on line 19
 [13-Sep-2025 14:46:33 UTC] PHP Warning:  include(/var/www/html/KJ/includes/../views/lab/samples.php): Failed to open stream: No such file or directory in /var/www/html/KJ/includes/BaseController.php on line 19
 [13-Sep-2025 14:46:33 UTC] PHP Warning:  include(): Failed opening '/var/www/html/KJ/includes/../views/lab/samples.php' for inclusion (include_path='.:/usr/share/php') in /var/www/html/KJ/includes/BaseController.php on line 19
+[17-Sep-2025 04:15:33 UTC] Error in controller: Call to undefined method ReceptionistController::getSidebarData()
+[17-Sep-2025 15:24:18 UTC] Error in controller: syntax error, unexpected end of file

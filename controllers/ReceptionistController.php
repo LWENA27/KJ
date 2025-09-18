@@ -29,9 +29,40 @@ class ReceptionistController extends BaseController {
             LIMIT 5
         ")->fetchAll();
 
+        // Get today's payment summary
+        $stmt = $this->pdo->prepare("
+            SELECT 
+                COALESCE(SUM(amount), 0) as total_today,
+                COUNT(*) as payment_count
+            FROM payments 
+            WHERE DATE(payment_date) = CURDATE()
+        ");
+        $stmt->execute();
+        $payments_today = $stmt->fetch();
+
+        // Get yesterday's payment for comparison
+        $stmt = $this->pdo->prepare("
+            SELECT COALESCE(SUM(amount), 0) as total_yesterday
+            FROM payments 
+            WHERE DATE(payment_date) = DATE_SUB(CURDATE(), INTERVAL 1 DAY)
+        ");
+        $stmt->execute();
+        $payments_yesterday = $stmt->fetchColumn();
+
+        // Calculate percentage change
+        $percentage_change = 0;
+        if ($payments_yesterday > 0) {
+            $percentage_change = (($payments_today['total_today'] - $payments_yesterday) / $payments_yesterday) * 100;
+        } elseif ($payments_today['total_today'] > 0) {
+            $percentage_change = 100; // 100% increase from 0
+        }
+
         $this->render('receptionist/dashboard', [
             'appointments' => $appointments,
-            'recent_patients' => $recent_patients
+            'recent_patients' => $recent_patients,
+            'payments_today' => $payments_today,
+            'percentage_change' => $percentage_change,
+            'sidebar_data' => $this->getSidebarData()
         ]);
     }
 
@@ -54,7 +85,8 @@ class ReceptionistController extends BaseController {
 
         $this->render('receptionist/patients', [
             'patients' => $patients,
-            'csrf_token' => $this->generateCSRF()
+            'csrf_token' => $this->generateCSRF(),
+            'sidebar_data' => $this->getSidebarData()
         ]);
     }
 
@@ -152,7 +184,8 @@ class ReceptionistController extends BaseController {
         $appointments = $stmt->fetchAll();
 
         $this->render('receptionist/appointments', [
-            'appointments' => $appointments
+            'appointments' => $appointments,
+            'sidebar_data' => $this->getSidebarData()
         ]);
     }
 
@@ -168,7 +201,8 @@ class ReceptionistController extends BaseController {
         $payments = $stmt->fetchAll();
 
         $this->render('receptionist/payments', [
-            'payments' => $payments
+            'payments' => $payments,
+            'sidebar_data' => $this->getSidebarData()
         ]);
     }
 
@@ -307,7 +341,8 @@ class ReceptionistController extends BaseController {
             'categories' => $categories,
             'recent_transactions' => $recent_transactions,
             'csrf_token' => $this->generateCSRF(),
-            'notifications' => $notifications
+            'notifications' => $notifications,
+            'sidebar_data' => $this->getSidebarData()
         ]);
     }
 
@@ -594,6 +629,137 @@ class ReceptionistController extends BaseController {
         }
 
         $this->redirect('receptionist/medicine');
+    }
+
+    private function getSidebarData() {
+        // Get pending patients count (more accurate)
+        $stmt = $this->pdo->prepare("
+            SELECT COUNT(DISTINCT p.id) as pending_patients
+            FROM patients p
+            LEFT JOIN workflow_status ws ON p.id = ws.patient_id
+            WHERE ws.current_step IS NULL 
+               OR (ws.current_step != 'completed' AND ws.current_step != 'cancelled')
+        ");
+        $stmt->execute();
+        $pending_patients = $stmt->fetchColumn();
+
+        // Get today's appointments count (all statuses for today)
+        $stmt = $this->pdo->prepare("
+            SELECT COUNT(*) as upcoming_appointments
+            FROM consultations c
+            WHERE DATE(c.appointment_date) = CURDATE()
+        ");
+        $stmt->execute();
+        $upcoming_appointments = $stmt->fetchColumn();
+
+        // Get low stock medicines count (stock <= 10 or near expiry)
+        $stmt = $this->pdo->prepare("
+            SELECT COUNT(*) as low_stock_medicines
+            FROM medicines m
+            WHERE m.stock_quantity <= 10 
+               OR (m.expiry_date IS NOT NULL AND m.expiry_date <= DATE_ADD(CURDATE(), INTERVAL 30 DAY))
+        ");
+        $stmt->execute();
+        $low_stock_medicines = $stmt->fetchColumn();
+
+        return [
+            'pending_patients' => $pending_patients ?: 0,
+            'upcoming_appointments' => $upcoming_appointments ?: 0,
+            'low_stock_medicines' => $low_stock_medicines ?: 0
+        ];
+    }
+
+    public function reports() {
+        // Daily revenue report
+        $daily_revenue_stmt = $this->pdo->prepare("
+            SELECT 
+                DATE(payment_date) as date,
+                COUNT(*) as payment_count,
+                SUM(amount) as total_amount
+            FROM payments 
+            WHERE payment_date >= DATE_SUB(CURDATE(), INTERVAL 30 DAY)
+            GROUP BY DATE(payment_date)
+            ORDER BY date DESC
+        ");
+        $daily_revenue_stmt->execute();
+        $daily_revenue = $daily_revenue_stmt->fetchAll();
+
+        // Patient statistics
+        $patient_stats_stmt = $this->pdo->prepare("
+            SELECT 
+                COUNT(*) as total_patients,
+                COUNT(CASE WHEN DATE(created_at) = CURDATE() THEN 1 END) as new_today,
+                COUNT(CASE WHEN DATE(created_at) >= DATE_SUB(CURDATE(), INTERVAL 7 DAY) THEN 1 END) as new_week,
+                COUNT(CASE WHEN DATE(created_at) >= DATE_SUB(CURDATE(), INTERVAL 30 DAY) THEN 1 END) as new_month
+            FROM patients
+        ");
+        $patient_stats_stmt->execute();
+        $patient_stats = $patient_stats_stmt->fetch();
+
+        // Appointment statistics
+        $appointment_stats_stmt = $this->pdo->prepare("
+            SELECT 
+                COUNT(*) as total_appointments,
+                COUNT(CASE WHEN DATE(appointment_date) = CURDATE() THEN 1 END) as today,
+                COUNT(CASE WHEN DATE(appointment_date) >= DATE_SUB(CURDATE(), INTERVAL 7 DAY) THEN 1 END) as this_week,
+                COUNT(CASE WHEN status = 'completed' THEN 1 END) as completed,
+                COUNT(CASE WHEN status = 'cancelled' THEN 1 END) as cancelled
+            FROM appointments
+        ");
+        $appointment_stats_stmt->execute();
+        $appointment_stats = $appointment_stats_stmt->fetch();
+
+        // Payment method breakdown
+        $payment_methods_stmt = $this->pdo->prepare("
+            SELECT 
+                payment_method,
+                COUNT(*) as count,
+                SUM(amount) as total_amount
+            FROM payments 
+            WHERE payment_date >= DATE_SUB(CURDATE(), INTERVAL 30 DAY)
+            GROUP BY payment_method
+            ORDER BY total_amount DESC
+        ");
+        $payment_methods_stmt->execute();
+        $payment_methods = $payment_methods_stmt->fetchAll();
+
+        // Top doctors by appointments
+        $top_doctors_stmt = $this->pdo->prepare("
+            SELECT 
+                CONCAT(u.first_name, ' ', u.last_name) as doctor_name,
+                COUNT(a.id) as appointment_count,
+                COUNT(CASE WHEN a.status = 'completed' THEN 1 END) as completed_count
+            FROM users u
+            LEFT JOIN appointments a ON u.id = a.doctor_id
+            WHERE u.role = 'doctor'
+            GROUP BY u.id, u.first_name, u.last_name
+            ORDER BY appointment_count DESC
+            LIMIT 5
+        ");
+        $top_doctors_stmt->execute();
+        $top_doctors = $top_doctors_stmt->fetchAll();
+
+        // Medicine inventory status
+        $medicine_stats_stmt = $this->pdo->prepare("
+            SELECT 
+                COUNT(*) as total_medicines,
+                COUNT(CASE WHEN stock_quantity <= 10 THEN 1 END) as low_stock,
+                COUNT(CASE WHEN expiry_date <= DATE_ADD(CURDATE(), INTERVAL 30 DAY) THEN 1 END) as expiring_soon,
+                SUM(stock_quantity * unit_price) as total_inventory_value
+            FROM medicines
+        ");
+        $medicine_stats_stmt->execute();
+        $medicine_stats = $medicine_stats_stmt->fetch();
+
+        $this->render('receptionist/reports', [
+            'daily_revenue' => $daily_revenue,
+            'patient_stats' => $patient_stats,
+            'appointment_stats' => $appointment_stats,
+            'payment_methods' => $payment_methods,
+            'top_doctors' => $top_doctors,
+            'medicine_stats' => $medicine_stats,
+            'sidebar_data' => $this->getSidebarData()
+        ]);
     }
 }
 ?>

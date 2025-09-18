@@ -224,5 +224,15 @@ class BaseController {
 
         return $this->pdo->lastInsertId();
     }
+
+    // Format currency in Tanzanian Shillings
+    protected function formatCurrency($amount) {
+        return 'Tsh ' . number_format((float)$amount, 0, '.', ',');
+    }
+
+    // Format currency without prefix (for inputs)
+    protected function formatAmount($amount) {
+        return number_format((float)$amount, 0, '.', ',');
+    }
 }
 ?>
