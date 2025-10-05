@@ -86,27 +86,59 @@ class DoctorController extends BaseController {
         $stmt->execute([$doctor_id]);
         $recent_results = $stmt->fetchAll();
 
-        // Available patients (paid for consultation)
-        $stmt = $this->pdo->prepare("
+        // Available patients (paid for consultation) - Today's patients in FIFO order
+        $filter_date = $_GET['date'] ?? date('Y-m-d');
+        $filter_date = trim($filter_date);
+        $search_q = trim($_GET['q'] ?? '');
+
+        $sql = "
             SELECT p.*,
-                   COALESCE(consultation_counts.consultation_count, 0) as consultation_count,
+                   COALESCE(cc.consultation_count, 0) as consultation_count,
                    ws.consultation_registration_paid,
                    ws.lab_tests_paid,
-                   ws.results_review_paid
+                   ws.results_review_paid,
+                   MIN(c.created_at) as first_request_at
             FROM patients p
             LEFT JOIN workflow_status ws ON p.id = ws.patient_id
+            LEFT JOIN consultations c ON p.id = c.patient_id
             LEFT JOIN (
                 SELECT patient_id, COUNT(*) as consultation_count
                 FROM consultations
-                WHERE doctor_id = ?
                 GROUP BY patient_id
-            ) consultation_counts ON p.id = consultation_counts.patient_id
+            ) cc ON p.id = cc.patient_id
             WHERE ws.consultation_registration_paid = TRUE
-            ORDER BY p.first_name
-            LIMIT 10
-        ");
-        $stmt->execute([$doctor_id]);
+              AND DATE(c.created_at) = ?
+        ";
+
+        $params = [$filter_date];
+
+        // Search filter on name or phone
+        if ($search_q !== '') {
+            $sql .= " AND (CONCAT(p.first_name, ' ', p.last_name) LIKE ? OR p.phone LIKE ?) ";
+            $like = "%{$search_q}%";
+            $params[] = $like;
+            $params[] = $like;
+        }
+
+        $sql .= " GROUP BY p.id, ws.consultation_registration_paid, ws.lab_tests_paid, ws.results_review_paid, cc.consultation_count ";
+        $sql .= " ORDER BY first_request_at ASC, p.first_name ASC ";
+
+        $stmt = $this->pdo->prepare($sql);
+        $stmt->execute($params);
         $available_patients = $stmt->fetchAll();
+
+                // Pending consultations (registered / scheduled / waiting) for this doctor
+                $stmt = $this->pdo->prepare(
+                        "SELECT c.*, p.first_name AS patient_first, p.last_name AS patient_last, p.date_of_birth AS patient_dob, p.phone AS patient_phone, ws.consultation_registration_paid
+                         FROM consultations c
+                         JOIN patients p ON c.patient_id = p.id
+                         LEFT JOIN workflow_status ws ON p.id = ws.patient_id
+                         WHERE c.doctor_id = ?
+                             AND c.status NOT IN ('completed', 'cancelled')
+                         ORDER BY COALESCE(c.created_at, c.appointment_date) ASC"
+                );
+                $stmt->execute([$doctor_id]);
+                $pending_consultations = $stmt->fetchAll();
 
         $this->render('doctor/dashboard', [
             'today_completed' => $today_completed,
@@ -115,6 +147,7 @@ class DoctorController extends BaseController {
             'stats' => $stats,
             'recent_results' => $recent_results,
             'available_patients' => $available_patients,
+            'pending_consultations' => $pending_consultations,
             'csrf_token' => $this->generateCSRF()
         ]);
     }
@@ -124,14 +157,18 @@ class DoctorController extends BaseController {
 
         $stmt = $this->pdo->prepare("
             SELECT c.*, p.first_name, p.last_name, p.date_of_birth, p.phone,
-                   ws.consultation_registration_paid, ws.lab_tests_paid, ws.results_review_paid
+                   ws.consultation_registration_paid, ws.lab_tests_paid, ws.results_review_paid,
+                   COALESCE(c.main_complaint, c.symptoms) as main_complaint,
+                   COALESCE(c.final_diagnosis, c.preliminary_diagnosis, c.diagnosis) as final_diagnosis,
+                   c.preliminary_diagnosis,
+                   COALESCE(c.appointment_date, c.visit_date, c.created_at) as appointment_date
             FROM consultations c
             JOIN patients p ON c.patient_id = p.id
             LEFT JOIN workflow_status ws ON p.id = ws.patient_id
             WHERE c.doctor_id = ?
-            ORDER BY c.appointment_date DESC
+            ORDER BY COALESCE(c.appointment_date, c.visit_date, c.created_at) DESC
         ");
-        $stmt->execute([$doctor_id]);
+            $stmt->execute([$doctor_id]);
         $consultations = $stmt->fetchAll();
 
         $this->render('doctor/consultations', [

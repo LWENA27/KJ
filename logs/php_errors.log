@@ -1,0 +1,6 @@
+[05-Oct-2025 22:43:42 Europe/Berlin] PHP Deprecated:  Constant FILTER_SANITIZE_STRING is deprecated in C:\xampp\htdocs\KJ\controllers\DoctorController.php on line 90
+[05-Oct-2025 22:43:42 Europe/Berlin] PHP Deprecated:  Constant FILTER_SANITIZE_STRING is deprecated in C:\xampp\htdocs\KJ\controllers\DoctorController.php on line 91
+[05-Oct-2025 22:44:36 Europe/Berlin] PHP Deprecated:  Constant FILTER_SANITIZE_STRING is deprecated in C:\xampp\htdocs\KJ\controllers\DoctorController.php on line 90
+[05-Oct-2025 22:44:36 Europe/Berlin] PHP Deprecated:  Constant FILTER_SANITIZE_STRING is deprecated in C:\xampp\htdocs\KJ\controllers\DoctorController.php on line 91
+[05-Oct-2025 22:56:39 Europe/Berlin] Error in controller: SQLSTATE[42S02]: Base table or view not found: 1146 Table 'zahanati.appointments' doesn't exist
+[05-Oct-2025 23:13:08 Europe/Berlin] Error in controller: syntax error, unexpected end of file, expecting "elseif" or "else" or "endif"

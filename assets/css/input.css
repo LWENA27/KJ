@@ -493,3 +493,79 @@ body {
     }
 }
 
+/* Mobile Consultation Cards */
+.mobile-consultations-cards {
+    @apply space-y-4;
+}
+
+.mobile-consultation-card {
+    @apply bg-white border border-gray-200 rounded-lg shadow-sm overflow-hidden;
+}
+
+.mobile-consultation-header {
+    @apply flex items-center p-4 border-b border-gray-100;
+}
+
+.mobile-consultation-avatar {
+    @apply w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center mr-3 flex-shrink-0;
+}
+
+.mobile-consultation-info h3 {
+    @apply text-base font-semibold text-gray-900 leading-tight;
+}
+
+.mobile-consultation-info p {
+    @apply text-sm text-gray-600 mt-1;
+}
+
+.mobile-consultation-details {
+    @apply p-4 space-y-3;
+}
+
+.mobile-consultation-actions {
+    @apply p-4 border-t border-gray-100 space-y-2;
+}
+
+/* Desktop Table Wrapper for Consultations */
+.consultations-table-wrapper {
+    @apply min-h-0;
+}
+
+@media (max-width: 640px) {
+    /* Extra mobile optimizations for consultations */
+    .mobile-consultation-card {
+        @apply mx-2;
+    }
+    
+    .mobile-consultation-details {
+        @apply px-3 py-3;
+    }
+    
+    .mobile-consultation-actions {
+        @apply px-3 py-3 space-y-3;
+    }
+    
+    .mobile-detail-value {
+        @apply break-words;
+    }
+}
+
+@media (max-width: 420px) {
+    /* Ultra-small screens for consultations */
+    .mobile-consultation-header {
+        @apply p-3;
+    }
+    
+    .mobile-consultation-avatar {
+        @apply w-10 h-10;
+    }
+    
+    .mobile-consultation-info h3 {
+        @apply text-sm font-medium;
+    }
+    
+    .mobile-consultation-info p {
+        @apply text-xs;
+    }
+}
+
