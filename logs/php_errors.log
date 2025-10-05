@@ -1013,3 +1013,32 @@
 [13-Sep-2025 14:46:33 UTC] PHP Warning:  include(): Failed opening '/var/www/html/KJ/includes/../views/lab/samples.php' for inclusion (include_path='.:/usr/share/php') in /var/www/html/KJ/includes/BaseController.php on line 19
 [17-Sep-2025 04:15:33 UTC] Error in controller: Call to undefined method ReceptionistController::getSidebarData()
 [17-Sep-2025 15:24:18 UTC] Error in controller: syntax error, unexpected end of file
+[05-Oct-2025 13:10:56 UTC] Error in controller: SQLSTATE[42S02]: Base table or view not found: 1146 Table 'zahanati.workflow_status' doesn't exist
+[05-Oct-2025 13:13:32 UTC] Error in controller: SQLSTATE[42S02]: Base table or view not found: 1146 Table 'zahanati.workflow_status' doesn't exist
+[05-Oct-2025 13:13:33 UTC] Error in controller: SQLSTATE[42S02]: Base table or view not found: 1146 Table 'zahanati.workflow_status' doesn't exist
+[05-Oct-2025 13:14:40 UTC] Error in controller: SQLSTATE[42S02]: Base table or view not found: 1146 Table 'zahanati.workflow_status' doesn't exist
+[05-Oct-2025 13:31:02 UTC] Error in controller: SQLSTATE[42S02]: Base table or view not found: 1146 Table 'zahanati.workflow_status' doesn't exist
+[05-Oct-2025 13:34:16 UTC] Error in controller: SQLSTATE[42S02]: Base table or view not found: 1146 Table 'zahanati.workflow_status' doesn't exist
+[05-Oct-2025 13:44:24 UTC] Error in controller: SQLSTATE[42000]: Syntax error or access violation: 1055 Expression #2 of SELECT list is not in GROUP BY clause and contains nonaggregated column 'zahanati.p.first_name' which is not functionally dependent on columns in GROUP BY clause; this is incompatible with sql_mode=only_full_group_by
+[05-Oct-2025 13:49:09 UTC] Error in controller: SQLSTATE[42000]: Syntax error or access violation: 1055 Expression #2 of SELECT list is not in GROUP BY clause and contains nonaggregated column 'zahanati.p.first_name' which is not functionally dependent on columns in GROUP BY clause; this is incompatible with sql_mode=only_full_group_by
+[05-Oct-2025 14:02:40 UTC] Error in controller: SQLSTATE[42000]: Syntax error or access violation: 1055 Expression #2 of SELECT list is not in GROUP BY clause and contains nonaggregated column 'zahanati.p.first_name' which is not functionally dependent on columns in GROUP BY clause; this is incompatible with sql_mode=only_full_group_by
+[05-Oct-2025 14:13:02 UTC] PHP Deprecated:  strtotime(): Passing null to parameter #1 ($datetime) of type string is deprecated in /var/www/html/KJ/views/doctor/patients.php on line 38
+[05-Oct-2025 14:13:02 UTC] PHP Deprecated:  date_create(): Passing null to parameter #1 ($datetime) of type string is deprecated in /var/www/html/KJ/views/doctor/patients.php on line 39
+[05-Oct-2025 14:21:02 UTC] PHP Deprecated:  strtotime(): Passing null to parameter #1 ($datetime) of type string is deprecated in /var/www/html/KJ/views/admin/patients.php on line 42
+[05-Oct-2025 14:21:02 UTC] PHP Deprecated:  date_create(): Passing null to parameter #1 ($datetime) of type string is deprecated in /var/www/html/KJ/views/admin/patients.php on line 44
+[05-Oct-2025 14:21:02 UTC] PHP Deprecated:  ucfirst(): Passing null to parameter #1 ($string) of type string is deprecated in /var/www/html/KJ/views/admin/patients.php on line 50
+[05-Oct-2025 14:21:02 UTC] PHP Deprecated:  strtotime(): Passing null to parameter #1 ($datetime) of type string is deprecated in /var/www/html/KJ/views/admin/patients.php on line 42
+[05-Oct-2025 14:21:02 UTC] PHP Deprecated:  date_create(): Passing null to parameter #1 ($datetime) of type string is deprecated in /var/www/html/KJ/views/admin/patients.php on line 44
+[05-Oct-2025 14:21:02 UTC] PHP Deprecated:  ucfirst(): Passing null to parameter #1 ($string) of type string is deprecated in /var/www/html/KJ/views/admin/patients.php on line 50
+[05-Oct-2025 14:21:26 UTC] PHP Deprecated:  strtotime(): Passing null to parameter #1 ($datetime) of type string is deprecated in /var/www/html/KJ/views/admin/patients.php on line 42
+[05-Oct-2025 14:21:26 UTC] PHP Deprecated:  date_create(): Passing null to parameter #1 ($datetime) of type string is deprecated in /var/www/html/KJ/views/admin/patients.php on line 44
+[05-Oct-2025 14:21:26 UTC] PHP Deprecated:  ucfirst(): Passing null to parameter #1 ($string) of type string is deprecated in /var/www/html/KJ/views/admin/patients.php on line 50
+[05-Oct-2025 14:21:26 UTC] PHP Deprecated:  strtotime(): Passing null to parameter #1 ($datetime) of type string is deprecated in /var/www/html/KJ/views/admin/patients.php on line 42
+[05-Oct-2025 14:21:26 UTC] PHP Deprecated:  date_create(): Passing null to parameter #1 ($datetime) of type string is deprecated in /var/www/html/KJ/views/admin/patients.php on line 44
+[05-Oct-2025 14:21:26 UTC] PHP Deprecated:  ucfirst(): Passing null to parameter #1 ($string) of type string is deprecated in /var/www/html/KJ/views/admin/patients.php on line 50
+[05-Oct-2025 14:24:24 UTC] PHP Deprecated:  strtotime(): Passing null to parameter #1 ($datetime) of type string is deprecated in /var/www/html/KJ/views/admin/patients.php on line 42
+[05-Oct-2025 14:24:24 UTC] PHP Deprecated:  date_create(): Passing null to parameter #1 ($datetime) of type string is deprecated in /var/www/html/KJ/views/admin/patients.php on line 44
+[05-Oct-2025 14:24:24 UTC] PHP Deprecated:  ucfirst(): Passing null to parameter #1 ($string) of type string is deprecated in /var/www/html/KJ/views/admin/patients.php on line 50
+[05-Oct-2025 14:24:24 UTC] PHP Deprecated:  strtotime(): Passing null to parameter #1 ($datetime) of type string is deprecated in /var/www/html/KJ/views/admin/patients.php on line 42
+[05-Oct-2025 14:24:24 UTC] PHP Deprecated:  date_create(): Passing null to parameter #1 ($datetime) of type string is deprecated in /var/www/html/KJ/views/admin/patients.php on line 44
+[05-Oct-2025 14:24:24 UTC] PHP Deprecated:  ucfirst(): Passing null to parameter #1 ($string) of type string is deprecated in /var/www/html/KJ/views/admin/patients.php on line 50
