@@ -11,31 +11,21 @@ class DoctorController extends BaseController {
     public function dashboard() {
         $doctor_id = $_SESSION['user_id'];
 
-        // Get patients ready for consultation (paid consultation fee)
-        $stmt = $this->pdo->prepare("
-            SELECT p.*, ws.current_step, ws.consultation_registration_paid, ws.lab_tests_required, ws.medicine_prescribed
-            FROM patients p
-            LEFT JOIN workflow_status ws ON p.id = ws.patient_id
-            WHERE ws.consultation_registration_paid = 1 
-            AND ws.current_step IN ('consultation_registration', 'results_review')
-            AND p.id NOT IN (
-                SELECT patient_id FROM consultations 
-                WHERE doctor_id = ? AND DATE(created_at) = CURDATE() AND status = 'completed'
-            )
-            ORDER BY p.created_at ASC
-        ");
-        $stmt->execute([$doctor_id]);
-        $pending_consultations = $stmt->fetchAll();
+        // Patients ready for consultation removed from dashboard UI - no query needed
 
-        // Today's completed consultations
-        $stmt = $this->pdo->prepare("
-            SELECT c.*, p.first_name, p.last_name, p.date_of_birth, p.phone
-            FROM consultations c
-            JOIN patients p ON c.patient_id = p.id
-            WHERE c.doctor_id = ? AND DATE(c.created_at) = CURDATE() AND c.status = 'completed'
-            ORDER BY c.created_at DESC
-        ");
-        $stmt->execute([$doctor_id]);
+                // Today's completed consultations (check both created_at and appointment_date for robustness)
+                                $stmt = $this->pdo->prepare("                        SELECT c.*, p.first_name, p.last_name, p.date_of_birth, p.phone
+                                                FROM consultations c
+                                                JOIN patients p ON c.patient_id = p.id
+                                                WHERE c.doctor_id = ?
+                                                    AND c.status = 'completed'
+                                                    AND (
+                                                                        DATE(c.created_at) = CURDATE()
+                                                                        OR DATE(c.appointment_date) = CURDATE()
+                                                                    )
+                                                ORDER BY COALESCE(c.created_at, c.appointment_date) DESC
+                                ");
+                $stmt->execute([$doctor_id]);
         $today_completed = $stmt->fetchAll();
 
         // Consultation statistics
@@ -51,8 +41,8 @@ class DoctorController extends BaseController {
         $stats = $stmt->fetch();
 
     // Patients waiting for lab results review (join lab_results with tests to get names)
-        $stmt = $this->pdo->prepare("
-            SELECT p.*, ws.current_step,
+        // Scope to consultations that belong to this doctor
+        $stmt = $this->pdo->prepare("            SELECT p.*, ws.current_step,
                    ag.test_names,
                    ag.latest_result_date as result_date
             FROM patients p
@@ -63,14 +53,14 @@ class DoctorController extends BaseController {
                MAX(lr.created_at) AS latest_result_date
                 FROM lab_results lr
                 JOIN consultations c ON lr.consultation_id = c.id
-        JOIN tests t ON lr.test_id = t.id
-        WHERE lr.status = 'completed'
+                JOIN tests t ON lr.test_id = t.id
+                WHERE lr.status = 'completed' AND c.doctor_id = ?
                 GROUP BY c.patient_id
             ) ag ON p.id = ag.patient_id
-            WHERE ws.current_step = 'results_review'
+            WHERE ws.current_step = 'results_review' AND ag.test_names IS NOT NULL
             ORDER BY ag.latest_result_date DESC
         ");
-        $stmt->execute();
+        $stmt->execute([$doctor_id]);
         $pending_results = $stmt->fetchAll();
 
         // Get all doctors for patient allocation
@@ -119,7 +109,6 @@ class DoctorController extends BaseController {
         $available_patients = $stmt->fetchAll();
 
         $this->render('doctor/dashboard', [
-            'pending_consultations' => $pending_consultations,
             'today_completed' => $today_completed,
             'pending_results' => $pending_results,
             'other_doctors' => $other_doctors,
@@ -477,6 +466,21 @@ class DoctorController extends BaseController {
         $this->render('doctor/lab_results_view', [
             'patient' => $patient,
             'lab_results' => $lab_results,
+            'csrf_token' => $this->generateCSRF()
+        ]);
+    }
+
+    // List lab results index for the doctor (route: /doctor/lab_results)
+    public function lab_results() {
+        $doctor_id = $_SESSION['user_id'];
+
+        // Fetch recent lab results for patients that belong to this doctor
+        $stmt = $this->pdo->prepare("\n            SELECT lr.*, t.name as test_name, p.first_name, p.last_name, c.appointment_date, lr.result_value, lr.result_text, lr.status, lr.created_at as created_at\n            FROM lab_results lr\n            JOIN tests t ON lr.test_id = t.id\n            JOIN consultations c ON lr.consultation_id = c.id\n            JOIN patients p ON c.patient_id = p.id\n            WHERE c.doctor_id = ?\n            ORDER BY lr.created_at DESC\n            LIMIT 200\n        ");
+        $stmt->execute([$doctor_id]);
+        $results = $stmt->fetchAll();
+
+        $this->render('doctor/lab_results', [
+            'results' => $results,
             'csrf_token' => $this->generateCSRF()
         ]);
     }

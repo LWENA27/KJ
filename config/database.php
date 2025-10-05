@@ -2,8 +2,8 @@
 // Database configuration
 define('DB_HOST', 'localhost');
 define('DB_NAME', 'zahanati');
-define('DB_USER', 'app_user'); // Change this to your MySQL username
-define('DB_PASS', 'StrongPassword123'); // Change this to your MySQL password
+define('DB_USER', 'root'); // Change this to your MySQL username
+define('DB_PASS', ''); // Change this to your MySQL password
 try {
     $pdo = new PDO(
         "mysql:host=" . DB_HOST . ";dbname=" . DB_NAME . ";charset=utf8mb4",

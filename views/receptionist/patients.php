@@ -24,34 +24,6 @@
     </div>
 </div>
 
-<!-- Search and Filters with Professional Styling -->
-<div class="bg-white rounded-lg shadow-lg p-6 mb-6">
-    <div class="flex flex-col md:flex-row gap-4">
-        <div class="flex-1">
-            <div class="relative">
-                <input type="text" 
-                       id="patientSearch"
-                       placeholder="Search patients by name, phone, or email..."
-                       class="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-300">
-                <i class="fas fa-search absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400"></i>
-            </div>
-        </div>
-        <div class="flex gap-3">
-            <select id="statusFilter" class="px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-300">
-                <option value="">All Status</option>
-                <option value="pending">Pending</option>
-                <option value="consultation_paid">Consultation Paid</option>
-                <option value="lab_tests">Lab Tests</option>
-                <option value="medicine_dispensing">Medicine Dispensing</option>
-                <option value="completed">Completed</option>
-            </select>
-            <button class="bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white px-6 py-3 rounded-lg font-medium transition-all duration-300 transform hover:scale-105 shadow-lg">
-                <i class="fas fa-filter mr-2"></i>Filter
-            </button>
-        </div>
-    </div>
-</div>
-
 <!-- Statistics Cards with Professional Design -->
 <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
     <?php
@@ -128,15 +100,42 @@
                 Patient Records
             </h2>
             <div class="flex items-center gap-3">
-                <span class="bg-blue-100 text-blue-800 px-3 py-1 rounded-full text-sm font-medium">
+                <span class="bg-blue-100 text-blue-800 px-3 py-1 rounded-full text-sm font-medium mr-2">
                     <?php echo count($patients); ?> patients
                 </span>
+
+                <!-- Compact search moved next to count/export -->
+                <div class="compact-search hidden sm:flex items-center bg-gray-50 border border-gray-200 rounded-lg px-3 py-1">
+                    <i class="fas fa-search text-gray-400 mr-2"></i>
+                    <input id="compactPatientSearch" type="text" placeholder="Search patients..." class="compact-search-input" />
+                </div>
+
                 <button class="bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-all duration-300 transform hover:scale-105 shadow-lg">
                     <i class="fas fa-download mr-2"></i>Export
                 </button>
             </div>
         </div>
     </div>
+    <!-- Search and Filters with Professional Styling -->
+    <div class="bg-white rounded-lg shadow-lg p-6 mb-6 max-w-4xl mx-auto">
+    <div class="flex flex-col md:flex-row gap-4 items-center justify-between">
+        <div class="text-sm text-gray-600">Filter patients by status</div>
+        <div class="flex gap-3 items-center">
+            <select id="statusFilter" class="px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-300">
+                <option value="">All Status</option>
+                <option value="pending">Pending</option>
+                <option value="consultation_paid">Consultation Paid</option>
+                <option value="lab_tests">Lab Tests</option>
+                <option value="medicine_dispensing">Medicine Dispensing</option>
+                <option value="completed">Completed</option>
+            </select>
+            <button class="bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white px-6 py-3 rounded-lg font-medium transition-all duration-300 transform hover:scale-105 shadow-lg">
+                <i class="fas fa-filter mr-2"></i>Filter
+            </button>
+        </div>
+    </div>
+</div>
+
     
     <?php if (empty($patients)): ?>
         <div class="p-12 text-center">
@@ -354,7 +353,7 @@
                         <option value="">Select Gender</option>
                         <option value="male">Male</option>
                         <option value="female">Female</option>
-                        <option value="other">Other</option>
+                        <!-- 'Other' option removed per project requirement (Tanzania system) -->
                     </select>
                 </div>
             </div>

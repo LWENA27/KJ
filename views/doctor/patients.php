@@ -1,17 +1,19 @@
 <div class="space-y-6">
-    <div class="flex items-center justify-between">
-        <h1 class="text-3xl font-bold text-gray-900">My Patients</h1>
-    <a href="<?= $BASE_PATH ?>/doctor/patients" class="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-md">
+    <div class="flex flex-col space-y-4 sm:flex-row sm:items-center sm:justify-between sm:space-y-0">
+        <h1 class="text-2xl sm:text-3xl font-bold text-gray-900">My Patients</h1>
+        <a href="<?= $BASE_PATH ?>/doctor/patients" class="w-full sm:w-auto bg-blue-500 hover:bg-blue-600 text-white px-4 py-3 rounded-md text-center font-medium">
             <i class="fas fa-search mr-2"></i>Search Patients
         </a>
     </div>
 
-    <!-- Patients Table -->
+    <!-- Patients Display -->
     <div class="bg-white rounded-lg shadow overflow-hidden">
         <div class="px-6 py-4 border-b border-gray-200">
             <h3 class="text-lg font-medium text-gray-900">Patient List</h3>
         </div>
-        <div class="overflow-x-auto">
+        
+        <!-- Desktop Table View -->
+        <div class="hidden md:block overflow-x-auto patients-table-wrapper">
             <table class="min-w-full divide-y divide-gray-200">
                 <thead class="bg-gray-50">
                     <tr>
@@ -24,6 +26,27 @@
                 </thead>
                 <tbody class="bg-white divide-y divide-gray-200">
                     <?php foreach ($patients as $patient): ?>
+                    <?php
+                        // Safe DOB handling
+                        $dob_raw = $patient['date_of_birth'] ?? null;
+                        $dob_readable = 'N/A';
+                        $age = 'N/A';
+                        if (!empty($dob_raw) && strtotime($dob_raw) !== false) {
+                            $dob_readable = date('M j, Y', strtotime($dob_raw));
+                            $age = date_diff(date_create($dob_raw), date_create('today'))->y . ' years';
+                        }
+                        
+                        $status = $patient['workflow_status'] ?? 'registered';
+                        $status_classes = 'bg-gray-100 text-gray-800';
+                        switch ($status) {
+                            case 'registered': $status_classes = 'bg-blue-100 text-blue-800'; break;
+                            case 'consultation_started': $status_classes = 'bg-yellow-100 text-yellow-800'; break;
+                            case 'lab_testing': $status_classes = 'bg-purple-100 text-purple-800'; break;
+                            case 'results_review': $status_classes = 'bg-orange-100 text-orange-800'; break;
+                            case 'medicine_prescribed': $status_classes = 'bg-green-100 text-green-800'; break;
+                            case 'final_payment_collected': case 'completed': $status_classes = 'bg-gray-100 text-gray-800'; break;
+                        }
+                    ?>
                     <tr class="hover:bg-gray-50">
                         <td class="px-6 py-4 whitespace-nowrap">
                             <div class="flex items-center">
@@ -35,8 +58,8 @@
                                         <?php echo htmlspecialchars($patient['first_name'] . ' ' . $patient['last_name']); ?>
                                     </div>
                                     <div class="text-sm text-gray-500">
-                                        DOB: <?php echo date('M j, Y', strtotime($patient['date_of_birth'])); ?>
-                                        (<?php echo date_diff(date_create($patient['date_of_birth']), date_create('today'))->y; ?> years)
+                                        DOB: <?php echo htmlspecialchars($dob_readable); ?>
+                                        <span class="text-xs text-gray-400">(<?php echo htmlspecialchars($age); ?>)</span>
                                     </div>
                                 </div>
                             </div>
@@ -50,74 +73,109 @@
                             </div>
                         </td>
                         <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                            <span class="inline-flex px-2 py-1 text-xs font-medium rounded-full bg-blue-100 text-blue-800">
-                                <?php echo $patient['consultation_count']; ?> visits
-                            </span>
-                        </td>
-                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                            <?php
-                            // This would need to be fetched from the database
-                            echo 'Recent';
-                            ?>
+                            <?php echo (int)($patient['consultation_count'] ?? 0); ?> visits
                         </td>
                         <td class="px-6 py-4 whitespace-nowrap">
-                            <span class="inline-flex px-2 py-1 text-xs font-medium rounded-full
-                                <?php
-                                $status = $patient['workflow_status'] ?? 'registered';
-                                switch ($status) {
-                                    case 'registered':
-                                        echo 'bg-blue-100 text-blue-800';
-                                        break;
-                                    case 'consultation_started':
-                                        echo 'bg-yellow-100 text-yellow-800';
-                                        break;
-                                    case 'lab_testing':
-                                        echo 'bg-purple-100 text-purple-800';
-                                        break;
-                                    case 'results_review':
-                                        echo 'bg-orange-100 text-orange-800';
-                                        break;
-                                    case 'medicine_prescribed':
-                                        echo 'bg-green-100 text-green-800';
-                                        break;
-                                    case 'final_payment_collected':
-                                        echo 'bg-gray-100 text-gray-800';
-                                        break;
-                                    case 'completed':
-                                        echo 'bg-gray-100 text-gray-800';
-                                        break;
-                                    default:
-                                        echo 'bg-gray-100 text-gray-800';
-                                }
-                                ?>">
-                                <?php echo ucfirst(str_replace('_', ' ', $status)); ?>
+                            <span class="inline-flex px-2 py-1 text-xs font-medium rounded-full <?php echo $status_classes; ?>">
+                                <?php echo htmlspecialchars(ucfirst(str_replace('_', ' ', $status))); ?>
                             </span>
                         </td>
                         <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                            <button onclick="viewPatientDetails(<?php echo $patient['id']; ?>)"
-                                    class="text-blue-600 hover:text-blue-900 mr-3">
-                                <i class="fas fa-eye mr-1"></i>View Details
-                            </button>
-                            <?php if (($patient['workflow_status'] ?? 'registered') === 'results_review'): ?>
-                            <button onclick="viewLabResults(<?php echo $patient['id']; ?>)"
-                                    class="text-purple-600 hover:text-purple-900 mr-3">
-                                <i class="fas fa-vial mr-1"></i>Lab Results
-                            </button>
-                            <button onclick="reviewResults(<?php echo $patient['id']; ?>)"
-                                    class="text-orange-600 hover:text-orange-900 mr-3">
-                                <i class="fas fa-clipboard-check mr-1"></i>Review Results
-                            </button>
-                            <?php else: ?>
-                            <button onclick="attendPatient(<?php echo $patient['id']; ?>)"
-                                    class="text-green-600 hover:text-green-900">
-                                <i class="fas fa-stethoscope mr-1"></i>Attend
-                            </button>
-                            <?php endif; ?>
+                            <div class="flex items-center space-x-2">
+                                <button onclick="viewPatientDetails(<?php echo $patient['id']; ?>)" class="btn-primary">
+                                    <i class="fas fa-eye mr-1"></i>View
+                                </button>
+                                <?php if ($status === 'results_review'): ?>
+                                    <button onclick="viewLabResults(<?php echo $patient['id']; ?>)" class="btn-action btn-lab">
+                                        <i class="fas fa-vial mr-1"></i>Results
+                                    </button>
+                                    <button onclick="reviewResults(<?php echo $patient['id']; ?>)" class="btn-action btn-ghost">
+                                        <i class="fas fa-clipboard-check mr-1"></i>Review
+                                    </button>
+                                <?php else: ?>
+                                    <button onclick="attendPatient(<?php echo $patient['id']; ?>)" class="btn-action btn-allocate">
+                                        <i class="fas fa-stethoscope mr-1"></i>Attend
+                                    </button>
+                                <?php endif; ?>
+                            </div>
                         </td>
                     </tr>
                     <?php endforeach; ?>
                 </tbody>
             </table>
+        </div>
+        
+        <!-- Mobile Cards View -->
+        <div class="md:hidden mobile-patients-cards p-4">
+            <?php foreach ($patients as $patient): ?>
+            <?php
+                // Safe DOB handling
+                $dob_raw = $patient['date_of_birth'] ?? null;
+                $dob_readable = 'N/A';
+                $age = 'N/A';
+                if (!empty($dob_raw) && strtotime($dob_raw) !== false) {
+                    $dob_readable = date('M j, Y', strtotime($dob_raw));
+                    $age = date_diff(date_create($dob_raw), date_create('today'))->y . ' years';
+                }
+                
+                $status = $patient['workflow_status'] ?? 'registered';
+                $status_classes = 'bg-gray-100 text-gray-800';
+                switch ($status) {
+                    case 'registered': $status_classes = 'bg-blue-100 text-blue-800'; break;
+                    case 'consultation_started': $status_classes = 'bg-yellow-100 text-yellow-800'; break;
+                    case 'lab_testing': $status_classes = 'bg-purple-100 text-purple-800'; break;
+                    case 'results_review': $status_classes = 'bg-orange-100 text-orange-800'; break;
+                    case 'medicine_prescribed': $status_classes = 'bg-green-100 text-green-800'; break;
+                    case 'final_payment_collected': case 'completed': $status_classes = 'bg-gray-100 text-gray-800'; break;
+                }
+            ?>
+            <div class="mobile-patient-card">
+                <div class="mobile-patient-header">
+                    <div class="mobile-patient-avatar">
+                        <i class="fas fa-user text-blue-600"></i>
+                    </div>
+                    <div class="mobile-patient-info">
+                        <h3><?php echo htmlspecialchars($patient['first_name'] . ' ' . $patient['last_name']); ?></h3>
+                        <p><?php echo htmlspecialchars($age); ?> • DOB: <?php echo htmlspecialchars($dob_readable); ?></p>
+                    </div>
+                </div>
+                
+                <div class="mobile-patient-details">
+                    <div class="mobile-detail-row">
+                        <span class="mobile-detail-label">Phone:</span>
+                        <span class="mobile-detail-value"><?php echo htmlspecialchars($patient['phone'] ?? 'N/A'); ?></span>
+                    </div>
+                    <div class="mobile-detail-row">
+                        <span class="mobile-detail-label">Consultations:</span>
+                        <span class="mobile-detail-value"><?php echo (int)($patient['consultation_count'] ?? 0); ?> visits</span>
+                    </div>
+                    <div class="mobile-detail-row">
+                        <span class="mobile-detail-label">Status:</span>
+                        <span class="inline-flex px-2 py-1 text-xs font-medium rounded-full <?php echo $status_classes; ?>">
+                            <?php echo htmlspecialchars(ucfirst(str_replace('_', ' ', $status))); ?>
+                        </span>
+                    </div>
+                </div>
+                
+                <div class="mobile-patient-actions">
+                    <button onclick="viewPatientDetails(<?php echo $patient['id']; ?>)" class="mobile-btn-primary">
+                        <i class="fas fa-eye"></i>View Patient Details
+                    </button>
+                    <?php if ($status === 'results_review'): ?>
+                        <button onclick="viewLabResults(<?php echo $patient['id']; ?>)" class="mobile-btn-secondary">
+                            <i class="fas fa-vial"></i>View Lab Results
+                        </button>
+                        <button onclick="reviewResults(<?php echo $patient['id']; ?>)" class="mobile-btn-success">
+                            <i class="fas fa-clipboard-check"></i>Review Results
+                        </button>
+                    <?php else: ?>
+                        <button onclick="attendPatient(<?php echo $patient['id']; ?>)" class="mobile-btn-success">
+                            <i class="fas fa-stethoscope"></i>Attend Patient
+                        </button>
+                    <?php endif; ?>
+                </div>
+            </div>
+            <?php endforeach; ?>
         </div>
     </div>
 </div>

@@ -45,79 +45,7 @@
         </div>
     </div>
 
-    <!-- Patient Queue & Actions -->
-    <div class="space-y-6">
-        <!-- Patients Ready for Consultation -->
-        <div class="card overflow-hidden">
-            <div class="px-6 py-4 border-b border-neutral-200">
-                <div class="flex items-center justify-between">
-                    <h3 class="text-lg font-semibold text-neutral-900">Patients Ready for Consultation</h3>
-                    <span class="text-sm text-neutral-600"><?php echo count($pending_consultations); ?> patients waiting</span>
-                </div>
-            </div>
-            <div class="p-6">
-                <?php if (empty($pending_consultations)): ?>
-                <div class="text-center py-8">
-                    <div class="w-16 h-16 mx-auto mb-4 bg-neutral-100 rounded-full flex items-center justify-center">
-                        <i class="fas fa-user-clock text-2xl text-neutral-400"></i>
-                    </div>
-                    <h4 class="text-lg font-medium text-neutral-900 mb-2">No patients waiting</h4>
-                    <p class="text-neutral-600">All consultation patients have been attended to</p>
-                </div>
-                <?php else: ?>
-                <div class="space-y-4">
-                    <?php foreach ($pending_consultations as $patient): ?>
-                    <div class="flex items-center justify-between p-4 border border-neutral-200 rounded-lg hover:bg-neutral-50 transition-colors">
-                        <div class="flex items-center space-x-4">
-                            <div class="w-12 h-12 bg-gradient-to-br from-primary-500 to-primary-600 rounded-full flex items-center justify-center text-white font-medium">
-                                <?php echo strtoupper(substr($patient['first_name'], 0, 1) . substr($patient['last_name'], 0, 1)); ?>
-                            </div>
-                            <div>
-                                <h4 class="font-medium text-neutral-900">
-                                    <?php echo htmlspecialchars($patient['first_name'] . ' ' . $patient['last_name']); ?>
-                                </h4>
-                                <div class="flex items-center space-x-4 text-sm text-neutral-600">
-                                    <span>Age: <?php echo $patient['date_of_birth'] ? date_diff(date_create($patient['date_of_birth']), date_create('today'))->y : 'N/A'; ?></span>
-                                    <span>Phone: <?php echo htmlspecialchars($patient['phone'] ?? 'N/A'); ?></span>
-                                    <span class="status-success">Consultation Paid</span>
-                                </div>
-                                <div class="mt-1">
-                                    <span class="text-xs text-neutral-500">
-                                        Registered: <?php echo date('M j, Y H:i', strtotime($patient['created_at'])); ?>
-                                    </span>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="flex items-center space-x-2">
-                            <a href="<?php echo htmlspecialchars($BASE_PATH); ?>/doctor/view_patient?id=<?php echo $patient['id']; ?>" 
-                               class="btn btn-primary">
-                                <i class="fas fa-stethoscope mr-2"></i>Start Consultation
-                            </a>
-                            <div class="relative">
-                                <button class="btn btn-secondary dropdown-toggle" data-dropdown="patient-actions-<?php echo $patient['id']; ?>">
-                                    <i class="fas fa-ellipsis-v"></i>
-                                </button>
-                                <div class="dropdown-menu" id="patient-actions-<?php echo $patient['id']; ?>">
-                                    <button class="dropdown-item" onclick="openAllocateModal(<?php echo $patient['id']; ?>, '<?php echo htmlspecialchars($patient['first_name'] . ' ' . $patient['last_name']); ?>')">
-                                        <i class="fas fa-user-md mr-2"></i>Allocate to Another Doctor
-                                    </button>
-                                    <button class="dropdown-item" onclick="openLabModal(<?php echo $patient['id']; ?>, '<?php echo htmlspecialchars($patient['first_name'] . ' ' . $patient['last_name']); ?>')">
-                                        <i class="fas fa-vial mr-2"></i>Send to Lab
-                                    </button>
-                                    <button class="dropdown-item" onclick="openMedicineModal(<?php echo $patient['id']; ?>, '<?php echo htmlspecialchars($patient['first_name'] . ' ' . $patient['last_name']); ?>')">
-                                        <i class="fas fa-pills mr-2"></i>Prescribe Medicine
-                                    </button>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                    <?php endforeach; ?>
-                </div>
-                <?php endif; ?>
-            </div>
-        </div>
-
-        <!-- Patients Waiting for Lab Results Review -->
+    <!-- Patients Waiting for Lab Results Review -->
         <?php if (!empty($pending_results)): ?>
         <div class="card overflow-hidden">
             <div class="px-6 py-4 border-b border-neutral-200">
@@ -194,7 +122,7 @@
     <!-- Available Patients -->
     <div class="bg-white rounded-lg shadow">
         <div class="px-6 py-4 border-b border-gray-200">
-            <h3 class="text-lg font-medium text-gray-900">Available Patients</h3>
+            <h3 class="text-lg font-medium text-gray-900">All Patients</h3>
             <p class="text-sm text-gray-600">Patients who have paid for consultation and are ready to be seen</p>
         </div>
         <div class="p-6">
@@ -203,7 +131,7 @@
             <?php else: ?>
             <div class="space-y-4">
                 <?php foreach ($available_patients as $patient): ?>
-                <div class="flex items-center justify-between p-4 border border-gray-200 rounded-lg hover:bg-gray-50 transition duration-200">
+                    <div class="flex items-center justify-between p-4 border border-gray-200 rounded-lg hover:bg-gray-50 transition duration-200">
                     <div class="flex items-center">
                         <div class="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center mr-4">
                             <i class="fas fa-user-check text-green-600"></i>
@@ -227,15 +155,29 @@
                             </p>
                         </div>
                     </div>
-                    <div class="flex space-x-2">
+                    <div class="flex space-x-2 items-center">
                         <button onclick="viewPatientDetails(<?php echo $patient['id']; ?>)"
                                 class="px-3 py-1 bg-blue-500 hover:bg-blue-600 text-white text-sm rounded-md transition duration-200">
-                            <i class="fas fa-eye mr-1"></i>View Details
+                            <i class="fas fa-eye mr-1"></i>View
                         </button>
                         <button onclick="attendPatient(<?php echo $patient['id']; ?>)"
                                 class="px-3 py-1 bg-green-500 hover:bg-green-600 text-white text-sm rounded-md transition duration-200">
                             <i class="fas fa-stethoscope mr-1"></i>Attend
                         </button>
+                        <div class="patient-action-group">
+                            <button onclick="openAllocateModal(<?php echo $patient['id']; ?>, '<?php echo htmlspecialchars($patient['first_name'] . ' ' . $patient['last_name']); ?>')"
+                                    class="btn-action btn-allocate" title="Allocate to another doctor">
+                                <i class="fas fa-user-md mr-1"></i>Allocate
+                            </button>
+                            <button onclick="openLabModal(<?php echo $patient['id']; ?>, '<?php echo htmlspecialchars($patient['first_name'] . ' ' . $patient['last_name']); ?>')"
+                                    class="btn-action btn-lab" title="Send to lab">
+                                <i class="fas fa-vial mr-1"></i>Send to Lab
+                            </button>
+                            <button onclick="openMedicineModal(<?php echo $patient['id']; ?>, '<?php echo htmlspecialchars($patient['first_name'] . ' ' . $patient['last_name']); ?>')"
+                                    class="btn-action btn-prescribe" title="Prescribe medicine">
+                                <i class="fas fa-pills mr-1"></i>Prescribe
+                            </button>
+                        </div>
                     </div>
                 </div>
                 <?php endforeach; ?>

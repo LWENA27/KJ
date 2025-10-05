@@ -101,7 +101,8 @@ class ReceptionistController extends BaseController {
                 'first_name' => $this->sanitize($_POST['first_name'] ?? ''),
                 'last_name' => $this->sanitize($_POST['last_name'] ?? ''),
                 'date_of_birth' => $_POST['date_of_birth'] ?? '',
-                'gender' => $_POST['gender'] ?? '',
+                // sanitize gender input and validate below
+                'gender' => $this->sanitize($_POST['gender'] ?? ''),
                 'phone' => $this->sanitize($_POST['phone'] ?? ''),
                 'email' => $this->sanitize($_POST['email'] ?? ''),
                 'address' => $this->sanitize($_POST['address'] ?? ''),
@@ -117,8 +118,14 @@ class ReceptionistController extends BaseController {
                 'payment_method' => $_POST['payment_method'] ?? 'cash'
             ];
 
+            // normalize and validate gender
+            $patient_data['gender'] = strtolower(trim($patient_data['gender']));
+            $allowedGenders = ['male', 'female'];
+
             if (empty($patient_data['first_name']) || empty($patient_data['last_name'])) {
                 $error = 'First name and last name are required';
+            } elseif (!in_array($patient_data['gender'], $allowedGenders, true)) {
+                $error = 'Invalid gender selected. Please choose Male or Female.';
             } else {
                 try {
                     $this->pdo->beginTransaction();

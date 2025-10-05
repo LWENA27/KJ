@@ -496,22 +496,59 @@ function switchTab(tabName) {
 }
 
 // Modal management functions
+/**
+ * Show modal while ensuring header/title remains visible when app has fixed top bars.
+ * - Computes heights of any fixed top elements and applies padding-top to modal so it sits below them.
+ * - Resets modal content scroll and focuses the first input for accessibility.
+ */
 function showModal(modalId) {
     const modal = document.getElementById(modalId);
-    if (modal) {
-        modal.classList.add('show');
-        modal.style.display = 'flex';
-        document.body.style.overflow = 'hidden'; // Prevent background scrolling
+    if (!modal) return;
+
+    // Find all visible fixed elements anchored at the top and sum their heights
+    let topOffset = 0;
+    document.querySelectorAll('body *').forEach(el => {
+        try {
+            const style = window.getComputedStyle(el);
+            if (style.position === 'fixed' && parseFloat(style.top || 0) === 0) {
+                const rect = el.getBoundingClientRect();
+                if (rect.width > 0 && rect.height > 0) topOffset += rect.height;
+            }
+        } catch (e) {
+            // ignore
+        }
+    });
+
+    // Responsive minimum safe offset so modal doesn't stick to the very top
+    // on larger screens leave more space for the fixed header/breadcrumb bar.
+    const minOffset = window.innerWidth >= 1024 ? 84 : 28;
+    if (topOffset < minOffset) topOffset = minOffset;
+
+    modal.style.display = 'flex';
+    modal.classList.add('show');
+    modal.style.alignItems = 'flex-start';
+    modal.style.paddingTop = topOffset + 'px';
+    document.body.style.overflow = 'hidden'; // Prevent background scrolling
+
+    // Reset inner scroll and focus first input for keyboard users
+    const content = modal.querySelector('.modal-content');
+    if (content) {
+        const body = content.querySelector('.modal-body');
+        if (body) body.scrollTop = 0;
+        // focus first form control
+        const firstInput = content.querySelector('input, select, textarea, button');
+        if (firstInput) firstInput.focus();
     }
 }
 
 function hideModal(modalId) {
     const modal = document.getElementById(modalId);
-    if (modal) {
-        modal.classList.remove('show');
-        modal.style.display = 'none';
-        document.body.style.overflow = ''; // Restore scrolling
-    }
+    if (!modal) return;
+    modal.classList.remove('show');
+    modal.style.display = 'none';
+    modal.style.alignItems = '';
+    modal.style.paddingTop = '';
+    document.body.style.overflow = ''; // Restore scrolling
 }
 
 // Close modal when clicking outside of it
