@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -8,7 +9,11 @@
     <link rel="stylesheet" href="/assets/css/tailwind.css">
     <link rel="stylesheet" href="/assets/css/fontawesome.min.css">
     <link rel="stylesheet" href="/assets/css/fonts.css">
-    
+    <!-- additional awaresome links -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
+    <link rel="stylesheet" href="/KJ/assets/css/tailwind.css">
+    <!-- additional awaresome links -->
+
     <!-- PWA Manifest - Optional -->
     <!-- <link rel="manifest" href="/manifest.json"> -->
     <meta name="theme-color" content="#4facfe">
@@ -16,7 +21,7 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="default">
     <meta name="apple-mobile-web-app-title" content="KJ Healthcare">
     <!-- <link rel="apple-touch-icon" href="/assets/icons/icon-192x192.png"> -->
-    
+
     <!-- Service Worker Registration - Optional -->
     <!--
     <script>
@@ -64,7 +69,7 @@
             --medical-secondary: #8b5cf6;
         }
 
-        body { 
+        body {
             font-family: 'Inter', sans-serif;
             background-color: var(--neutral-50);
             color: var(--neutral-700);
@@ -189,10 +194,25 @@
             letter-spacing: 0.05em;
         }
 
-        .status-pending { background: var(--warning-50); color: var(--warning-600); }
-        .status-active { background: var(--primary-50); color: var(--primary-600); }
-        .status-completed { background: var(--success-50); color: var(--success-600); }
-        .status-critical { background: var(--error-50); color: var(--error-600); }
+        .status-pending {
+            background: var(--warning-50);
+            color: var(--warning-600);
+        }
+
+        .status-active {
+            background: var(--primary-50);
+            color: var(--primary-600);
+        }
+
+        .status-completed {
+            background: var(--success-50);
+            color: var(--success-600);
+        }
+
+        .status-critical {
+            background: var(--error-50);
+            color: var(--error-600);
+        }
 
         /* Medical priority indicators */
         .priority-dot {
@@ -203,9 +223,17 @@
             margin-right: 0.5rem;
         }
 
-        .priority-high { background: var(--error-500); }
-        .priority-medium { background: var(--warning-500); }
-        .priority-low { background: var(--success-500); }
+        .priority-high {
+            background: var(--error-500);
+        }
+
+        .priority-medium {
+            background: var(--warning-500);
+        }
+
+        .priority-low {
+            background: var(--success-500);
+        }
 
         /* Professional buttons */
         .btn {
@@ -261,14 +289,20 @@
         }
 
         /* Enhanced scrollbars */
-        .custom-scrollbar::-webkit-scrollbar { width: 6px; height: 6px; }
+        .custom-scrollbar::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+
         .custom-scrollbar::-webkit-scrollbar-thumb {
             background: var(--neutral-300);
             border-radius: 3px;
         }
+
         .custom-scrollbar::-webkit-scrollbar-thumb:hover {
             background: var(--neutral-400);
         }
+
         .custom-scrollbar::-webkit-scrollbar-track {
             background: var(--neutral-100);
             border-radius: 3px;
@@ -310,36 +344,82 @@
 
         /* Advanced Animations */
         @keyframes slideInFromLeft {
-            0% { transform: translateX(-100%); opacity: 0; }
-            100% { transform: translateX(0); opacity: 1; }
+            0% {
+                transform: translateX(-100%);
+                opacity: 0;
+            }
+
+            100% {
+                transform: translateX(0);
+                opacity: 1;
+            }
         }
 
         @keyframes slideInFromRight {
-            0% { transform: translateX(100%); opacity: 0; }
-            100% { transform: translateX(0); opacity: 1; }
+            0% {
+                transform: translateX(100%);
+                opacity: 0;
+            }
+
+            100% {
+                transform: translateX(0);
+                opacity: 1;
+            }
         }
 
         @keyframes bounceIn {
-            0% { transform: scale(0.3); opacity: 0; }
-            50% { transform: scale(1.05); }
-            70% { transform: scale(0.9); }
-            100% { transform: scale(1); opacity: 1; }
+            0% {
+                transform: scale(0.3);
+                opacity: 0;
+            }
+
+            50% {
+                transform: scale(1.05);
+            }
+
+            70% {
+                transform: scale(0.9);
+            }
+
+            100% {
+                transform: scale(1);
+                opacity: 1;
+            }
         }
 
         @keyframes pulse {
-            0%, 100% { opacity: 1; }
-            50% { opacity: 0.7; }
+
+            0%,
+            100% {
+                opacity: 1;
+            }
+
+            50% {
+                opacity: 0.7;
+            }
         }
 
-        .animate-slide-in-left { animation: slideInFromLeft 0.5s ease-out; }
-        .animate-slide-in-right { animation: slideInFromRight 0.5s ease-out; }
-        .animate-bounce-in { animation: bounceIn 0.6s ease-out; }
-        .animate-pulse { animation: pulse 2s infinite; }
+        .animate-slide-in-left {
+            animation: slideInFromLeft 0.5s ease-out;
+        }
+
+        .animate-slide-in-right {
+            animation: slideInFromRight 0.5s ease-out;
+        }
+
+        .animate-bounce-in {
+            animation: bounceIn 0.6s ease-out;
+        }
+
+        .animate-pulse {
+            animation: pulse 2s infinite;
+        }
 
         /* Advanced hover effects */
         .hover-lift {
             transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
         }
+
         .hover-lift:hover {
             transform: translateY(-4px) scale(1.02);
             box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
@@ -372,13 +452,18 @@
             left: -100%;
             width: 100%;
             height: 100%;
-            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.4), transparent);
+            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.4), transparent);
             animation: loading 1.5s infinite;
         }
 
         @keyframes loading {
-            0% { left: -100%; }
-            100% { left: 100%; }
+            0% {
+                left: -100%;
+            }
+
+            100% {
+                left: 100%;
+            }
         }
 
         /* Medical data tables */
@@ -451,7 +536,8 @@
         }
 
         /* High DPI displays */
-        @media (-webkit-min-device-pixel-ratio: 2), (min-resolution: 192dpi) {
+        @media (-webkit-min-device-pixel-ratio: 2),
+        (min-resolution: 192dpi) {
             .card {
                 border-width: 0.5px;
             }
@@ -505,8 +591,15 @@
         }
 
         @keyframes fadeIn {
-            from { opacity: 0; transform: translateY(10px); }
-            to { opacity: 1; transform: translateY(0); }
+            from {
+                opacity: 0;
+                transform: translateY(10px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
         }
 
         /* Focus management for accessibility */
@@ -522,8 +615,15 @@
         }
 
         @keyframes fadeIn {
-            from { opacity: 0; transform: translateY(10px); }
-            to { opacity: 1; transform: translateY(0); }
+            from {
+                opacity: 0;
+                transform: translateY(10px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
         }
 
         .slide-up {
@@ -531,8 +631,15 @@
         }
 
         @keyframes slideUp {
-            from { transform: translateY(20px); opacity: 0; }
-            to { transform: translateY(0); opacity: 1; }
+            from {
+                transform: translateY(20px);
+                opacity: 0;
+            }
+
+            to {
+                transform: translateY(0);
+                opacity: 1;
+            }
         }
 
         /* Top Header Bar Styles */
@@ -715,7 +822,8 @@
         /* Modal z-index fix and display control */
         .modal {
             z-index: 60 !important;
-            display: none !important; /* hidden by default */
+            display: none !important;
+            /* hidden by default */
             position: fixed;
             top: 0;
             left: 0;
@@ -727,11 +835,12 @@
         }
 
         .modal.show {
-            display: flex !important; /* show when toggled */
+            display: flex !important;
+            /* show when toggled */
         }
 
         /* Ensure only direct modal content is styled, not any element with 'modal' in its class */
-        .modal > .modal-content {
+        .modal>.modal-content {
             background: #ffffff;
             border-radius: 8px;
             box-shadow: 0 10px 25px rgba(0, 0, 0, 0.3);
@@ -818,337 +927,338 @@
         }
     </style>
 </head>
+
 <body class="bg-gray-100">
     <?php if (isset($_SESSION['user_id'])): ?>
-    <!-- Mobile overlay -->
-    <div id="sidebarOverlay" class="sidebar-overlay" onclick="toggleSidebar()"></div>
-    
-    <div class="flex min-h-screen">
-        <!-- Sidebar -->
-        <div id="sidebar" class="sidebar w-64 bg-white shadow-xl min-h-screen flex flex-col border-r border-neutral-200">
-            <!-- Header -->
-            <div class="p-6 border-b border-neutral-200">
-                <div class="flex items-center justify-between">
-                    <a href="<?php echo htmlspecialchars($BASE_PATH); ?>/" class="flex items-center space-x-3">
-                        <div class="w-10 h-10 bg-gradient-to-br from-primary-500 to-primary-600 rounded-xl flex items-center justify-center">
-                            <i class="fas fa-hospital-symbol text-white text-xl"></i>
+        <!-- Mobile overlay -->
+        <div id="sidebarOverlay" class="sidebar-overlay" onclick="toggleSidebar()"></div>
+
+        <div class="flex min-h-screen">
+            <!-- Sidebar -->
+            <div id="sidebar" class="sidebar w-64 bg-white shadow-xl min-h-screen flex flex-col border-r border-neutral-200">
+                <!-- Header -->
+                <div class="p-6 border-b border-neutral-200">
+                    <div class="flex items-center justify-between">
+                        <a href="<?php echo htmlspecialchars($BASE_PATH); ?>/" class="flex items-center space-x-3">
+                            <div class="w-10 h-10 bg-gradient-to-br from-primary-500 to-primary-600 rounded-xl flex items-center justify-center">
+                                <i class="fas fa-hospital-symbol text-white text-xl"></i>
+                            </div>
+                            <div>
+                                <span class="text-xl font-bold text-neutral-800"><?php echo htmlspecialchars($_ENV['APP_NAME'] ?? 'KJ'); ?></span>
+                                <div class="text-xs text-neutral-500">Healthcare System</div>
+                            </div>
+                        </a>
+                        <!-- Mobile close button -->
+                        <button id="closeSidebar" class="md:hidden p-2 rounded-lg hover:bg-neutral-100" onclick="toggleSidebar()">
+                            <i class="fas fa-times text-neutral-600"></i>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Navigation -->
+                <div class="flex-1 p-4 overflow-y-auto custom-scrollbar">
+                    <nav class="space-y-1">
+                        <?php
+                        $role = $_SESSION['user_role'];
+                        $menu_items = [];
+                        $current_path = trim(parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH), '/');
+                        $base = defined('BASE_PATH') ? trim(BASE_PATH, '/') : basename(dirname(__DIR__, 2));
+                        if (strpos($current_path, $base . '/') === 0) {
+                            $current_path = substr($current_path, strlen($base) + 1);
+                        }
+
+                        if ($role === 'admin') {
+                            $menu_items = [
+                                ['url' => 'admin/dashboard', 'icon' => 'fas fa-chart-line', 'text' => 'Dashboard'],
+                                ['url' => 'admin/users', 'icon' => 'fas fa-user-shield', 'text' => 'User Management'],
+                                ['url' => 'admin/patients', 'icon' => 'fas fa-user-injured', 'text' => 'Patients'],
+                                ['url' => 'admin/medicines', 'icon' => 'fas fa-pills', 'text' => 'Medicines'],
+                                ['url' => 'admin/tests', 'icon' => 'fas fa-microscope', 'text' => 'Lab Tests'],
+                            ];
+                        } elseif ($role === 'receptionist') {
+                            $menu_items = [
+                                ['url' => 'receptionist/dashboard', 'icon' => 'fas fa-chart-line', 'text' => 'Dashboard', 'badge' => '', 'color' => 'blue'],
+                                ['url' => 'receptionist/patients', 'icon' => 'fas fa-users', 'text' => 'Patients', 'badge' => isset($sidebar_data['pending_patients']) ? $sidebar_data['pending_patients'] : '0', 'color' => 'blue'],
+                                ['url' => 'receptionist/appointments', 'icon' => 'fas fa-calendar-check', 'text' => 'Appointments', 'badge' => isset($sidebar_data['upcoming_appointments']) ? $sidebar_data['upcoming_appointments'] : '0', 'color' => 'green'],
+                                ['url' => 'receptionist/payments', 'icon' => 'fas fa-credit-card', 'text' => 'Payments', 'badge' => '', 'color' => 'purple'],
+                                ['url' => 'receptionist/medicine', 'icon' => 'fas fa-pills', 'text' => 'Medicine', 'badge' => isset($sidebar_data['low_stock_medicines']) && $sidebar_data['low_stock_medicines'] > 0 ? '!' : '', 'color' => 'yellow'],
+                                ['url' => 'receptionist/reports', 'icon' => 'fas fa-chart-bar', 'text' => 'Reports', 'badge' => '', 'color' => 'indigo'],
+                            ];
+                        } elseif ($role === 'doctor') {
+                            $menu_items = [
+                                ['url' => 'doctor/dashboard', 'icon' => 'fas fa-chart-line', 'text' => 'Dashboard'],
+                                ['url' => 'doctor/consultations', 'icon' => 'fas fa-stethoscope', 'text' => 'Consultations'],
+                                ['url' => 'doctor/patients', 'icon' => 'fas fa-user-injured', 'text' => 'My Patients'],
+                                ['url' => 'doctor/lab_results', 'icon' => 'fas fa-flask', 'text' => 'Lab Results'],
+                            ];
+                        } elseif ($role === 'lab_technician') {
+                            $menu_items = [
+                                ['url' => 'lab/dashboard', 'icon' => 'fas fa-chart-line', 'text' => 'Dashboard', 'badge' => '', 'color' => 'blue'],
+                                ['url' => 'lab/tests', 'icon' => 'fas fa-vial', 'text' => 'Test Queue', 'badge' => '3', 'color' => 'yellow'],
+                                ['url' => 'lab/results', 'icon' => 'fas fa-clipboard-check', 'text' => 'Record Results', 'badge' => '', 'color' => 'green'],
+                                ['url' => 'lab/samples', 'icon' => 'fas fa-test-tube', 'text' => 'Sample Collection', 'badge' => '2', 'color' => 'purple'],
+                                ['url' => 'lab/equipment', 'icon' => 'fas fa-microscope', 'text' => 'Equipment', 'badge' => '1', 'color' => 'indigo'],
+                                ['url' => 'lab/inventory', 'icon' => 'fas fa-boxes', 'text' => 'Inventory', 'badge' => '!', 'color' => 'orange'],
+                                ['url' => 'lab/quality', 'icon' => 'fas fa-check-double', 'text' => 'Quality Control', 'badge' => '', 'color' => 'emerald'],
+                                ['url' => 'lab/reports', 'icon' => 'fas fa-chart-bar', 'text' => 'Reports', 'badge' => '', 'color' => 'rose'],
+                            ];
+                        }
+                        ?>
+
+                        <!-- Role badge -->
+                        <div class="mb-6 p-3 bg-gradient-to-r from-neutral-50 to-neutral-100 rounded-lg">
+                            <div class="flex items-center space-x-2">
+                                <div class="w-8 h-8 bg-gradient-to-br from-medical-accent to-medical-secondary rounded-lg flex items-center justify-center">
+                                    <i class="fas fa-user text-white text-sm"></i>
+                                </div>
+                                <div>
+                                    <div class="text-sm font-medium text-neutral-800"><?php echo htmlspecialchars($_SESSION['user_name']); ?></div>
+                                    <div class="text-xs text-neutral-500 capitalize"><?php echo htmlspecialchars($role); ?></div>
+                                </div>
+                            </div>
                         </div>
-                        <div>
-                            <span class="text-xl font-bold text-neutral-800"><?php echo htmlspecialchars($_ENV['APP_NAME'] ?? 'KJ'); ?></span>
-                            <div class="text-xs text-neutral-500">Healthcare System</div>
-                        </div>
+
+                        <?php foreach ($menu_items as $item):
+                            $is_active = (strpos($current_path, $item['url']) !== false);
+                            $color = isset($item['color']) ? $item['color'] : 'blue';
+                            $badge = isset($item['badge']) ? $item['badge'] : '';
+                        ?>
+                            <a href="<?php echo htmlspecialchars($BASE_PATH); ?>/<?php echo $item['url']; ?>"
+                                class="group flex items-center justify-between px-3 py-2.5 rounded-lg transition-all duration-200 <?php echo $is_active ? 'bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 text-blue-700 shadow-sm' : 'text-neutral-600 hover:bg-gradient-to-r hover:from-neutral-50 hover:to-neutral-100 hover:text-neutral-800'; ?>"
+                                onclick="closeSidebarOnMobile()">
+                                <div class="flex items-center space-x-3">
+                                    <div class="w-8 h-8 rounded-lg flex items-center justify-center transition-all duration-200 <?php echo $is_active ? 'bg-gradient-to-br from-blue-500 to-indigo-600 text-white shadow-sm' : 'bg-neutral-100 text-neutral-500 group-hover:bg-gradient-to-br group-hover:from-' . $color . '-500 group-hover:to-' . $color . '-600 group-hover:text-white'; ?>">
+                                        <i class="<?php echo $item['icon']; ?> text-sm"></i>
+                                    </div>
+                                    <span class="font-medium text-sm"><?php echo $item['text']; ?></span>
+                                </div>
+                                <?php if ($badge): ?>
+                                    <div class="flex items-center">
+                                        <span class="<?php echo $badge === '!' ? 'bg-red-500 text-white' : 'bg-' . $color . '-500 text-white'; ?> text-xs font-bold px-2 py-1 rounded-full min-w-[20px] h-5 flex items-center justify-center">
+                                            <?php echo $badge; ?>
+                                        </span>
+                                    </div>
+                                <?php endif; ?>
+                            </a>
+                        <?php endforeach; ?>
+                    </nav>
+                </div>
+
+                <!-- Footer -->
+                <div class="p-4 border-t border-neutral-200">
+                    <a href="<?php echo htmlspecialchars($BASE_PATH); ?>/auth/logout"
+                        class="flex items-center space-x-3 text-neutral-600 hover:text-error-600 transition-colors">
+                        <i class="fas fa-sign-out-alt"></i>
+                        <span class="font-medium">Logout</span>
                     </a>
-                    <!-- Mobile close button -->
-                    <button id="closeSidebar" class="md:hidden p-2 rounded-lg hover:bg-neutral-100" onclick="toggleSidebar()">
-                        <i class="fas fa-times text-neutral-600"></i>
-                    </button>
                 </div>
             </div>
 
-            <!-- Navigation -->
-            <div class="flex-1 p-4 overflow-y-auto custom-scrollbar">
-                <nav class="space-y-1">
-                    <?php
-                    $role = $_SESSION['user_role'];
-                    $menu_items = [];
-                    $current_path = trim(parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH), '/');
-                    $base = defined('BASE_PATH') ? trim(BASE_PATH, '/') : basename(dirname(__DIR__, 2));
-                    if (strpos($current_path, $base . '/') === 0) {
-                        $current_path = substr($current_path, strlen($base) + 1);
-                    }
+            <!-- Main Content -->
+            <div class="flex-1 flex flex-col min-h-screen">
+                <!-- Top Header Bar -->
+                <div class="top-header">
+                    <div class="px-4 md:px-6 py-3">
+                        <div class="flex items-center justify-between">
+                            <!-- Left: Breadcrumb or Page Title -->
+                            <div class="flex items-center space-x-4">
+                                <!-- Mobile menu button -->
+                                <button onclick="toggleSidebar()" class="md:hidden header-action-btn">
+                                    <i class="fas fa-bars text-lg"></i>
+                                </button>
 
-                    if ($role === 'admin') {
-                        $menu_items = [
-                            ['url' => 'admin/dashboard', 'icon' => 'fas fa-chart-line', 'text' => 'Dashboard'],
-                            ['url' => 'admin/users', 'icon' => 'fas fa-user-shield', 'text' => 'User Management'],
-                            ['url' => 'admin/patients', 'icon' => 'fas fa-user-injured', 'text' => 'Patients'],
-                            ['url' => 'admin/medicines', 'icon' => 'fas fa-pills', 'text' => 'Medicines'],
-                            ['url' => 'admin/tests', 'icon' => 'fas fa-microscope', 'text' => 'Lab Tests'],
-                        ];
-                    } elseif ($role === 'receptionist') {
-                        $menu_items = [
-                            ['url' => 'receptionist/dashboard', 'icon' => 'fas fa-chart-line', 'text' => 'Dashboard', 'badge' => '', 'color' => 'blue'],
-                            ['url' => 'receptionist/patients', 'icon' => 'fas fa-users', 'text' => 'Patients', 'badge' => isset($sidebar_data['pending_patients']) ? $sidebar_data['pending_patients'] : '0', 'color' => 'blue'],
-                            ['url' => 'receptionist/appointments', 'icon' => 'fas fa-calendar-check', 'text' => 'Appointments', 'badge' => isset($sidebar_data['upcoming_appointments']) ? $sidebar_data['upcoming_appointments'] : '0', 'color' => 'green'],
-                            ['url' => 'receptionist/payments', 'icon' => 'fas fa-credit-card', 'text' => 'Payments', 'badge' => '', 'color' => 'purple'],
-                            ['url' => 'receptionist/medicine', 'icon' => 'fas fa-pills', 'text' => 'Medicine', 'badge' => isset($sidebar_data['low_stock_medicines']) && $sidebar_data['low_stock_medicines'] > 0 ? '!' : '', 'color' => 'yellow'],
-                            ['url' => 'receptionist/reports', 'icon' => 'fas fa-chart-bar', 'text' => 'Reports', 'badge' => '', 'color' => 'indigo'],
-                        ];
-                    } elseif ($role === 'doctor') {
-                        $menu_items = [
-                            ['url' => 'doctor/dashboard', 'icon' => 'fas fa-chart-line', 'text' => 'Dashboard'],
-                            ['url' => 'doctor/consultations', 'icon' => 'fas fa-stethoscope', 'text' => 'Consultations'],
-                            ['url' => 'doctor/patients', 'icon' => 'fas fa-user-injured', 'text' => 'My Patients'],
-                            ['url' => 'doctor/lab_results', 'icon' => 'fas fa-flask', 'text' => 'Lab Results'],
-                        ];
-                    } elseif ($role === 'lab_technician') {
-                        $menu_items = [
-                            ['url' => 'lab/dashboard', 'icon' => 'fas fa-chart-line', 'text' => 'Dashboard', 'badge' => '', 'color' => 'blue'],
-                            ['url' => 'lab/tests', 'icon' => 'fas fa-vial', 'text' => 'Test Queue', 'badge' => '3', 'color' => 'yellow'],
-                            ['url' => 'lab/results', 'icon' => 'fas fa-clipboard-check', 'text' => 'Record Results', 'badge' => '', 'color' => 'green'],
-                            ['url' => 'lab/samples', 'icon' => 'fas fa-test-tube', 'text' => 'Sample Collection', 'badge' => '2', 'color' => 'purple'],
-                            ['url' => 'lab/equipment', 'icon' => 'fas fa-microscope', 'text' => 'Equipment', 'badge' => '1', 'color' => 'indigo'],
-                            ['url' => 'lab/inventory', 'icon' => 'fas fa-boxes', 'text' => 'Inventory', 'badge' => '!', 'color' => 'orange'],
-                            ['url' => 'lab/quality', 'icon' => 'fas fa-check-double', 'text' => 'Quality Control', 'badge' => '', 'color' => 'emerald'],
-                            ['url' => 'lab/reports', 'icon' => 'fas fa-chart-bar', 'text' => 'Reports', 'badge' => '', 'color' => 'rose'],
-                        ];
-                    }
-                    ?>
-                    
-                    <!-- Role badge -->
-                    <div class="mb-6 p-3 bg-gradient-to-r from-neutral-50 to-neutral-100 rounded-lg">
-                        <div class="flex items-center space-x-2">
-                            <div class="w-8 h-8 bg-gradient-to-br from-medical-accent to-medical-secondary rounded-lg flex items-center justify-center">
-                                <i class="fas fa-user text-white text-sm"></i>
-                            </div>
-                            <div>
-                                <div class="text-sm font-medium text-neutral-800"><?php echo htmlspecialchars($_SESSION['user_name']); ?></div>
-                                <div class="text-xs text-neutral-500 capitalize"><?php echo htmlspecialchars($role); ?></div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <?php foreach ($menu_items as $item):
-                        $is_active = (strpos($current_path, $item['url']) !== false);
-                        $color = isset($item['color']) ? $item['color'] : 'blue';
-                        $badge = isset($item['badge']) ? $item['badge'] : '';
-                    ?>
-                    <a href="<?php echo htmlspecialchars($BASE_PATH); ?>/<?php echo $item['url']; ?>" 
-                       class="group flex items-center justify-between px-3 py-2.5 rounded-lg transition-all duration-200 <?php echo $is_active ? 'bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 text-blue-700 shadow-sm' : 'text-neutral-600 hover:bg-gradient-to-r hover:from-neutral-50 hover:to-neutral-100 hover:text-neutral-800'; ?>"
-                       onclick="closeSidebarOnMobile()">
-                        <div class="flex items-center space-x-3">
-                            <div class="w-8 h-8 rounded-lg flex items-center justify-center transition-all duration-200 <?php echo $is_active ? 'bg-gradient-to-br from-blue-500 to-indigo-600 text-white shadow-sm' : 'bg-neutral-100 text-neutral-500 group-hover:bg-gradient-to-br group-hover:from-' . $color . '-500 group-hover:to-' . $color . '-600 group-hover:text-white'; ?>">
-                                <i class="<?php echo $item['icon']; ?> text-sm"></i>
-                            </div>
-                            <span class="font-medium text-sm"><?php echo $item['text']; ?></span>
-                        </div>
-                        <?php if ($badge): ?>
-                        <div class="flex items-center">
-                            <span class="<?php echo $badge === '!' ? 'bg-red-500 text-white' : 'bg-' . $color . '-500 text-white'; ?> text-xs font-bold px-2 py-1 rounded-full min-w-[20px] h-5 flex items-center justify-center">
-                                <?php echo $badge; ?>
-                            </span>
-                        </div>
-                        <?php endif; ?>
-                    </a>
-                    <?php endforeach; ?>
-                </nav>
-            </div>
-
-            <!-- Footer -->
-            <div class="p-4 border-t border-neutral-200">
-                <a href="<?php echo htmlspecialchars($BASE_PATH); ?>/auth/logout" 
-                   class="flex items-center space-x-3 text-neutral-600 hover:text-error-600 transition-colors">
-                    <i class="fas fa-sign-out-alt"></i>
-                    <span class="font-medium">Logout</span>
-                </a>
-            </div>
-        </div>
-
-        <!-- Main Content -->
-        <div class="flex-1 flex flex-col min-h-screen">
-            <!-- Top Header Bar -->
-            <div class="top-header">
-                <div class="px-4 md:px-6 py-3">
-                    <div class="flex items-center justify-between">
-                        <!-- Left: Breadcrumb or Page Title -->
-                        <div class="flex items-center space-x-4">
-                            <!-- Mobile menu button -->
-                            <button onclick="toggleSidebar()" class="md:hidden header-action-btn">
-                                <i class="fas fa-bars text-lg"></i>
-                            </button>
-                            
-                            <!-- Breadcrumb -->
-                            <nav class="breadcrumb hidden md:flex">
-                                <?php
-                                $current_page = trim(parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH), '/');
-                                $base = defined('BASE_PATH') ? trim(BASE_PATH, '/') : basename(dirname(__DIR__, 2));
-                                if (strpos($current_page, $base . '/') === 0) {
-                                    $current_page = substr($current_page, strlen($base) + 1);
-                                }
-                                
-                                $breadcrumbs = [];
-                                $parts = explode('/', $current_page);
-                                
-                                if (count($parts) >= 1 && $parts[0]) {
-                                    $breadcrumbs[] = ['text' => ucfirst($parts[0]), 'url' => $parts[0]];
-                                    if (count($parts) >= 2 && $parts[1]) {
-                                        $breadcrumbs[] = ['text' => ucfirst(str_replace('_', ' ', $parts[1])), 'url' => null];
+                                <!-- Breadcrumb -->
+                                <nav class="breadcrumb hidden md:flex">
+                                    <?php
+                                    $current_page = trim(parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH), '/');
+                                    $base = defined('BASE_PATH') ? trim(BASE_PATH, '/') : basename(dirname(__DIR__, 2));
+                                    if (strpos($current_page, $base . '/') === 0) {
+                                        $current_page = substr($current_page, strlen($base) + 1);
                                     }
-                                }
-                                
-                                if (empty($breadcrumbs)) {
-                                    $breadcrumbs[] = ['text' => 'Dashboard', 'url' => null];
-                                }
-                                ?>
-                                
-                                <div class="breadcrumb-item">
-                                    <i class="fas fa-home text-neutral-400 mr-2"></i>
-                                    <span class="text-neutral-800 font-medium">KJ Healthcare</span>
-                                </div>
-                                
-                                <?php foreach ($breadcrumbs as $index => $crumb): ?>
-                                <div class="breadcrumb-item">
-                                    <?php if ($crumb['url'] && $index < count($breadcrumbs) - 1): ?>
-                                        <a href="<?= htmlspecialchars($BASE_PATH) ?>/<?= htmlspecialchars($crumb['url']) ?>" 
-                                           class="breadcrumb-link"><?= htmlspecialchars($crumb['text']) ?></a>
-                                    <?php else: ?>
-                                        <span class="text-neutral-800 font-medium"><?= htmlspecialchars($crumb['text']) ?></span>
-                                    <?php endif; ?>
-                                </div>
-                                <?php endforeach; ?>
-                            </nav>
-                            
-                            <!-- Mobile page title -->
-                            <h1 class="md:hidden font-semibold text-neutral-800">
-                                <?= isset($pageTitle) ? htmlspecialchars($pageTitle) : 'KJ Healthcare' ?>
-                            </h1>
-                        </div>
 
-                        <!-- Right: Actions -->
-                        <div class="flex items-center space-x-2">
-                            <!-- Theme Toggle -->
-                            <div class="relative" id="themeDropdown">
-                                <button class="header-action-btn" onclick="toggleTheme()" title="Toggle Theme">
-                                    <i id="themeIcon" class="fas fa-moon text-lg"></i>
-                                </button>
-                            </div>
+                                    $breadcrumbs = [];
+                                    $parts = explode('/', $current_page);
 
-                            <!-- Search (Enhanced) -->
-                            <div class="relative hidden lg:flex" id="globalSearch">
-                                <input type="text" id="searchInput" placeholder="Search patients, tests..." 
-                                       class="w-64 px-4 py-2 pl-10 pr-4 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
-                                <i class="fas fa-search absolute left-3 top-3 text-gray-400"></i>
-                                <div id="searchResults" class="absolute top-full left-0 right-0 bg-white border border-gray-200 rounded-lg shadow-lg mt-1 hidden z-50"></div>
-                            </div>
-                            
-                            <!-- Language Switch -->
-                            <div class="relative" id="languageDropdown">
-                                <button class="header-action-btn" onclick="toggleLanguageDropdown()" title="Language">
-                                    <i class="fas fa-globe text-lg"></i>
-                                    <span class="ml-1 text-sm font-medium hidden sm:inline" id="currentLanguage">EN</span>
-                                </button>
-                                
-                                <div class="language-dropdown" id="languageMenu">
-                                    <a href="#" class="language-option active" onclick="switchLanguage('en')">
-                                        <i class="fas fa-flag-usa mr-2"></i>
-                                        <span>English</span>
-                                    </a>
-                                    <a href="#" class="language-option" onclick="switchLanguage('sw')">
-                                        <i class="fas fa-flag mr-2" style="color: #009639;"></i>
-                                        <span>Kiswahili</span>
-                                    </a>
-                                </div>
-                            </div>
-                            
-                            <!-- Notifications -->
-                            <div class="relative" id="notificationDropdown">
-                                <?php $notifCount = isset($notifications) ? count($notifications) : 0; ?>
-                                <button class="header-action-btn" onclick="toggleNotifications()" title="Notifications">
-                                    <i class="fas fa-bell text-lg"></i>
-                                    <?php if ($notifCount > 0): ?>
-                                        <span class="notification-badge" id="notificationCount"><?= $notifCount ?></span>
-                                    <?php endif; ?>
-                                </button>
-                                
-                                <div class="user-menu" id="notificationMenu" style="min-width: 300px;">
-                                    <div class="px-3 py-2 border-b border-neutral-200">
-                                        <h3 class="font-semibold text-neutral-800">Notifications</h3>
-                                        <p class="text-xs text-neutral-500">
-                                            <?= $notifCount > 0 ? ("You have $notifCount notification" . ($notifCount>1?'s':'')) : 'No notifications' ?>
-                                        </p>
+                                    if (count($parts) >= 1 && $parts[0]) {
+                                        $breadcrumbs[] = ['text' => ucfirst($parts[0]), 'url' => $parts[0]];
+                                        if (count($parts) >= 2 && $parts[1]) {
+                                            $breadcrumbs[] = ['text' => ucfirst(str_replace('_', ' ', $parts[1])), 'url' => null];
+                                        }
+                                    }
+
+                                    if (empty($breadcrumbs)) {
+                                        $breadcrumbs[] = ['text' => 'Dashboard', 'url' => null];
+                                    }
+                                    ?>
+
+                                    <div class="breadcrumb-item">
+                                        <i class="fas fa-home text-neutral-400 mr-2"></i>
+                                        <span class="text-neutral-800 font-medium">KJ Healthcare</span>
                                     </div>
 
-                                    <div class="max-h-64 overflow-y-auto">
-                                        <?php if (!empty($notifications)): ?>
-                                            <?php foreach ($notifications as $n): ?>
-                                                <div class="user-menu-item">
-                                                    <div class="flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center mr-3"
-                                                         style="background: <?= ($n['type'] ?? 'info') === 'error' ? '#fee2e2' : ((($n['type'] ?? 'info') === 'warning') ? '#fef3c7' : '#dbeafe') ?>;">
-                                                        <i class="fas <?= htmlspecialchars($n['icon'] ?? 'fa-info-circle') ?> text-xs"
-                                                           style="color: <?= ($n['type'] ?? 'info') === 'error' ? '#ef4444' : ((($n['type'] ?? 'info') === 'warning') ? '#f59e0b' : '#2563eb') ?>;"></i>
-                                                    </div>
-                                                    <div class="flex-1">
-                                                        <p class="text-sm font-medium text-neutral-800"><?= htmlspecialchars($n['title'] ?? 'Notification') ?></p>
-                                                        <p class="text-xs text-neutral-500"><?= htmlspecialchars($n['message'] ?? '') ?></p>
-                                                    </div>
-                                                </div>
-                                            <?php endforeach; ?>
-                                        <?php else: ?>
-                                            <div class="px-3 py-4 text-xs text-neutral-500">All caught up.</div>
+                                    <?php foreach ($breadcrumbs as $index => $crumb): ?>
+                                        <div class="breadcrumb-item">
+                                            <?php if ($crumb['url'] && $index < count($breadcrumbs) - 1): ?>
+                                                <a href="<?= htmlspecialchars($BASE_PATH) ?>/<?= htmlspecialchars($crumb['url']) ?>"
+                                                    class="breadcrumb-link"><?= htmlspecialchars($crumb['text']) ?></a>
+                                            <?php else: ?>
+                                                <span class="text-neutral-800 font-medium"><?= htmlspecialchars($crumb['text']) ?></span>
+                                            <?php endif; ?>
+                                        </div>
+                                    <?php endforeach; ?>
+                                </nav>
+
+                                <!-- Mobile page title -->
+                                <h1 class="md:hidden font-semibold text-neutral-800">
+                                    <?= isset($pageTitle) ? htmlspecialchars($pageTitle) : 'KJ Healthcare' ?>
+                                </h1>
+                            </div>
+
+                            <!-- Right: Actions -->
+                            <div class="flex items-center space-x-2">
+                                <!-- Theme Toggle -->
+                                <div class="relative" id="themeDropdown">
+                                    <button class="header-action-btn" onclick="toggleTheme()" title="Toggle Theme">
+                                        <i id="themeIcon" class="fas fa-moon text-lg"></i>
+                                    </button>
+                                </div>
+
+                                <!-- Search (Enhanced) -->
+                                <div class="relative hidden lg:flex" id="globalSearch">
+                                    <input type="text" id="searchInput" placeholder="Search patients, tests..."
+                                        class="w-64 px-4 py-2 pl-10 pr-4 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                                    <i class="fas fa-search absolute left-3 top-3 text-gray-400"></i>
+                                    <div id="searchResults" class="absolute top-full left-0 right-0 bg-white border border-gray-200 rounded-lg shadow-lg mt-1 hidden z-50"></div>
+                                </div>
+
+                                <!-- Language Switch -->
+                                <div class="relative" id="languageDropdown">
+                                    <button class="header-action-btn" onclick="toggleLanguageDropdown()" title="Language">
+                                        <i class="fas fa-globe text-lg"></i>
+                                        <span class="ml-1 text-sm font-medium hidden sm:inline" id="currentLanguage">EN</span>
+                                    </button>
+
+                                    <div class="language-dropdown" id="languageMenu">
+                                        <a href="#" class="language-option active" onclick="switchLanguage('en')">
+                                            <i class="fas fa-flag-usa mr-2"></i>
+                                            <span>English</span>
+                                        </a>
+                                        <a href="#" class="language-option" onclick="switchLanguage('sw')">
+                                            <i class="fas fa-flag mr-2" style="color: #009639;"></i>
+                                            <span>Kiswahili</span>
+                                        </a>
+                                    </div>
+                                </div>
+
+                                <!-- Notifications -->
+                                <div class="relative" id="notificationDropdown">
+                                    <?php $notifCount = isset($notifications) ? count($notifications) : 0; ?>
+                                    <button class="header-action-btn" onclick="toggleNotifications()" title="Notifications">
+                                        <i class="fas fa-bell text-lg"></i>
+                                        <?php if ($notifCount > 0): ?>
+                                            <span class="notification-badge" id="notificationCount"><?= $notifCount ?></span>
                                         <?php endif; ?>
+                                    </button>
+
+                                    <div class="user-menu" id="notificationMenu" style="min-width: 300px;">
+                                        <div class="px-3 py-2 border-b border-neutral-200">
+                                            <h3 class="font-semibold text-neutral-800">Notifications</h3>
+                                            <p class="text-xs text-neutral-500">
+                                                <?= $notifCount > 0 ? ("You have $notifCount notification" . ($notifCount > 1 ? 's' : '')) : 'No notifications' ?>
+                                            </p>
+                                        </div>
+
+                                        <div class="max-h-64 overflow-y-auto">
+                                            <?php if (!empty($notifications)): ?>
+                                                <?php foreach ($notifications as $n): ?>
+                                                    <div class="user-menu-item">
+                                                        <div class="flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center mr-3"
+                                                            style="background: <?= ($n['type'] ?? 'info') === 'error' ? '#fee2e2' : ((($n['type'] ?? 'info') === 'warning') ? '#fef3c7' : '#dbeafe') ?>;">
+                                                            <i class="fas <?= htmlspecialchars($n['icon'] ?? 'fa-info-circle') ?> text-xs"
+                                                                style="color: <?= ($n['type'] ?? 'info') === 'error' ? '#ef4444' : ((($n['type'] ?? 'info') === 'warning') ? '#f59e0b' : '#2563eb') ?>;"></i>
+                                                        </div>
+                                                        <div class="flex-1">
+                                                            <p class="text-sm font-medium text-neutral-800"><?= htmlspecialchars($n['title'] ?? 'Notification') ?></p>
+                                                            <p class="text-xs text-neutral-500"><?= htmlspecialchars($n['message'] ?? '') ?></p>
+                                                        </div>
+                                                    </div>
+                                                <?php endforeach; ?>
+                                            <?php else: ?>
+                                                <div class="px-3 py-4 text-xs text-neutral-500">All caught up.</div>
+                                            <?php endif; ?>
+                                        </div>
+
+                                        <div class="px-3 py-2 border-t border-neutral-200">
+                                            <a href="#" class="text-xs text-primary-600 hover:text-primary-700 font-medium">
+                                                View all notifications
+                                            </a>
+                                        </div>
                                     </div>
-                                    
-                                    <div class="px-3 py-2 border-t border-neutral-200">
-                                        <a href="#" class="text-xs text-primary-600 hover:text-primary-700 font-medium">
-                                            View all notifications
+                                </div>
+
+                                <!-- User Menu -->
+                                <div class="relative" id="userDropdown">
+                                    <button class="header-action-btn" onclick="toggleUserMenu()" title="User Menu">
+                                        <div class="w-8 h-8 bg-gradient-to-br from-primary-500 to-primary-600 rounded-full flex items-center justify-center">
+                                            <i class="fas fa-user text-white text-sm"></i>
+                                        </div>
+                                        <span class="ml-2 text-sm font-medium hidden sm:inline text-neutral-700">
+                                            <?= htmlspecialchars($_SESSION['user_name'] ?? 'User') ?>
+                                        </span>
+                                        <i class="fas fa-chevron-down text-xs text-neutral-500 ml-1 hidden sm:inline"></i>
+                                    </button>
+
+                                    <div class="user-menu" id="userMenu">
+                                        <div class="px-3 py-2 border-b border-neutral-200">
+                                            <p class="text-sm font-medium text-neutral-800"><?= htmlspecialchars($_SESSION['user_name'] ?? 'User') ?></p>
+                                            <p class="text-xs text-neutral-500 capitalize"><?= htmlspecialchars($_SESSION['user_role'] ?? 'user') ?></p>
+                                        </div>
+
+                                        <a href="#" class="user-menu-item">
+                                            <i class="fas fa-user-circle"></i>
+                                            <span>My Profile</span>
+                                        </a>
+
+                                        <a href="#" class="user-menu-item">
+                                            <i class="fas fa-cog"></i>
+                                            <span>Settings</span>
+                                        </a>
+
+                                        <a href="#" class="user-menu-item">
+                                            <i class="fas fa-question-circle"></i>
+                                            <span>Help & Support</span>
+                                        </a>
+
+                                        <div class="border-t border-neutral-200 my-1"></div>
+
+                                        <a href="<?= htmlspecialchars($BASE_PATH) ?>/auth/logout" class="user-menu-item text-red-600 hover:bg-red-50">
+                                            <i class="fas fa-sign-out-alt"></i>
+                                            <span>Logout</span>
                                         </a>
                                     </div>
                                 </div>
                             </div>
-                            
-                            <!-- User Menu -->
-                            <div class="relative" id="userDropdown">
-                                <button class="header-action-btn" onclick="toggleUserMenu()" title="User Menu">
-                                    <div class="w-8 h-8 bg-gradient-to-br from-primary-500 to-primary-600 rounded-full flex items-center justify-center">
-                                        <i class="fas fa-user text-white text-sm"></i>
-                                    </div>
-                                    <span class="ml-2 text-sm font-medium hidden sm:inline text-neutral-700">
-                                        <?= htmlspecialchars($_SESSION['user_name'] ?? 'User') ?>
-                                    </span>
-                                    <i class="fas fa-chevron-down text-xs text-neutral-500 ml-1 hidden sm:inline"></i>
-                                </button>
-                                
-                                <div class="user-menu" id="userMenu">
-                                    <div class="px-3 py-2 border-b border-neutral-200">
-                                        <p class="text-sm font-medium text-neutral-800"><?= htmlspecialchars($_SESSION['user_name'] ?? 'User') ?></p>
-                                        <p class="text-xs text-neutral-500 capitalize"><?= htmlspecialchars($_SESSION['user_role'] ?? 'user') ?></p>
-                                    </div>
-                                    
-                                    <a href="#" class="user-menu-item">
-                                        <i class="fas fa-user-circle"></i>
-                                        <span>My Profile</span>
-                                    </a>
-                                    
-                                    <a href="#" class="user-menu-item">
-                                        <i class="fas fa-cog"></i>
-                                        <span>Settings</span>
-                                    </a>
-                                    
-                                    <a href="#" class="user-menu-item">
-                                        <i class="fas fa-question-circle"></i>
-                                        <span>Help & Support</span>
-                                    </a>
-                                    
-                                    <div class="border-t border-neutral-200 my-1"></div>
-                                    
-                                    <a href="<?= htmlspecialchars($BASE_PATH) ?>/auth/logout" class="user-menu-item text-red-600 hover:bg-red-50">
-                                        <i class="fas fa-sign-out-alt"></i>
-                                        <span>Logout</span>
-                                    </a>
-                                </div>
-                            </div>
                         </div>
                     </div>
                 </div>
+
+                <!-- Mobile header (remove this as it's now in top header) -->
+
+                <!-- Page content -->
+                <main class="flex-1 overflow-auto custom-scrollbar main-content-area">
+                    <div class="fade-in">
+                        <?php echo $content; ?>
+                    </div>
+                </main>
             </div>
-
-            <!-- Mobile header (remove this as it's now in top header) -->
-
-            <!-- Page content -->
-            <main class="flex-1 overflow-auto custom-scrollbar main-content-area">
-                <div class="fade-in">
-                    <?php echo $content; ?>
-                </div>
-            </main>
         </div>
-    </div>
     <?php else: ?>
-    <!-- Login Page -->
-    <div class="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100">
-        <div class="max-w-md w-full space-y-8">
-            <?php echo $content; ?>
+        <!-- Login Page -->
+        <div class="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100">
+            <div class="max-w-md w-full space-y-8">
+                <?php echo $content; ?>
+            </div>
         </div>
-    </div>
     <?php endif; ?>
 
     <!-- Mobile Navigation JavaScript -->
@@ -1156,7 +1266,7 @@
         function toggleSidebar() {
             const sidebar = document.getElementById('sidebar');
             const overlay = document.getElementById('sidebarOverlay');
-            
+
             if (sidebar && overlay) {
                 sidebar.classList.toggle('open');
                 overlay.classList.toggle('show');
@@ -1167,7 +1277,7 @@
             if (window.innerWidth <= 768) {
                 const sidebar = document.getElementById('sidebar');
                 const overlay = document.getElementById('sidebarOverlay');
-                
+
                 if (sidebar && overlay) {
                     sidebar.classList.remove('open');
                     overlay.classList.remove('show');
@@ -1180,7 +1290,7 @@
             if (window.innerWidth <= 768) {
                 const sidebar = document.getElementById('sidebar');
                 const toggleBtn = event.target.closest('[onclick*="toggleSidebar"]');
-                
+
                 if (sidebar && !sidebar.contains(event.target) && !toggleBtn) {
                     sidebar.classList.remove('open');
                     document.getElementById('sidebarOverlay').classList.remove('show');
@@ -1193,7 +1303,7 @@
             if (window.innerWidth > 768) {
                 const sidebar = document.getElementById('sidebar');
                 const overlay = document.getElementById('sidebarOverlay');
-                
+
                 if (sidebar && overlay) {
                     sidebar.classList.remove('open');
                     overlay.classList.remove('show');
@@ -1206,11 +1316,11 @@
             const dropdown = document.getElementById('languageMenu');
             const userMenu = document.getElementById('userMenu');
             const notificationMenu = document.getElementById('notificationMenu');
-            
+
             // Close other dropdowns
             if (userMenu) userMenu.classList.remove('show');
             if (notificationMenu) notificationMenu.classList.remove('show');
-            
+
             if (dropdown) {
                 dropdown.classList.toggle('show');
             }
@@ -1220,15 +1330,15 @@
             const dropdown = document.getElementById('notificationMenu');
             const userMenu = document.getElementById('userMenu');
             const languageMenu = document.getElementById('languageMenu');
-            
+
             // Close other dropdowns
             if (userMenu) userMenu.classList.remove('show');
             if (languageMenu) languageMenu.classList.remove('show');
-            
+
             if (dropdown) {
                 dropdown.classList.toggle('show');
             }
-            
+
             // Mark notifications as read (update badge)
             const badge = document.getElementById('notificationCount');
             if (badge && dropdown && dropdown.classList.contains('show')) {
@@ -1242,11 +1352,11 @@
             const dropdown = document.getElementById('userMenu');
             const languageMenu = document.getElementById('languageMenu');
             const notificationMenu = document.getElementById('notificationMenu');
-            
+
             // Close other dropdowns
             if (languageMenu) languageMenu.classList.remove('show');
             if (notificationMenu) notificationMenu.classList.remove('show');
-            
+
             if (dropdown) {
                 dropdown.classList.toggle('show');
             }
@@ -1256,15 +1366,15 @@
         function toggleTheme() {
             const currentTheme = localStorage.getItem('theme') || 'light';
             const newTheme = currentTheme === 'light' ? 'dark' : 'light';
-            
+
             document.documentElement.setAttribute('data-theme', newTheme);
             localStorage.setItem('theme', newTheme);
-            
+
             const themeIcon = document.getElementById('themeIcon');
             if (themeIcon) {
                 themeIcon.className = newTheme === 'dark' ? 'fas fa-sun text-lg' : 'fas fa-moon text-lg';
             }
-            
+
             showToast(`Switched to ${newTheme} mode`, 'success');
         }
 
@@ -1278,7 +1388,7 @@
                 searchInput.addEventListener('input', function(e) {
                     clearTimeout(searchTimeout);
                     const query = e.target.value.trim();
-                    
+
                     if (query.length < 2) {
                         searchResults.classList.add('hidden');
                         return;
@@ -1306,17 +1416,31 @@
         function performGlobalSearch(query) {
             // Simulate search results (in real implementation, this would be an AJAX call)
             const searchResults = document.getElementById('searchResults');
-            const mockResults = [
-                { type: 'patient', name: 'John Doe', id: 'P-001', info: 'Age 45, Last visit: Today' },
-                { type: 'test', name: 'Blood Sugar', id: 'T-001', info: 'Category: Blood Tests' },
-                { type: 'medicine', name: 'Paracetamol', id: 'M-001', info: 'Stock: 500 tablets' }
+            const mockResults = [{
+                    type: 'patient',
+                    name: 'John Doe',
+                    id: 'P-001',
+                    info: 'Age 45, Last visit: Today'
+                },
+                {
+                    type: 'test',
+                    name: 'Blood Sugar',
+                    id: 'T-001',
+                    info: 'Category: Blood Tests'
+                },
+                {
+                    type: 'medicine',
+                    name: 'Paracetamol',
+                    id: 'M-001',
+                    info: 'Stock: 500 tablets'
+                }
             ].filter(item => item.name.toLowerCase().includes(query.toLowerCase()));
 
             let resultsHTML = '';
             if (mockResults.length > 0) {
                 mockResults.forEach(result => {
-                    const icon = result.type === 'patient' ? 'fa-user' : 
-                                result.type === 'test' ? 'fa-flask' : 'fa-pills';
+                    const icon = result.type === 'patient' ? 'fa-user' :
+                        result.type === 'test' ? 'fa-flask' : 'fa-pills';
                     resultsHTML += `
                         <div class="p-3 hover:bg-gray-50 cursor-pointer border-b border-gray-100 last:border-b-0">
                             <div class="flex items-center space-x-3">
@@ -1341,16 +1465,16 @@
         function showAdvancedNotification(title, message, type = 'info', actions = []) {
             const notification = document.createElement('div');
             notification.className = `fixed top-4 right-4 z-50 p-4 rounded-lg shadow-lg text-white max-w-sm animate-slide-in-right`;
-            
+
             const bgColors = {
                 success: 'bg-gradient-to-r from-green-500 to-green-600',
                 error: 'bg-gradient-to-r from-red-500 to-red-600',
                 warning: 'bg-gradient-to-r from-yellow-500 to-yellow-600',
                 info: 'bg-gradient-to-r from-blue-500 to-blue-600'
             };
-            
+
             notification.classList.add(bgColors[type] || bgColors.info);
-            
+
             let actionsHTML = '';
             if (actions.length > 0) {
                 actionsHTML = '<div class="mt-3 flex space-x-2">';
@@ -1359,7 +1483,7 @@
                 });
                 actionsHTML += '</div>';
             }
-            
+
             notification.innerHTML = `
                 <div class="flex items-start justify-between">
                     <div class="flex-1">
@@ -1372,9 +1496,9 @@
                     </button>
                 </div>
             `;
-            
+
             document.body.appendChild(notification);
-            
+
             setTimeout(() => {
                 if (notification.parentNode) {
                     notification.style.opacity = '0';
@@ -1394,7 +1518,7 @@
                     searchInput.focus();
                 }
             }
-            
+
             // Ctrl/Cmd + D for dark mode toggle
             if ((e.ctrlKey || e.metaKey) && e.key === 'd') {
                 e.preventDefault();
@@ -1407,15 +1531,15 @@
             // Load saved theme
             const savedTheme = localStorage.getItem('theme') || 'light';
             document.documentElement.setAttribute('data-theme', savedTheme);
-            
+
             const themeIcon = document.getElementById('themeIcon');
             if (themeIcon) {
                 themeIcon.className = savedTheme === 'dark' ? 'fas fa-sun text-lg' : 'fas fa-moon text-lg';
             }
-            
+
             // Initialize global search
             initializeGlobalSearch();
-            
+
             // Add loading states to forms
             const forms = document.querySelectorAll('form');
             forms.forEach(form => {
@@ -1434,24 +1558,24 @@
             const languageDropdown = document.getElementById('languageDropdown');
             const userDropdown = document.getElementById('userDropdown');
             const notificationDropdown = document.getElementById('notificationDropdown');
-            
+
             if (languageDropdown && !languageDropdown.contains(event.target)) {
                 document.getElementById('languageMenu').classList.remove('show');
             }
-            
+
             if (userDropdown && !userDropdown.contains(event.target)) {
                 document.getElementById('userMenu').classList.remove('show');
             }
-            
+
             if (notificationDropdown && !notificationDropdown.contains(event.target)) {
                 document.getElementById('notificationMenu').classList.remove('show');
             }
-            
+
             // Close sidebar on mobile
             if (window.innerWidth <= 768) {
                 const sidebar = document.getElementById('sidebar');
                 const toggleBtn = event.target.closest('[onclick*="toggleSidebar"]');
-                
+
                 if (sidebar && !sidebar.contains(event.target) && !toggleBtn) {
                     sidebar.classList.remove('open');
                     document.getElementById('sidebarOverlay').classList.remove('show');
@@ -1469,21 +1593,21 @@
         function showToast(message, type = 'info', duration = 5000) {
             const toast = document.createElement('div');
             toast.className = `fixed top-4 right-4 z-50 p-4 rounded-lg shadow-lg text-white max-w-sm slide-up`;
-            
+
             const bgColors = {
                 success: 'bg-gradient-to-r from-green-500 to-green-600',
                 error: 'bg-gradient-to-r from-red-500 to-red-600',
                 warning: 'bg-gradient-to-r from-yellow-500 to-yellow-600',
                 info: 'bg-gradient-to-r from-blue-500 to-blue-600'
             };
-            
+
             const icons = {
                 success: 'fas fa-check-circle',
                 error: 'fas fa-exclamation-triangle',
                 warning: 'fas fa-exclamation-circle',
                 info: 'fas fa-info-circle'
             };
-            
+
             toast.classList.add(bgColors[type] || bgColors.info);
             toast.innerHTML = `
                 <div class="flex items-center space-x-3">
@@ -1494,9 +1618,9 @@
                     </button>
                 </div>
             `;
-            
+
             document.body.appendChild(toast);
-            
+
             setTimeout(() => {
                 if (toast.parentNode) {
                     toast.style.opacity = '0';
@@ -1511,7 +1635,7 @@
             showToast('<?php echo addslashes($_SESSION['success']); ?>', 'success');
             <?php unset($_SESSION['success']); ?>
         <?php endif; ?>
-        
+
         <?php if (isset($_SESSION['error'])): ?>
             showToast('<?php echo addslashes($_SESSION['error']); ?>', 'error');
             <?php unset($_SESSION['error']); ?>
@@ -1576,4 +1700,5 @@
         });
     </script>
 </body>
+
 </html>
