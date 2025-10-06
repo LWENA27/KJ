@@ -14,6 +14,49 @@
         </div>
     </div>
 
+    <!-- Patient Workflow Status -->
+    <div class="bg-blue-50 p-4 rounded-lg mb-6">
+        <h4 class="font-medium text-blue-800 mb-2">Patient Workflow Status</h4>
+        <div class="flex items-center space-x-8">
+            <div class="flex items-center">
+                <div class="w-8 h-8 rounded-full bg-green-500 flex items-center justify-center text-white">
+                    <i class="fas fa-check"></i>
+                </div>
+                <div class="ml-2">
+                    <div class="text-sm font-medium">Reception</div>
+                    <div class="text-xs text-gray-500">Completed</div>
+                </div>
+            </div>
+            <div class="flex items-center">
+                <div class="w-8 h-8 rounded-full bg-green-500 flex items-center justify-center text-white">
+                    <i class="fas fa-check"></i>
+                </div>
+                <div class="ml-2">
+                    <div class="text-sm font-medium">Payment</div>
+                    <div class="text-xs text-gray-500">Verified</div>
+                </div>
+            </div>
+            <div class="flex items-center">
+                <div class="w-8 h-8 rounded-full bg-blue-500 flex items-center justify-center text-white">
+                    <i class="fas fa-flask"></i>
+                </div>
+                <div class="ml-2">
+                    <div class="text-sm font-medium">Lab Test</div>
+                    <div class="text-xs text-gray-500">In Progress</div>
+                </div>
+            </div>
+            <div class="flex items-center">
+                <div class="w-8 h-8 rounded-full bg-gray-300 flex items-center justify-center text-white">
+                    <i class="fas fa-file-medical"></i>
+                </div>
+                <div class="ml-2">
+                    <div class="text-sm font-medium">Results</div>
+                    <div class="text-xs text-gray-500">Pending</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- Test Information -->
     <div class="bg-white rounded-lg shadow p-6">
         <h3 class="text-xl font-semibold text-gray-900 mb-4 flex items-center">

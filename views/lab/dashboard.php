@@ -147,73 +147,98 @@
                             <i class="fas fa-clipboard-list mr-3 text-yellow-600"></i>
                             Pending Test Queue
                         </h3>
-                        <span class="bg-yellow-100 text-yellow-800 px-3 py-1 rounded-full text-sm font-medium">
-                            <?php echo count($pending_tests); ?> tests waiting
-                        </span>
+                        <div class="flex items-center space-x-3">
+                            <span class="bg-yellow-100 text-yellow-800 px-3 py-1 rounded-full text-sm font-medium">
+                                <?php echo count($pending_tests); ?> tests waiting
+                            </span>
+                            <select id="queueFilter" class="text-sm border-gray-300 rounded-md">
+                                <option value="all">All Tests</option>
+                                <option value="urgent">Urgent</option>
+                                <option value="routine">Routine</option>
+                            </select>
+                        </div>
                     </div>
                 </div>
                 <div class="p-6 max-h-96 overflow-y-auto">
                     <?php if (empty($pending_tests)): ?>
-                    <div class="text-center py-12">
-                        <div class="w-20 h-20 mx-auto mb-4 bg-green-100 rounded-full flex items-center justify-center">
-                            <i class="fas fa-check-circle text-green-500 text-3xl"></i>
-                        </div>
-                        <h4 class="text-lg font-medium text-gray-900 mb-2">All Tests Completed!</h4>
-                        <p class="text-gray-500">No pending tests in queue</p>
-                        <p class="text-sm text-gray-400 mt-1">All tests have been processed</p>
-                    </div>
-                    <?php else: ?>
-                    <div class="space-y-4">
-                        <?php foreach ($pending_tests as $index => $test): ?>
-                        <div class="group border-l-4 border-yellow-400 bg-yellow-50 hover:bg-yellow-100 rounded-lg p-4 transition-all duration-200 hover:shadow-md">
-                            <div class="flex items-center justify-between">
-                                <div class="flex items-center space-x-4">
-                                    <!-- Priority Badge -->
-                                    <div class="flex flex-col items-center">
-                                        <div class="w-8 h-8 bg-yellow-500 text-white rounded-full flex items-center justify-center text-sm font-bold">
-                                            <?php echo $index + 1; ?>
-                                        </div>
-                                        <span class="text-xs text-yellow-600 mt-1">Queue</span>
-                                    </div>
-                                    
-                                    <!-- Test Info -->
-                                    <div class="flex-1">
-                                        <div class="flex items-center space-x-3 mb-2">
-                                            <h4 class="font-semibold text-gray-900">
-                                                <?php echo htmlspecialchars($test['test_name']); ?>
-                                            </h4>
-                                            <span class="bg-blue-100 text-blue-800 px-2 py-1 rounded text-xs">
-                                                ID: <?php echo str_pad($test['id'], 4, '0', STR_PAD_LEFT); ?>
-                                            </span>
-                                        </div>
-                                        <div class="grid grid-cols-2 gap-4 text-sm text-gray-600">
-                                            <div class="flex items-center">
-                                                <i class="fas fa-user mr-2 text-gray-400"></i>
-                                                <span><strong>Patient:</strong> <?php echo htmlspecialchars($test['first_name'] . ' ' . $test['last_name']); ?></span>
-                                            </div>
-                                            <div class="flex items-center">
-                                                <i class="fas fa-clock mr-2 text-gray-400"></i>
-                                                <span><strong>Requested:</strong> <?php echo date('M j, H:i', strtotime($test['created_at'])); ?></span>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                                
-                                <!-- Action Buttons -->
-                                <div class="flex items-center space-x-2">
-                                    <button onclick="startTest(<?php echo $test['id']; ?>, '<?php echo htmlspecialchars($test['test_name']); ?>')" 
-                                            class="bg-green-500 hover:bg-green-600 text-white px-3 py-2 rounded-lg text-sm font-medium transition-colors">
-                                        <i class="fas fa-play mr-1"></i>Start Test
-                                    </button>
-                                    <a href="/KJ/lab/view_test/<?php echo $test['id']; ?>"
-                                       class="bg-blue-500 hover:bg-blue-600 text-white px-3 py-2 rounded-lg text-sm font-medium transition-colors">
-                                        <i class="fas fa-eye mr-1"></i>Details
-                                    </a>
-                                </div>
+                        <div class="text-center py-12">
+                            <div class="w-20 h-20 mx-auto mb-4 bg-green-100 rounded-full flex items-center justify-center">
+                                <i class="fas fa-check-circle text-green-500 text-3xl"></i>
                             </div>
+                            <h4 class="text-lg font-medium text-gray-900 mb-2">All Tests Completed!</h4>
+                            <p class="text-gray-500">No pending tests in queue</p>
                         </div>
-                        <?php endforeach; ?>
-                    </div>
+                    <?php else: ?>
+                        <div class="space-y-4">
+                            <?php foreach ($pending_tests as $index => $test): ?>
+                                <div class="group border-l-4 <?php echo $test['priority'] === 'urgent' ? 'border-red-400' : 'border-yellow-400'; ?> 
+                                          bg-white hover:bg-gray-50 rounded-lg p-4 transition-all duration-200 hover:shadow-md">
+                                    <div class="flex items-center justify-between">
+                                        <div class="flex items-center space-x-4">
+                                            <!-- Queue Number -->
+                                            <div class="flex flex-col items-center">
+                                                <div class="w-8 h-8 <?php echo $test['priority'] === 'urgent' ? 'bg-red-500' : 'bg-yellow-500'; ?> 
+                                                          text-white rounded-full flex items-center justify-center text-sm font-bold">
+                                                    <?php echo $index + 1; ?>
+                                                </div>
+                                                <span class="text-xs <?php echo $test['priority'] === 'urgent' ? 'text-red-600' : 'text-yellow-600'; ?> mt-1">
+                                                    <?php echo $test['priority'] === 'urgent' ? 'URGENT' : 'Queue'; ?>
+                                                </span>
+                                            </div>
+
+                                            <!-- Patient & Test Info -->
+                                            <div class="flex-1">
+                                                <div class="flex items-center space-x-3 mb-2">
+                                                    <h4 class="font-semibold text-gray-900">
+                                                        <?php echo htmlspecialchars($test['first_name'] . ' ' . $test['last_name']); ?>
+                                                    </h4>
+                                                    <span class="bg-gray-100 text-gray-600 px-2 py-1 rounded text-xs">
+                                                        ID: <?php echo str_pad($test['patient_id'], 4, '0', STR_PAD_LEFT); ?>
+                                                    </span>
+                                                    <?php if($test['lab_tests_paid']): ?>
+                                                        <span class="bg-green-100 text-green-800 px-2 py-1 rounded text-xs">
+                                                            <i class="fas fa-check-circle mr-1"></i>Paid
+                                                        </span>
+                                                    <?php endif; ?>
+                                                </div>
+                                                <div class="grid grid-cols-2 gap-4 text-sm text-gray-600">
+                                                    <div class="flex items-center">
+                                                        <i class="fas fa-flask mr-2 text-gray-400"></i>
+                                                        <span><strong>Test:</strong> <?php echo htmlspecialchars($test['test_name']); ?></span>
+                                                    </div>
+                                                    <div class="flex items-center">
+                                                        <i class="fas fa-clock mr-2 text-gray-400"></i>
+                                                        <span><strong>Requested:</strong> 
+                                                            <?php echo date('M j, H:i', strtotime($test['created_at'])); ?>
+                                                        </span>
+                                                    </div>
+                                                </div>
+                                                <?php if($test['notes']): ?>
+                                                    <div class="mt-2 text-sm text-gray-500">
+                                                        <i class="fas fa-comment-medical mr-2"></i>
+                                                        <?php echo htmlspecialchars($test['notes']); ?>
+                                                    </div>
+                                                <?php endif; ?>
+                                            </div>
+                                        </div>
+
+                                        <!-- Action Buttons -->
+                                        <div class="flex items-center space-x-2">
+                                            <?php if($test['lab_tests_paid']): ?>
+                                                <button onclick="startTest(<?php echo $test['id']; ?>, '<?php echo htmlspecialchars($test['test_name']); ?>')" 
+                                                        class="bg-green-500 hover:bg-green-600 text-white px-3 py-2 rounded-lg text-sm font-medium transition-colors">
+                                                    <i class="fas fa-play mr-1"></i>Start Test
+                                                </button>
+                                            <?php endif; ?>
+                                            <a href="/KJ/lab/view_test/<?php echo $test['id']; ?>"
+                                               class="bg-blue-500 hover:bg-blue-600 text-white px-3 py-2 rounded-lg text-sm font-medium transition-colors">
+                                                <i class="fas fa-eye mr-1"></i>Details
+                                            </a>
+                                        </div>
+                                    </div>
+                                </div>
+                            <?php endforeach; ?>
+                        </div>
                     <?php endif; ?>
                 </div>
             </div>
@@ -769,6 +794,31 @@ function refreshTestCounts() {
 
 // Refresh every 30 seconds
 setInterval(refreshTestCounts, 30000);
+
+// Check for new patients
+function checkNewPatients() {
+    fetch('/KJ/lab/check_new_patients', {
+        method: 'GET',
+        headers: {
+            'Content-Type': 'application/json',
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.new_patients > 0) {
+            showNotification(
+                'New Patients Waiting',
+                `${data.new_patients} patient(s) waiting for lab tests`,
+                'info'
+            );
+            // Refresh the pending patients list
+            location.reload();
+        }
+    });
+}
+
+// Check every 30 seconds for new patients
+setInterval(checkNewPatients, 30000);
 
 // Keyboard shortcuts
 document.addEventListener('keydown', function(e) {

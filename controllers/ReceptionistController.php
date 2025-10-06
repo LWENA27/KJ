@@ -1,14 +1,17 @@
 <?php
 require_once __DIR__ . '/../includes/BaseController.php';
 
-class ReceptionistController extends BaseController {
+class ReceptionistController extends BaseController
+{
 
-    public function __construct() {
+    public function __construct()
+    {
         parent::__construct();
         $this->requireRole('receptionist');
     }
 
-    public function dashboard() {
+    public function dashboard()
+    {
         // Get today's appointments
         $stmt = $this->pdo->prepare("
             SELECT c.*, p.first_name, p.last_name, u.first_name as doctor_first, u.last_name as doctor_last
@@ -66,7 +69,8 @@ class ReceptionistController extends BaseController {
         ]);
     }
 
-    public function patients() {
+    public function patients()
+    {
         $patients = $this->pdo->query("
             SELECT p.*, ws.current_step as workflow_status, ws.current_step, ws.consultation_registration_paid, ws.lab_tests_paid,
                    ws.results_review_paid, ws.medicine_prescribed, ws.medicine_dispensed, ws.final_payment_collected,
@@ -90,7 +94,37 @@ class ReceptionistController extends BaseController {
         ]);
     }
 
-    public function register_patient() {
+    private function generateRegistrationNumber()
+    {
+        try {
+            $year = date('Y');
+            $pattern = "KJ{$year}%";
+
+            $stmt = $this->pdo->prepare("
+            SELECT COALESCE(MAX(CAST(SUBSTR(registration_number, -4) AS UNSIGNED)), 0) + 1 AS next_sequence
+            FROM patients 
+            WHERE registration_number LIKE ?
+        ");
+
+            if (!$stmt->execute([$pattern])) {
+                throw new PDOException('Failed to fetch last registration number sequence.');
+            }
+
+            $next_sequence = $stmt->fetchColumn();
+            if ($next_sequence === false) {
+                $next_sequence = 1;
+            }
+
+            return sprintf("KJ%s%04d", $year, $next_sequence);
+        } catch (PDOException $e) {
+            // Fallback to 1 on error, or log the error as needed
+            error_log('Error generating registration number: ' . $e->getMessage());
+            $year = date('Y');
+            return sprintf("KJ%s%04d", $year, 1);
+        }
+    }
+    public function register_patient()
+    {
         $error = '';
         $success = '';
 
@@ -101,49 +135,47 @@ class ReceptionistController extends BaseController {
                 'first_name' => $this->sanitize($_POST['first_name'] ?? ''),
                 'last_name' => $this->sanitize($_POST['last_name'] ?? ''),
                 'date_of_birth' => $_POST['date_of_birth'] ?? '',
-                // sanitize gender input and validate below
                 'gender' => $this->sanitize($_POST['gender'] ?? ''),
                 'phone' => $this->sanitize($_POST['phone'] ?? ''),
                 'email' => $this->sanitize($_POST['email'] ?? ''),
                 'address' => $this->sanitize($_POST['address'] ?? ''),
                 'emergency_contact_name' => $this->sanitize($_POST['emergency_contact_name'] ?? ''),
-                'emergency_contact_phone' => $this->sanitize($_POST['emergency_contact_phone'] ?? ''),
-                'occupation' => $this->sanitize($_POST['occupation'] ?? ''),
-                'temperature' => floatval($_POST['temperature'] ?? 0),
-                'blood_pressure' => $this->sanitize($_POST['blood_pressure'] ?? ''),
-                'pulse_rate' => intval($_POST['pulse_rate'] ?? 0),
-                'body_weight' => floatval($_POST['body_weight'] ?? 0),
-                'height' => floatval($_POST['height'] ?? 0),
-                'consultation_fee' => floatval($_POST['consultation_fee'] ?? 0),
-                'payment_method' => $_POST['payment_method'] ?? 'cash'
+                'emergency_contact_phone' => $this->sanitize($_POST['emergency_contact_phone'] ?? '')
             ];
-
-            // normalize and validate gender
-            $patient_data['gender'] = strtolower(trim($patient_data['gender']));
-            $allowedGenders = ['male', 'female'];
 
             if (empty($patient_data['first_name']) || empty($patient_data['last_name'])) {
                 $error = 'First name and last name are required';
-            } elseif (!in_array($patient_data['gender'], $allowedGenders, true)) {
-                $error = 'Invalid gender selected. Please choose Male or Female.';
             } else {
                 try {
                     $this->pdo->beginTransaction();
 
-                    // Insert patient
+                    // Generate registration number
+                    $registration_number = $this->generateRegistrationNumber();
+
+                    // Insert patient with registration number
                     $stmt = $this->pdo->prepare("
-                        INSERT INTO patients (first_name, last_name, date_of_birth, gender, phone, email, address,
-                                           occupation, emergency_contact_name, emergency_contact_phone, temperature,
-                                           blood_pressure, pulse_rate, body_weight, height)
-                        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                        INSERT INTO patients (
+                            registration_number, first_name, last_name, date_of_birth, 
+                            gender, phone, email, address, 
+                            emergency_contact_name, emergency_contact_phone
+                        ) VALUES (
+                            ?, ?, ?, ?, 
+                            ?, ?, ?, ?, 
+                            ?, ?
+                        )
                     ");
+
                     $stmt->execute([
-                        $patient_data['first_name'], $patient_data['last_name'], $patient_data['date_of_birth'],
-                        $patient_data['gender'], $patient_data['phone'], $patient_data['email'],
-                        $patient_data['address'], $patient_data['occupation'], $patient_data['emergency_contact_name'],
-                        $patient_data['emergency_contact_phone'], $patient_data['temperature'],
-                        $patient_data['blood_pressure'], $patient_data['pulse_rate'], $patient_data['body_weight'],
-                        $patient_data['height']
+                        $registration_number,
+                        $patient_data['first_name'],
+                        $patient_data['last_name'],
+                        $patient_data['date_of_birth'],
+                        $patient_data['gender'],
+                        $patient_data['phone'],
+                        $patient_data['email'],
+                        $patient_data['address'],
+                        $patient_data['emergency_contact_name'],
+                        $patient_data['emergency_contact_phone']
                     ]);
 
                     $patient_id = $this->pdo->lastInsertId();
@@ -151,19 +183,10 @@ class ReceptionistController extends BaseController {
                     // Initialize workflow
                     $workflow_id = $this->initializeWorkflow($patient_id);
 
-                    // Process consultation/registration payment
-                    if ($patient_data['consultation_fee'] > 0) {
-                        $this->processStepPayment($workflow_id, 'consultation_registration', $patient_data['consultation_fee'],
-                                                $patient_data['payment_method'], $_SESSION['user_id']);
-                    }
-
                     $this->pdo->commit();
-                    // Set flash message and redirect to patients list for better UX
-                    $_SESSION['success'] = 'Patient registered successfully!';
-                    // Store the last registered patient id for quick access
+                    $_SESSION['success'] = "Patient registered successfully! Registration Number: $registration_number";
                     $_SESSION['last_registered_patient_id'] = $patient_id;
                     $this->redirect('receptionist/patients');
-
                 } catch (Exception $e) {
                     $this->pdo->rollBack();
                     $error = 'Registration failed: ' . $e->getMessage();
@@ -179,7 +202,8 @@ class ReceptionistController extends BaseController {
         ]);
     }
 
-    public function appointments() {
+    public function appointments()
+    {
         $stmt = $this->pdo->prepare("
             SELECT c.*, p.first_name, p.last_name, u.first_name as doctor_first, u.last_name as doctor_last
             FROM consultations c
@@ -196,7 +220,8 @@ class ReceptionistController extends BaseController {
         ]);
     }
 
-    public function payments() {
+    public function payments()
+    {
         $stmt = $this->pdo->prepare("
             SELECT p.*, pt.first_name, pt.last_name, c.appointment_date
             FROM payments p
@@ -213,7 +238,8 @@ class ReceptionistController extends BaseController {
         ]);
     }
 
-    public function process_final_payment() {
+    public function process_final_payment()
+    {
         if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
             $this->redirect('receptionist/patients');
         }
@@ -253,7 +279,6 @@ class ReceptionistController extends BaseController {
 
             $this->pdo->commit();
             $_SESSION['success'] = 'Final payment processed successfully';
-
         } catch (Exception $e) {
             $this->pdo->rollBack();
             $_SESSION['error'] = 'Failed to process payment: ' . $e->getMessage();
@@ -262,7 +287,8 @@ class ReceptionistController extends BaseController {
         $this->redirect('receptionist/patients');
     }
 
-    public function medicine() {
+    public function medicine()
+    {
         // Get patients waiting for medicine dispensing (prescribed and paid)
         $stmt = $this->pdo->prepare("
             SELECT p.id AS patient_id, p.first_name, p.last_name,
@@ -324,7 +350,7 @@ class ReceptionistController extends BaseController {
         }
 
         // Get medicine categories
-    $categories = $this->pdo->query("SELECT DISTINCT supplier FROM medicines ORDER BY supplier")->fetchAll(PDO::FETCH_COLUMN);
+        $categories = $this->pdo->query("SELECT DISTINCT supplier FROM medicines ORDER BY supplier")->fetchAll(PDO::FETCH_COLUMN);
 
         // Get recent medicine transactions (simplified)
         $stmt = $this->pdo->prepare("
@@ -353,7 +379,8 @@ class ReceptionistController extends BaseController {
         ]);
     }
 
-    public function process_medicine_dispensing() {
+    public function process_medicine_dispensing()
+    {
         if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
             $this->redirect('receptionist/dispense_medicines');
         }
@@ -438,7 +465,6 @@ class ReceptionistController extends BaseController {
             $this->pdo->commit();
             $_SESSION['success'] = 'Medicines dispensed successfully';
             error_log("Medicine dispensing completed successfully for patient $patient_id");
-
         } catch (Exception $e) {
             $this->pdo->rollBack();
             error_log("Error in medicine dispensing: " . $e->getMessage());
@@ -448,7 +474,8 @@ class ReceptionistController extends BaseController {
         $this->redirect('receptionist/dispense_medicines');
     }
 
-    public function force_complete_medicine($patient_id) {
+    public function force_complete_medicine($patient_id)
+    {
         if (!$patient_id) {
             $this->redirect('receptionist/dispense_medicines');
         }
@@ -468,7 +495,8 @@ class ReceptionistController extends BaseController {
         $this->redirect('receptionist/medicine');
     }
 
-    public function add_medicine() {
+    public function add_medicine()
+    {
         if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
             $this->redirect('receptionist/medicine');
             return;
@@ -510,7 +538,8 @@ class ReceptionistController extends BaseController {
         $this->redirect('receptionist/medicine');
     }
 
-    public function update_medicine_stock() {
+    public function update_medicine_stock()
+    {
         if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
             $this->redirect('receptionist/medicine');
             return;
@@ -546,7 +575,8 @@ class ReceptionistController extends BaseController {
         $this->redirect('receptionist/medicine');
     }
 
-    public function dispense_patient_medicine() {
+    public function dispense_patient_medicine()
+    {
         if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
             $this->redirect('receptionist/medicine');
             return;
@@ -556,7 +586,7 @@ class ReceptionistController extends BaseController {
 
         try {
             $patient_id = intval($_POST['patient_id']);
-            
+
             if ($patient_id <= 0) {
                 throw new Exception('Invalid patient ID');
             }
@@ -629,7 +659,6 @@ class ReceptionistController extends BaseController {
 
             $this->pdo->commit();
             $_SESSION['success'] = 'Medicine dispensed successfully';
-
         } catch (Exception $e) {
             $this->pdo->rollBack();
             $_SESSION['error'] = 'Failed to dispense medicine: ' . $e->getMessage();
@@ -638,7 +667,8 @@ class ReceptionistController extends BaseController {
         $this->redirect('receptionist/medicine');
     }
 
-    private function getSidebarData() {
+    private function getSidebarData()
+    {
         // Get pending patients count (more accurate)
         $stmt = $this->pdo->prepare("
             SELECT COUNT(DISTINCT p.id) as pending_patients
@@ -676,7 +706,8 @@ class ReceptionistController extends BaseController {
         ];
     }
 
-    public function reports() {
+    public function reports()
+    {
         // Daily revenue report
         $daily_revenue_stmt = $this->pdo->prepare("
             SELECT 
@@ -769,4 +800,3 @@ class ReceptionistController extends BaseController {
         ]);
     }
 }
-?>
