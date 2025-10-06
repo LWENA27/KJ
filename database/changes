@@ -1,4 +1,5 @@
 drop table tests we use lab_tests
+drop table patient_consultations we use consultations
     1. move VItal sign to reception registration
     2. to ur ui to doctor consultation with action (allocate to, eye for view(medical form) and attend)
     3.reception to make payment lab/medicine
