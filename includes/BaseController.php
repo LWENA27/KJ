@@ -55,7 +55,11 @@ class BaseController {
         if (is_array($data)) {
             return array_map([$this, 'sanitize'], $data);
         }
-        return htmlspecialchars(trim($data), ENT_QUOTES, 'UTF-8');
+        // Normalize nulls to empty string to avoid trim(null) deprecation warnings
+        if ($data === null) {
+            $data = '';
+        }
+        return htmlspecialchars(trim((string)$data), ENT_QUOTES, 'UTF-8');
     }
 
     // Validate CSRF token

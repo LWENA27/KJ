@@ -191,3 +191,5 @@
 [07-Oct-2025 22:55:08 Europe/Berlin] PHP Warning:  Undefined variable $csrf_token in C:\xampp\htdocs\KJ\views\doctor\consultations.php on line 82
 [07-Oct-2025 22:55:08 Europe/Berlin] PHP Warning:  Undefined variable $consultation in C:\xampp\htdocs\KJ\views\doctor\consultations.php on line 83
 [07-Oct-2025 22:55:08 Europe/Berlin] PHP Warning:  Trying to access array offset on value of type null in C:\xampp\htdocs\KJ\views\doctor\consultations.php on line 83
+[07-Oct-2025 23:15:02 Europe/Berlin] PHP Warning:  Undefined array key "address" in C:\xampp\htdocs\KJ\controllers\ReceptionistController.php on line 176
+[07-Oct-2025 23:15:02 Europe/Berlin] PHP Deprecated:  trim(): Passing null to parameter #1 ($string) of type string is deprecated in C:\xampp\htdocs\KJ\includes\BaseController.php on line 58

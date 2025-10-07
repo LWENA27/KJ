@@ -96,6 +96,33 @@
                 </div>
             </div>
 
+
+                             <!-- Emergency Contact Section -->
+            <div class="border-b pb-6">
+                <h3 class="text-xl font-semibold text-gray-900 mb-4 flex items-center">
+                    <i class="fas fa-phone mr-3 text-red-600"></i>Emergency Contact(Gurdian)
+                </h3>
+                
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                        <label for="emergency_contact_name" class="block text-sm font-medium text-gray-700 mb-1">
+                            Contact Name
+                        </label>
+                        <input type="text" id="emergency_contact_name" name="emergency_contact_name"
+                               class="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-red-500 focus:border-red-500 transition-colors">
+                    </div>
+
+                    <div>
+                        <label for="emergency_contact_phone" class="block text-sm font-medium text-gray-700 mb-1">
+                            Contact Phone
+                        </label>
+                        <input type="tel" id="emergency_contact_phone" name="emergency_contact_phone"
+                               class="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-red-500 focus:border-red-500 transition-colors">
+                    </div>
+                </div>
+            </div>
+
+
             <!-- Visit Type Section -->
             <div class="border-b pb-6">
                 <h3 class="text-xl font-semibold text-gray-900 mb-4 flex items-center">
@@ -118,6 +145,9 @@
                         <span class="error-message text-red-500 text-xs mt-1 hidden"></span>
                     </div>
                 </div>
+
+
+
                 
                 <!-- Visit Type Badge -->
                 <div id="visitBadge" class="mt-4 hidden">
@@ -131,6 +161,8 @@
                     </div>
                 </div>
             </div>
+
+            
 
             <!-- Vital Signs Section (Hidden by default) -->
             <div id="vitalSignsSection" class="border-b pb-6 hidden">
@@ -241,31 +273,7 @@
                 </div>
             </div>
 
-            <!-- Emergency Contact Section -->
-            <div class="border-b pb-6">
-                <h3 class="text-xl font-semibold text-gray-900 mb-4 flex items-center">
-                    <i class="fas fa-phone mr-3 text-red-600"></i>Emergency Contact
-                </h3>
-                
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div>
-                        <label for="emergency_contact_name" class="block text-sm font-medium text-gray-700 mb-1">
-                            Contact Name
-                        </label>
-                        <input type="text" id="emergency_contact_name" name="emergency_contact_name"
-                               class="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-red-500 focus:border-red-500 transition-colors">
-                    </div>
-
-                    <div>
-                        <label for="emergency_contact_phone" class="block text-sm font-medium text-gray-700 mb-1">
-                            Contact Phone
-                        </label>
-                        <input type="tel" id="emergency_contact_phone" name="emergency_contact_phone"
-                               class="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-red-500 focus:border-red-500 transition-colors">
-                    </div>
-                </div>
-            </div>
-
+           
             <!-- Form Actions -->
             <div class="flex justify-end space-x-3 pt-6">
                 <button type="button" onclick="window.location.href='<?php echo htmlspecialchars($BASE_PATH); ?>/receptionist/patients'"

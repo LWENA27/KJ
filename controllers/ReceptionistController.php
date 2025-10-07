@@ -131,18 +131,31 @@ class ReceptionistController extends BaseController
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $this->validateCSRF();
 
+            // Normalize POST inputs to avoid undefined array key notices
+            $post = array_map(function($v){ return $v; }, $_POST);
+            $visit_type = $post['visit_type'] ?? 'consultation';
+            $consultation_fee = $post['consultation_fee'] ?? null;
+            $payment_method = $post['payment_method'] ?? null;
+            $first_name = $post['first_name'] ?? null;
+            $last_name = $post['last_name'] ?? null;
+            $date_of_birth = $post['date_of_birth'] ?? null;
+            $gender = $post['gender'] ?? null;
+            $phone = $post['phone'] ?? null;
+            $email = $post['email'] ?? null;
+            $address = $post['address'] ?? null;
+            $emergency_contact_name = $post['emergency_contact_name'] ?? null;
+            $emergency_contact_phone = $post['emergency_contact_phone'] ?? null;
+            $temperature = $post['temperature'] ?? null;
+            $blood_pressure = $post['blood_pressure'] ?? null;
+            $pulse_rate = $post['pulse_rate'] ?? null;
+            $body_weight = $post['body_weight'] ?? null;
+            $height = $post['height'] ?? null;
+
             try {
                 $this->pdo->beginTransaction();
 
-                $visit_type = $_POST['visit_type'];
-                $consultation_fee = null;
-                $payment_method = null;
-
                 // Only process payment for consultation visits
                 if ($visit_type === 'consultation') {
-                    $consultation_fee = $_POST['consultation_fee'];
-                    $payment_method = $_POST['payment_method'];
-
                     // Validate consultation payment
                     if (empty($consultation_fee) || empty($payment_method)) {
                         throw new Exception('Consultation fee and payment method are required');
@@ -167,27 +180,26 @@ class ReceptionistController extends BaseController
                 // In your register_patient method, update the vital signs assignment:
                 $stmt->execute([
                     $registration_number,
-                    $this->sanitize($_POST['first_name']),
-                    $this->sanitize($_POST['last_name']),
-                    $_POST['date_of_birth'],
-                    $this->sanitize($_POST['gender']),
-                    $this->sanitize($_POST['phone']),
-                    $this->sanitize($_POST['email']),
-                    $this->sanitize($_POST['address']),
-                    $this->sanitize($_POST['emergency_contact_name']),
-                    $this->sanitize($_POST['emergency_contact_phone']),
+                    $this->sanitize($first_name),
+                    $this->sanitize($last_name),
+                    $date_of_birth,
+                    $this->sanitize($gender),
+                    $this->sanitize($phone),
+                    $this->sanitize($email),
+                    $this->sanitize($address),
+                    $this->sanitize($emergency_contact_name),
+                    $this->sanitize($emergency_contact_phone),
                     $visit_type,
                     // Update these to record vital signs for all visit types, not just consultation
-                    !empty($_POST['temperature']) ? $_POST['temperature'] : null,
-                    !empty($_POST['blood_pressure']) ? $_POST['blood_pressure'] : null,
-                    !empty($_POST['pulse_rate']) ? $_POST['pulse_rate'] : null,
-                    !empty($_POST['body_weight']) ? $_POST['body_weight'] : null,
-                    !empty($_POST['height']) ? $_POST['height'] : null,
+                    !empty($temperature) ? $temperature : null,
+                    !empty($blood_pressure) ? $blood_pressure : null,
+                    !empty($pulse_rate) ? $pulse_rate : null,
+                    !empty($body_weight) ? $body_weight : null,
+                    !empty($height) ? $height : null,
                     $visit_type === 'consultation' ? 1 : 0
                 ]);
 
                 $patient_id = $this->pdo->lastInsertId();
-
                 // Only record payment for consultation visits
                 if ($visit_type === 'consultation') {
                     $stmt = $this->pdo->prepare("
@@ -207,6 +219,23 @@ class ReceptionistController extends BaseController
                         $_SESSION['user_id'],
                         'Initial consultation payment'
                     ]);
+                    // Mark consultation registration payment in workflow_status (create or update)
+                    $stmt = $this->pdo->prepare("SELECT id FROM workflow_status WHERE patient_id = ?");
+                    $stmt->execute([$patient_id]);
+                    $ws = $stmt->fetch();
+                    if ($ws) {
+                        $stmt = $this->pdo->prepare("UPDATE workflow_status SET consultation_registration_paid = 1, current_step = 'consultation_registration' WHERE patient_id = ?");
+                        $stmt->execute([$patient_id]);
+                    } else {
+                        $stmt = $this->pdo->prepare("INSERT INTO workflow_status (patient_id, current_step, consultation_registration_paid, created_at, updated_at) VALUES (?, 'consultation_registration', 1, NOW(), NOW())");
+                        $stmt->execute([$patient_id]);
+                    }
+
+                    // Create a consultations row so doctors can immediately see the registered patient
+                    // Use default doctor_id = 1 to avoid NULL constraint issues; can be reassigned later
+                    $default_doctor_id = 1;
+                    $stmt = $this->pdo->prepare("INSERT INTO consultations (patient_id, doctor_id, appointment_date, status, created_at) VALUES (?, ?, NOW(), 'pending', NOW())");
+                    $stmt->execute([$patient_id, $default_doctor_id]);
                 }
 
                 $this->pdo->commit();
