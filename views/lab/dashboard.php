@@ -194,22 +194,13 @@
                                                 <span class="bg-gray-100 text-gray-600 px-2 py-1 rounded text-xs">
                                                     <?php echo htmlspecialchars($patient['registration_number'] ?? str_pad($patient['registration_number'], STR_PAD_LEFT)); ?>
                                                 </span>
-                                                <?php if ($patient['lab_tests_paid']): ?>
-                                                    <span class="bg-green-100 text-green-800 px-2 py-1 rounded text-xs">
-                                                        <i class="fas fa-check-circle mr-1"></i>Paid
-                                                    </span>
-                                                <?php endif; ?>
+                                               
                                             </div>
                                         </div>
 
                                         <!-- Action Button (Start Testing Form) -->
                                         <div class="flex items-center space-x-2">
-                                            <?php if ($patient['lab_tests_paid']): ?>
-                                                <button onclick="startTest(<?php echo $patient['id']; ?>, '<?php echo htmlspecialchars($patient['test_name']); ?>')"
-                                                    class="bg-green-500 hover:bg-green-600 text-white px-3 py-2 rounded-lg text-sm font-medium transition-colors">
-                                                    <i class="fas fa-play mr-1"></i>Start Testing
-                                                </button>
-                                            <?php endif; ?>
+                                            
                                             <a href="/KJ/lab/view_test/<?php echo $patient['id']; ?>"
                                                 class="bg-blue-500 hover:bg-blue-600 text-white px-3 py-2 rounded-lg text-sm font-medium transition-colors">
                                                 <i class="fas fa-eye mr-1"></i>Details

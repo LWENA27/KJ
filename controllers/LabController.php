@@ -36,7 +36,7 @@ class LabController extends BaseController {
             'priority' => 'routine',  // Default; can add logic for urgent based on other fields
             'notes' => '',  // Optional notes from patient
             'created_at' => date('Y-m-d H:i:s'),  // Current time or from patient created_at
-            'lab_tests_paid' => $patient['lab_tests_paid']
+            // 'lab_tests_paid' => $patient['lab_tests_paid']
         ];
     }
 

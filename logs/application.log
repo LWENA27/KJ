@@ -141,3 +141,15 @@
 [2025-10-07 13:40:58] ERROR: str_pad(): Passing null to parameter #1 ($string) of type string is deprecated | Context: {"errno":8192,"file":"C:\\xampp\\htdocs\\KJ\\views\\lab\\dashboard.php","line":195}
 [2025-10-07 13:41:54] ERROR: Undefined array key "lab_tests_paid" | Context: {"errno":2,"file":"C:\\xampp\\htdocs\\KJ\\controllers\\LabController.php","line":39}
 [2025-10-07 13:46:50] ERROR: Undefined array key "lab_tests_paid" | Context: {"errno":2,"file":"C:\\xampp\\htdocs\\KJ\\controllers\\LabController.php","line":39}
+[2025-10-07 14:03:55] ERROR: Undefined array key "lab_tests_paid" | Context: {"errno":2,"file":"C:\\xampp\\htdocs\\KJ\\controllers\\LabController.php","line":39}
+[2025-10-07 14:03:57] ERROR: Error in controller: SQLSTATE[42S22]: Column not found: 1054 Unknown column 'lt.category' in 'field list' | Context: {"controller":"lab","action":"tests","file":"C:\\xampp\\htdocs\\KJ\\controllers\\LabController.php","line":75,"trace":"#0 C:\\xampp\\htdocs\\KJ\\controllers\\LabController.php(75): PDO->prepare('\\r\\n            S...')\n#1 C:\\xampp\\htdocs\\KJ\\index.php(119): LabController->tests()\n#2 {main}"}
+[2025-10-07 14:03:58] ERROR: Undefined array key "lab_tests_paid" | Context: {"errno":2,"file":"C:\\xampp\\htdocs\\KJ\\controllers\\LabController.php","line":39}
+[2025-10-07 14:05:08] ERROR: Undefined array key "lab_tests_paid" | Context: {"errno":2,"file":"C:\\xampp\\htdocs\\KJ\\controllers\\LabController.php","line":39}
+[2025-10-07 14:05:26] ERROR: Undefined array key "lab_tests_paid" | Context: {"errno":2,"file":"C:\\xampp\\htdocs\\KJ\\controllers\\LabController.php","line":39}
+[2025-10-07 14:06:05] ERROR: Undefined array key "lab_tests_paid" | Context: {"errno":2,"file":"C:\\xampp\\htdocs\\KJ\\views\\lab\\dashboard.php","line":197}
+[2025-10-07 14:06:05] ERROR: Undefined array key "lab_tests_paid" | Context: {"errno":2,"file":"C:\\xampp\\htdocs\\KJ\\views\\lab\\dashboard.php","line":207}
+[2025-10-07 14:07:14] ERROR: Undefined array key "#" | Context: {"errno":2,"file":"C:\\xampp\\htdocs\\KJ\\views\\lab\\dashboard.php","line":197}
+[2025-10-07 14:07:14] ERROR: Undefined array key "#" | Context: {"errno":2,"file":"C:\\xampp\\htdocs\\KJ\\views\\lab\\dashboard.php","line":207}
+[2025-10-07 14:08:10] ERROR: Undefined array key "lab_tests_paid" | Context: {"errno":2,"file":"C:\\xampp\\htdocs\\KJ\\controllers\\LabController.php","line":40}
+[2025-10-07 14:08:40] ERROR: Undefined array key "lab_tests_paid" | Context: {"errno":2,"file":"C:\\xampp\\htdocs\\KJ\\views\\lab\\dashboard.php","line":197}
+[2025-10-07 14:08:40] ERROR: Undefined array key "lab_tests_paid" | Context: {"errno":2,"file":"C:\\xampp\\htdocs\\KJ\\views\\lab\\dashboard.php","line":207}

@@ -147,3 +147,15 @@
 [07-Oct-2025 13:40:58 Europe/Berlin] PHP Deprecated:  str_pad(): Passing null to parameter #1 ($string) of type string is deprecated in C:\xampp\htdocs\KJ\views\lab\dashboard.php on line 195
 [07-Oct-2025 13:41:54 Europe/Berlin] PHP Warning:  Undefined array key "lab_tests_paid" in C:\xampp\htdocs\KJ\controllers\LabController.php on line 39
 [07-Oct-2025 13:46:50 Europe/Berlin] PHP Warning:  Undefined array key "lab_tests_paid" in C:\xampp\htdocs\KJ\controllers\LabController.php on line 39
+[07-Oct-2025 14:03:55 Europe/Berlin] PHP Warning:  Undefined array key "lab_tests_paid" in C:\xampp\htdocs\KJ\controllers\LabController.php on line 39
+[07-Oct-2025 14:03:57 Europe/Berlin] Error in controller: SQLSTATE[42S22]: Column not found: 1054 Unknown column 'lt.category' in 'field list'
+[07-Oct-2025 14:03:58 Europe/Berlin] PHP Warning:  Undefined array key "lab_tests_paid" in C:\xampp\htdocs\KJ\controllers\LabController.php on line 39
+[07-Oct-2025 14:05:08 Europe/Berlin] PHP Warning:  Undefined array key "lab_tests_paid" in C:\xampp\htdocs\KJ\controllers\LabController.php on line 39
+[07-Oct-2025 14:05:26 Europe/Berlin] PHP Warning:  Undefined array key "lab_tests_paid" in C:\xampp\htdocs\KJ\controllers\LabController.php on line 39
+[07-Oct-2025 14:06:05 Europe/Berlin] PHP Warning:  Undefined array key "lab_tests_paid" in C:\xampp\htdocs\KJ\views\lab\dashboard.php on line 197
+[07-Oct-2025 14:06:05 Europe/Berlin] PHP Warning:  Undefined array key "lab_tests_paid" in C:\xampp\htdocs\KJ\views\lab\dashboard.php on line 207
+[07-Oct-2025 14:07:14 Europe/Berlin] PHP Warning:  Undefined array key "#" in C:\xampp\htdocs\KJ\views\lab\dashboard.php on line 197
+[07-Oct-2025 14:07:14 Europe/Berlin] PHP Warning:  Undefined array key "#" in C:\xampp\htdocs\KJ\views\lab\dashboard.php on line 207
+[07-Oct-2025 14:08:10 Europe/Berlin] PHP Warning:  Undefined array key "lab_tests_paid" in C:\xampp\htdocs\KJ\controllers\LabController.php on line 40
+[07-Oct-2025 14:08:40 Europe/Berlin] PHP Warning:  Undefined array key "lab_tests_paid" in C:\xampp\htdocs\KJ\views\lab\dashboard.php on line 197
+[07-Oct-2025 14:08:40 Europe/Berlin] PHP Warning:  Undefined array key "lab_tests_paid" in C:\xampp\htdocs\KJ\views\lab\dashboard.php on line 207
