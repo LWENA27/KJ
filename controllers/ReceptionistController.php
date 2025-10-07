@@ -26,7 +26,7 @@ class ReceptionistController extends BaseController
 
         // Get recent patients
         $recent_patients = $this->pdo->query("
-            SELECT id, first_name, last_name, phone, created_at
+            SELECT registration_number, first_name, last_name, phone, created_at
             FROM patients
             ORDER BY created_at DESC
             LIMIT 5
@@ -131,73 +131,94 @@ class ReceptionistController extends BaseController
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $this->validateCSRF();
 
-            $patient_data = [
-                'first_name' => $this->sanitize($_POST['first_name'] ?? ''),
-                'last_name' => $this->sanitize($_POST['last_name'] ?? ''),
-                'date_of_birth' => $_POST['date_of_birth'] ?? '',
-                'gender' => $this->sanitize($_POST['gender'] ?? ''),
-                'phone' => $this->sanitize($_POST['phone'] ?? ''),
-                'email' => $this->sanitize($_POST['email'] ?? ''),
-                'address' => $this->sanitize($_POST['address'] ?? ''),
-                'emergency_contact_name' => $this->sanitize($_POST['emergency_contact_name'] ?? ''),
-                'emergency_contact_phone' => $this->sanitize($_POST['emergency_contact_phone'] ?? '')
-            ];
+            try {
+                $this->pdo->beginTransaction();
 
-            if (empty($patient_data['first_name']) || empty($patient_data['last_name'])) {
-                $error = 'First name and last name are required';
-            } else {
-                try {
-                    $this->pdo->beginTransaction();
+                $visit_type = $_POST['visit_type'];
+                $consultation_fee = null;
+                $payment_method = null;
 
-                    // Generate registration number
-                    $registration_number = $this->generateRegistrationNumber();
+                // Only process payment for consultation visits
+                if ($visit_type === 'consultation') {
+                    $consultation_fee = $_POST['consultation_fee'];
+                    $payment_method = $_POST['payment_method'];
 
-                    // Insert patient with registration number
+                    // Validate consultation payment
+                    if (empty($consultation_fee) || empty($payment_method)) {
+                        throw new Exception('Consultation fee and payment method are required');
+                    }
+                }
+
+                // Insert patient basic info
+                $stmt = $this->pdo->prepare("
+                    INSERT INTO patients (
+                        registration_number, first_name, last_name, 
+                        date_of_birth, gender, phone, email, 
+                        address, emergency_contact_name, 
+                        emergency_contact_phone, visit_type,
+                        temperature, blood_pressure, pulse_rate,
+                        body_weight, height,
+                        consultation_registration_paid
+                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                ");
+
+                $registration_number = $this->generateRegistrationNumber();
+
+                // In your register_patient method, update the vital signs assignment:
+                $stmt->execute([
+                    $registration_number,
+                    $this->sanitize($_POST['first_name']),
+                    $this->sanitize($_POST['last_name']),
+                    $_POST['date_of_birth'],
+                    $this->sanitize($_POST['gender']),
+                    $this->sanitize($_POST['phone']),
+                    $this->sanitize($_POST['email']),
+                    $this->sanitize($_POST['address']),
+                    $this->sanitize($_POST['emergency_contact_name']),
+                    $this->sanitize($_POST['emergency_contact_phone']),
+                    $visit_type,
+                    // Update these to record vital signs for all visit types, not just consultation
+                    !empty($_POST['temperature']) ? $_POST['temperature'] : null,
+                    !empty($_POST['blood_pressure']) ? $_POST['blood_pressure'] : null,
+                    !empty($_POST['pulse_rate']) ? $_POST['pulse_rate'] : null,
+                    !empty($_POST['body_weight']) ? $_POST['body_weight'] : null,
+                    !empty($_POST['height']) ? $_POST['height'] : null,
+                    $visit_type === 'consultation' ? 1 : 0
+                ]);
+
+                $patient_id = $this->pdo->lastInsertId();
+
+                // Only record payment for consultation visits
+                if ($visit_type === 'consultation') {
                     $stmt = $this->pdo->prepare("
-                        INSERT INTO patients (
-                            registration_number, first_name, last_name, date_of_birth, 
-                            gender, phone, email, address, 
-                            emergency_contact_name, emergency_contact_phone
-                        ) VALUES (
-                            ?, ?, ?, ?, 
-                            ?, ?, ?, ?, 
-                            ?, ?
-                        )
+                        INSERT INTO patient_payments (
+                            patient_id, payment_type, amount,
+                            payment_method, payment_status,
+                            payment_date, collected_by, notes
+                        ) VALUES (?, ?, ?, ?, ?, NOW(), ?, ?)
                     ");
 
                     $stmt->execute([
-                        $registration_number,
-                        $patient_data['first_name'],
-                        $patient_data['last_name'],
-                        $patient_data['date_of_birth'],
-                        $patient_data['gender'],
-                        $patient_data['phone'],
-                        $patient_data['email'],
-                        $patient_data['address'],
-                        $patient_data['emergency_contact_name'],
-                        $patient_data['emergency_contact_phone']
+                        $patient_id,
+                        'consultation_fee',
+                        $consultation_fee,
+                        $payment_method,
+                        'paid',
+                        $_SESSION['user_id'],
+                        'Initial consultation payment'
                     ]);
-
-                    $patient_id = $this->pdo->lastInsertId();
-
-                    // Initialize workflow
-                    $workflow_id = $this->initializeWorkflow($patient_id);
-
-                    $this->pdo->commit();
-                    $_SESSION['success'] = "Patient registered successfully! Registration Number: $registration_number";
-                    $_SESSION['last_registered_patient_id'] = $patient_id;
-                    $this->redirect('receptionist/patients');
-                } catch (Exception $e) {
-                    $this->pdo->rollBack();
-                    $error = 'Registration failed: ' . $e->getMessage();
-                    $_SESSION['error'] = $error;
                 }
+
+                $this->pdo->commit();
+                $_SESSION['success'] = "Patient registered successfully! Registration Number: $registration_number";
+                $this->redirect('receptionist/patients');
+            } catch (Exception $e) {
+                $this->pdo->rollBack();
+                $_SESSION['error'] = 'Registration failed: ' . $e->getMessage();
             }
         }
 
         $this->render('receptionist/register_patient', [
-            'error' => $error,
-            'success' => $success,
             'csrf_token' => $this->generateCSRF()
         ]);
     }

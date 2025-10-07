@@ -62,3 +62,22 @@
 [07-Oct-2025 07:51:15 Europe/Berlin] Error in controller: SQLSTATE[42S22]: Column not found: 1054 Unknown column 'ws.current_step' in 'field list'
 [07-Oct-2025 07:51:39 Europe/Berlin] Error in controller: SQLSTATE[42S22]: Column not found: 1054 Unknown column 'ws.current_step' in 'field list'
 [07-Oct-2025 07:51:45 Europe/Berlin] Error in controller: SQLSTATE[42S22]: Column not found: 1054 Unknown column 'ws.current_step' in 'field list'
+[07-Oct-2025 07:57:57 Europe/Berlin] PHP Warning:  Undefined array key "today_consultations" in C:\xampp\htdocs\KJ\views\doctor\dashboard.php on line 18
+[07-Oct-2025 07:57:57 Europe/Berlin] PHP Warning:  Undefined array key "completed_consultations" in C:\xampp\htdocs\KJ\views\doctor\dashboard.php on line 30
+[07-Oct-2025 07:57:57 Europe/Berlin] PHP Warning:  Undefined array key "total_consultations" in C:\xampp\htdocs\KJ\views\doctor\dashboard.php on line 42
+[07-Oct-2025 07:57:57 Europe/Berlin] PHP Warning:  Undefined variable $other_doctors in C:\xampp\htdocs\KJ\views\doctor\dashboard.php on line 458
+[07-Oct-2025 07:57:57 Europe/Berlin] PHP Warning:  foreach() argument must be of type array|object, null given in C:\xampp\htdocs\KJ\views\doctor\dashboard.php on line 458
+[07-Oct-2025 08:09:21 Europe/Berlin] PHP Warning:  Undefined array key "address" in C:\xampp\htdocs\KJ\controllers\ReceptionistController.php on line 167
+[07-Oct-2025 08:09:21 Europe/Berlin] PHP Deprecated:  trim(): Passing null to parameter #1 ($string) of type string is deprecated in C:\xampp\htdocs\KJ\includes\BaseController.php on line 58
+[07-Oct-2025 08:16:13 Europe/Berlin] PHP Warning:  Undefined array key "address" in C:\xampp\htdocs\KJ\controllers\ReceptionistController.php on line 167
+[07-Oct-2025 08:16:13 Europe/Berlin] PHP Deprecated:  trim(): Passing null to parameter #1 ($string) of type string is deprecated in C:\xampp\htdocs\KJ\includes\BaseController.php on line 58
+[07-Oct-2025 08:33:42 Europe/Berlin] PHP Deprecated:  htmlspecialchars(): Passing null to parameter #1 ($string) of type string is deprecated in C:\xampp\htdocs\KJ\views\receptionist\dashboard.php on line 276
+[07-Oct-2025 08:33:42 Europe/Berlin] PHP Deprecated:  htmlspecialchars(): Passing null to parameter #1 ($string) of type string is deprecated in C:\xampp\htdocs\KJ\views\receptionist\dashboard.php on line 276
+[07-Oct-2025 08:36:50 Europe/Berlin] PHP Warning:  Undefined array key "address" in C:\xampp\htdocs\KJ\controllers\ReceptionistController.php on line 175
+[07-Oct-2025 08:36:50 Europe/Berlin] PHP Deprecated:  trim(): Passing null to parameter #1 ($string) of type string is deprecated in C:\xampp\htdocs\KJ\includes\BaseController.php on line 58
+[07-Oct-2025 08:37:17 Europe/Berlin] PHP Deprecated:  htmlspecialchars(): Passing null to parameter #1 ($string) of type string is deprecated in C:\xampp\htdocs\KJ\views\receptionist\dashboard.php on line 276
+[07-Oct-2025 08:58:45 Europe/Berlin] PHP Deprecated:  htmlspecialchars(): Passing null to parameter #1 ($string) of type string is deprecated in C:\xampp\htdocs\KJ\views\receptionist\dashboard.php on line 276
+[07-Oct-2025 09:01:22 Europe/Berlin] PHP Warning:  Undefined array key "address" in C:\xampp\htdocs\KJ\controllers\ReceptionistController.php on line 176
+[07-Oct-2025 09:01:22 Europe/Berlin] PHP Deprecated:  trim(): Passing null to parameter #1 ($string) of type string is deprecated in C:\xampp\htdocs\KJ\includes\BaseController.php on line 58
+[07-Oct-2025 09:02:29 Europe/Berlin] PHP Warning:  Undefined array key "address" in C:\xampp\htdocs\KJ\controllers\ReceptionistController.php on line 176
+[07-Oct-2025 09:02:29 Europe/Berlin] PHP Deprecated:  trim(): Passing null to parameter #1 ($string) of type string is deprecated in C:\xampp\htdocs\KJ\includes\BaseController.php on line 58

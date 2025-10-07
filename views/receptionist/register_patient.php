@@ -73,7 +73,6 @@
                             <option value="">Select Gender</option>
                             <option value="male">Male</option>
                             <option value="female">Female</option>
-                            <option value="other">Other</option>
                         </select>
                     </div>
 
@@ -129,6 +128,65 @@
                                 Please select a visit type
                             </p>
                         </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Vital Signs Section (Hidden by default) -->
+            <div id="vitalSignsSection" class="border-b pb-6 hidden">
+                <h3 class="text-xl font-semibold text-gray-900 mb-4 flex items-center">
+                    <i class="fas fa-heartbeat mr-3 text-red-600"></i>Vital Signs
+                </h3>
+                
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <!-- Temperature -->
+                    <div>
+                        <label for="temperature" class="block text-sm font-medium text-gray-700 mb-1">
+                            Temperature (°C)
+                        </label>
+                        <input type="number" id="temperature" name="temperature" 
+                               step="0.1" min="35" max="42"
+                               class="w-full px-3 py-2 border border-gray-300 rounded-md">
+                    </div>
+
+                    <!-- Blood Pressure -->
+                    <div>
+                        <label for="blood_pressure" class="block text-sm font-medium text-gray-700 mb-1">
+                            Blood Pressure (mmHg)
+                        </label>
+                        <input type="text" id="blood_pressure" name="blood_pressure" 
+                               placeholder="120/80"
+                               class="w-full px-3 py-2 border border-gray-300 rounded-md">
+                    </div>
+
+                    <!-- Pulse Rate -->
+                    <div>
+                        <label for="pulse_rate" class="block text-sm font-medium text-gray-700 mb-1">
+                            Pulse Rate (bpm)
+                        </label>
+                        <input type="number" id="pulse_rate" name="pulse_rate" 
+                               min="40" max="200"
+                               class="w-full px-3 py-2 border border-gray-300 rounded-md">
+                    </div>
+
+                    <!-- Weight -->
+                    <div>
+                        <label for="body_weight" class="block text-sm font-medium text-gray-700 mb-1">
+                            Weight (kg)
+                        </label>
+                        <input type="number" id="body_weight" name="body_weight" 
+                               step="0.1" min="0" max="300"
+                               class="w-full px-3 py-2 border border-gray-300 rounded-md">
+                    </div>
+
+                    <!-- Height -->
+                    <div>
+                        <label for="height" class="block text-sm font-medium text-gray-700 mb-1">
+                            Height (cm)
+                        </label>
+                        <input type="number" id="height" name="height" 
+                               step="0.1" min="0" max="300"
+                               class="w-full px-3 py-2 border border-gray-300 rounded-md">
                     </div>
                 </div>
             </div>
@@ -226,6 +284,7 @@
 </div>
 
 <script>
+
 // Patient Registration JavaScript
 (function() {
     'use strict';
@@ -241,7 +300,8 @@
         paymentMethod: null,
         totalAmount: null,
         visitBadge: null,
-        visitBadgeText: null
+        visitBadgeText: null,
+        vitalSignsSection: null
     };
 
     function initElements() {
@@ -252,14 +312,18 @@
         elements.totalAmount = document.getElementById('totalAmount');
         elements.visitBadge = document.getElementById('visitBadge');
         elements.visitBadgeText = document.getElementById('visitBadgeText');
+        elements.vitalSignsSection = document.getElementById('vitalSignsSection');
     }
 
     function toggleVisitSections() {
         const visitType = elements.visitType ? elements.visitType.value : '';
 
-        // Hide consultation section and badge initially
+        // Hide all optional sections initially
         if (elements.consultationSection) {
             elements.consultationSection.classList.add('hidden');
+        }
+        if (elements.vitalSignsSection) {
+            elements.vitalSignsSection.classList.add('hidden');
         }
         if (elements.visitBadge) {
             elements.visitBadge.classList.add('hidden');
@@ -272,8 +336,12 @@
         // Show relevant sections based on visit type
         switch(visitType) {
             case 'consultation':
+                // Show consultation payment and vital signs for doctor consultation
                 if (elements.consultationSection) {
                     elements.consultationSection.classList.remove('hidden');
+                }
+                if (elements.vitalSignsSection) {
+                    elements.vitalSignsSection.classList.remove('hidden');
                 }
                 if (elements.consultationFee) {
                     elements.consultationFee.setAttribute('required', 'required');
@@ -292,6 +360,10 @@
                 break;
                 
             case 'lab_test':
+                // Only show vital signs for lab tests
+                if (elements.vitalSignsSection) {
+                    elements.vitalSignsSection.classList.remove('hidden');
+                }
                 if (elements.visitBadge && elements.visitBadgeText) {
                     elements.visitBadge.classList.remove('hidden');
                     elements.visitBadgeText.textContent = 'Lab tests will be selected by medical staff';
@@ -299,6 +371,7 @@
                 break;
                 
             case 'medicine_pickup':
+                // Hide vital signs for medicine pickup - only show badge
                 if (elements.visitBadge && elements.visitBadgeText) {
                     elements.visitBadge.classList.remove('hidden');
                     elements.visitBadgeText.textContent = 'Medicine collection - prescription required';
@@ -306,9 +379,26 @@
                 break;
                 
             case 'minor_service':
+                // Only show vital signs for minor services
+                if (elements.vitalSignsSection) {
+                    elements.vitalSignsSection.classList.remove('hidden');
+                }
                 if (elements.visitBadge && elements.visitBadgeText) {
                     elements.visitBadge.classList.remove('hidden');
                     elements.visitBadgeText.textContent = 'Minor service fees may apply';
+                }
+                break;
+                
+            default:
+                // No visit type selected - hide all optional sections
+                if (elements.consultationSection) {
+                    elements.consultationSection.classList.add('hidden');
+                }
+                if (elements.vitalSignsSection) {
+                    elements.vitalSignsSection.classList.add('hidden');
+                }
+                if (elements.visitBadge) {
+                    elements.visitBadge.classList.add('hidden');
                 }
                 break;
         }
