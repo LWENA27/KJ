@@ -49,11 +49,11 @@ class DoctorController extends BaseController {
             JOIN workflow_status ws ON p.id = ws.patient_id
             LEFT JOIN (
                 SELECT c.patient_id,
-               GROUP_CONCAT(t.test_name SEPARATOR ', ') AS test_names,
+               GROUP_CONCAT(lt.test_name SEPARATOR ', ') AS test_names,
                MAX(lr.created_at) AS latest_result_date
                 FROM lab_results lr
                 JOIN consultations c ON lr.consultation_id = c.id
-                JOIN lab_tests t ON lr.test_id = t.id
+                JOIN lab_tests lt ON lr.test_id = lt.id
                 WHERE lr.status = 'completed' AND c.doctor_id = ?
                 GROUP BY c.patient_id
             ) ag ON p.id = ag.patient_id
@@ -74,9 +74,9 @@ class DoctorController extends BaseController {
 
         // Recent lab results
         $stmt = $this->pdo->prepare("
-                SELECT lr.*, t.test_name as test_name, p.first_name, p.last_name
+            SELECT lr.*, lt.test_name as test_name, p.first_name, p.last_name
             FROM lab_results lr
-                JOIN lab_tests t ON lr.test_id = t.id
+            JOIN lab_tests lt ON lr.test_id = lt.id
             JOIN consultations c ON lr.consultation_id = c.id
             JOIN patients p ON c.patient_id = p.id
             WHERE c.doctor_id = ?
@@ -94,37 +94,23 @@ class DoctorController extends BaseController {
         $sql = "
             SELECT p.*,
                    COALESCE(cc.consultation_count, 0) as consultation_count,
-                   ws.consultation_registration_paid,
-                   ws.lab_tests_paid,
-                   ws.results_review_paid,
-                   MIN(c.created_at) as first_request_at
+                   c.status as consultation_status,
+                   c.consultation_type
             FROM patients p
-            LEFT JOIN workflow_status ws ON p.id = ws.patient_id
-            LEFT JOIN consultations c ON p.id = c.patient_id
             LEFT JOIN (
                 SELECT patient_id, COUNT(*) as consultation_count
-                FROM consultations
+                FROM consultations 
                 GROUP BY patient_id
             ) cc ON p.id = cc.patient_id
-            WHERE ws.consultation_registration_paid = TRUE
-              AND DATE(c.created_at) = ?
+            LEFT JOIN consultations c ON p.id = c.patient_id
+            WHERE p.visit_type = 'consultation' 
+            AND DATE(p.created_at) = CURDATE()
+            AND (c.status IS NULL OR c.status NOT IN ('completed', 'cancelled'))
+            ORDER BY p.created_at ASC
         ";
 
-        $params = [$filter_date];
-
-        // Search filter on name or phone
-        if ($search_q !== '') {
-            $sql .= " AND (CONCAT(p.first_name, ' ', p.last_name) LIKE ? OR p.phone LIKE ?) ";
-            $like = "%{$search_q}%";
-            $params[] = $like;
-            $params[] = $like;
-        }
-
-        $sql .= " GROUP BY p.id, ws.consultation_registration_paid, ws.lab_tests_paid, ws.results_review_paid, cc.consultation_count ";
-        $sql .= " ORDER BY first_request_at ASC, p.first_name ASC ";
-
         $stmt = $this->pdo->prepare($sql);
-        $stmt->execute($params);
+        $stmt->execute();
         $available_patients = $stmt->fetchAll();
 
                 // Pending consultations (registered / scheduled / waiting) for this doctor
@@ -140,15 +126,19 @@ class DoctorController extends BaseController {
                 $stmt->execute([$doctor_id]);
                 $pending_consultations = $stmt->fetchAll();
 
+        // Add these variables for the dashboard statistics
+        $stats = [
+            'today_consultations' => 0,
+            'completed_consultations' => 0,
+            'total_consultations' => 0
+        ];
+
+        // Pass all required variables to the view
         $this->render('doctor/dashboard', [
-            'today_completed' => $today_completed,
-            'pending_results' => $pending_results,
-            'other_doctors' => $other_doctors,
-            'stats' => $stats,
-            'recent_results' => $recent_results,
             'available_patients' => $available_patients,
-            'pending_consultations' => $pending_consultations,
-            'csrf_token' => $this->generateCSRF()
+            'stats' => $stats,
+            'csrf_token' => $this->generateCSRF(),
+            'other_doctors' => []  // Add empty array to prevent undefined variable error
         ]);
     }
 

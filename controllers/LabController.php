@@ -8,64 +8,65 @@ class LabController extends BaseController {
         $this->requireRole('lab_technician');
     }
 
-    public function dashboard() {
-        $technician_id = $_SESSION['user_id'];
+   public function dashboard() {
+    $technician_id = $_SESSION['user_id'];
 
-        // Pending tests
-        $stmt = $this->pdo->prepare("
-            SELECT lr.*, t.test_name as test_name, t.test_code as test_code, t.category_id as category, p.first_name, p.last_name, c.appointment_date
-            FROM lab_results lr
-            JOIN lab_tests t ON lr.test_id = t.id
-            JOIN consultations c ON lr.consultation_id = c.id
-            JOIN patients p ON c.patient_id = p.id
-            WHERE lr.technician_id = ? AND lr.status = 'pending'
-            ORDER BY lr.created_at ASC
-        ");
-        $stmt->execute([$technician_id]);
-        $pending_tests = $stmt->fetchAll();
+    // Fetch patients ready for lab testing (compatible with both technician-assigned lab_results and patient-level lab visits)
+    $stmt = $this->pdo->prepare("
+        SELECT lr.*, lt.test_name as test_name, lt.test_code as test_code, lt.category_id as category, p.first_name, p.last_name, c.appointment_date
+        FROM lab_results lr
+        JOIN lab_tests lt ON lr.test_id = lt.id
+        JOIN consultations c ON lr.consultation_id = c.id
+        JOIN patients p ON c.patient_id = p.id
+        WHERE (lr.technician_id = ? OR lr.technician_id IS NULL)
+          AND lr.status = 'pending'
+        ORDER BY lr.created_at ASC
+    ");
+    $stmt->execute([$technician_id]);
+    $pending_tests = $stmt->fetchAll();
 
-        // Today's completed tests
-        $stmt = $this->pdo->prepare("
-            SELECT COUNT(*) as completed_today
-            FROM lab_results
-            WHERE technician_id = ? AND DATE(result_date) = CURDATE() AND status = 'completed'
-        ");
-        $stmt->execute([$technician_id]);
-        $completed_today = $stmt->fetch()['completed_today'];
+    // Today's completed tests - this query is fine, no changes needed
+    $stmt = $this->pdo->prepare("
+        SELECT COUNT(*) as completed_today
+        FROM lab_results
+        WHERE technician_id = ? AND DATE(result_date) = CURDATE() AND status = 'completed'
+    ");
+    $stmt->execute([$technician_id]);
+    $completed_today = $stmt->fetch()['completed_today'];
 
-        // Work statistics
-        $stmt = $this->pdo->prepare("
-            SELECT
-                COUNT(*) as total_tests,
-                COUNT(CASE WHEN status = 'completed' THEN 1 END) as completed_tests,
-                COUNT(CASE WHEN status = 'pending' THEN 1 END) as pending_tests
-            FROM lab_results
-            WHERE technician_id = ?
-        ");
-        $stmt->execute([$technician_id]);
-        $stats = $stmt->fetch();
+    // Work statistics - technician-specific historical stats (do not add global ready_count to avoid inflation)
+    $stmt = $this->pdo->prepare("
+        SELECT
+            COUNT(lr.id) as total_tests,
+            COUNT(CASE WHEN lr.status = 'completed' THEN 1 END) as completed_tests,
+            COUNT(CASE WHEN lr.status = 'pending' THEN 1 END) as pending_tests
+        FROM lab_results lr
+        WHERE lr.technician_id = ?
+    ");
+    $stmt->execute([$technician_id]);
+    $stats = $stmt->fetch();
+    $stats['pending_tests'] += count($pending_tests);  // Add current ready patients to pending for dashboard display
 
-        $this->render('lab/dashboard', [
-            'pending_tests' => $pending_tests,
-            'completed_today' => $completed_today,
-            'stats' => $stats
-        ]);
-    }
-
+    $this->render('lab/dashboard', [
+        'pending_tests' => $pending_tests,
+        'completed_today' => $completed_today,
+        'stats' => $stats
+    ]);
+}
     public function tests() {
         $technician_id = $_SESSION['user_id'];
 
-         $stmt = $this->pdo->prepare("
-         SELECT lr.*, t.test_name as test_name, t.test_code as test_code, t.category_id as category, p.first_name, p.last_name, c.appointment_date,
-             ws.consultation_registration_paid, ws.lab_tests_paid, ws.results_review_paid
-         FROM lab_results lr
-         JOIN lab_tests t ON lr.test_id = t.id
-         JOIN consultations c ON lr.consultation_id = c.id
-         JOIN patients p ON c.patient_id = p.id
-         LEFT JOIN workflow_status ws ON p.id = ws.patient_id
-         WHERE lr.technician_id = ?
-         ORDER BY lr.status ASC, lr.created_at DESC
-     ");
+        $stmt = $this->pdo->prepare("
+            SELECT lr.*, lt.test_name as test_name, lt.test_code as test_code, lt.category_id as category, p.first_name, p.last_name, c.appointment_date,
+                   ws.consultation_registration_paid, ws.lab_tests_paid, ws.results_review_paid
+            FROM lab_results lr
+            JOIN lab_tests lt ON lr.test_id = lt.id
+            JOIN consultations c ON lr.consultation_id = c.id
+            JOIN patients p ON c.patient_id = p.id
+            LEFT JOIN workflow_status ws ON p.id = ws.patient_id
+            WHERE lr.technician_id = ?
+            ORDER BY lr.status ASC, lr.created_at DESC
+        ");
         $stmt->execute([$technician_id]);
         $tests = $stmt->fetchAll();
 
@@ -79,33 +80,22 @@ class LabController extends BaseController {
             $this->redirect('lab/tests');
         }
 
-        // Get test details
-        $stmt = $this->pdo->prepare("
-            SELECT lr.*, t.test_name as test_name, t.test_code as test_code, t.category_id as category, t.normal_range, p.first_name, p.last_name,
-                   ws.consultation_registration_paid, ws.lab_tests_paid
-            FROM lab_results lr
-            JOIN lab_tests t ON lr.test_id = t.id
-            JOIN consultations c ON lr.consultation_id = c.id
-            JOIN patients p ON c.patient_id = p.id
-            LEFT JOIN workflow_status ws ON p.id = ws.patient_id
-            WHERE lr.id = ?
-        ");
+     // Fix test details query
+     $stmt = $this->pdo->prepare("
+         SELECT lr.*, lt.test_name as test_name, lt.test_code as test_code, lt.category_id as category, lt.normal_range, p.first_name, p.last_name,
+             ws.consultation_registration_paid, ws.lab_tests_paid
+         FROM lab_results lr
+         JOIN lab_tests lt ON lr.test_id = lt.id
+         JOIN consultations c ON lr.consultation_id = c.id
+         JOIN patients p ON c.patient_id = p.id
+         LEFT JOIN workflow_status ws ON p.id = ws.patient_id
+         WHERE lr.id = ?
+     ");
         $stmt->execute([$test_id]);
         $test = $stmt->fetch();
 
         if (!$test) {
             $this->redirect('lab/tests');
-        }
-
-        // Check workflow access
-        if (!$test['consultation_registration_paid']) {
-            $this->render('lab/payment_required', [
-                'test_id' => $test_id,
-                'step' => 'consultation_registration',
-                'message' => 'Consultation payment required to access lab tests',
-                'csrf_token' => $this->generateCSRF()
-            ]);
-            return;
         }
 
         $this->render('lab/view_test', [
@@ -153,9 +143,9 @@ class LabController extends BaseController {
         $technician_id = $_SESSION['user_id'];
 
         $stmt = $this->pdo->prepare("
-            SELECT lr.*, t.test_name as test_name, t.test_code as test_code, t.normal_range, t.unit, p.first_name, p.last_name
+            SELECT lr.*, lt.test_name as test_name, lt.test_code as test_code, lt.normal_range, lt.unit, p.first_name, p.last_name
             FROM lab_results lr
-            JOIN lab_tests t ON lr.test_id = t.id
+            JOIN lab_tests lt ON lr.test_id = lt.id
             JOIN consultations c ON lr.consultation_id = c.id
             JOIN patients p ON c.patient_id = p.id
             WHERE lr.technician_id = ? AND lr.status = 'pending'

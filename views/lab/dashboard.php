@@ -138,21 +138,21 @@
 
     <!-- Main Content Grid -->
     <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <!-- Pending Test Queue (Left Column - 2/3 width) -->
+        <!-- Pending Test Queue (Left Column - 2/3 width) --> <!-- Pending Test Queue (Left Column - 2/3 width) -->
         <div class="lg:col-span-2">
             <div class="bg-white rounded-lg shadow-lg">
                 <div class="px-6 py-4 border-b border-gray-200 bg-gradient-to-r from-yellow-50 to-orange-50">
                     <div class="flex items-center justify-between">
                         <h3 class="text-lg font-semibold text-gray-900 flex items-center">
                             <i class="fas fa-clipboard-list mr-3 text-yellow-600"></i>
-                            Pending Test Queue
+                            Patients Ready for Lab Testing
                         </h3>
                         <div class="flex items-center space-x-3">
                             <span class="bg-yellow-100 text-yellow-800 px-3 py-1 rounded-full text-sm font-medium">
-                                <?php echo count($pending_tests); ?> tests waiting
+                                <?php echo count($pending_tests); ?> patients waiting
                             </span>
                             <select id="queueFilter" class="text-sm border-gray-300 rounded-md">
-                                <option value="all">All Tests</option>
+                                <option value="all">All Patients</option>
                                 <option value="urgent">Urgent</option>
                                 <option value="routine">Routine</option>
                             </select>
@@ -165,73 +165,44 @@
                             <div class="w-20 h-20 mx-auto mb-4 bg-green-100 rounded-full flex items-center justify-center">
                                 <i class="fas fa-check-circle text-green-500 text-3xl"></i>
                             </div>
-                            <h4 class="text-lg font-medium text-gray-900 mb-2">All Tests Completed!</h4>
-                            <p class="text-gray-500">No pending tests in queue</p>
+                            <h4 class="text-lg font-medium text-gray-900 mb-2">No Patients Waiting!</h4>
+                            <p class="text-gray-500">All lab test patients processed</p>
                         </div>
                     <?php else: ?>
                         <div class="space-y-4">
-                            <?php foreach ($pending_tests as $index => $test): ?>
-                                <div class="group border-l-4 <?php echo $test['priority'] === 'urgent' ? 'border-red-400' : 'border-yellow-400'; ?> 
-                                          bg-white hover:bg-gray-50 rounded-lg p-4 transition-all duration-200 hover:shadow-md">
+                            <?php foreach ($pending_tests as $index => $patient): ?>
+                                <div class="group border-l-4 <?php echo $patient['priority'] === 'urgent' ? 'border-red-400' : 'border-yellow-400'; ?> 
+                                  bg-white hover:bg-gray-50 rounded-lg p-4 transition-all duration-200 hover:shadow-md">
                                     <div class="flex items-center justify-between">
-                                        <div class="flex items-center space-x-4">
-                                            <!-- Queue Number -->
-                                            <div class="flex flex-col items-center">
-                                                <div class="w-8 h-8 <?php echo $test['priority'] === 'urgent' ? 'bg-red-500' : 'bg-yellow-500'; ?> 
-                                                          text-white rounded-full flex items-center justify-center text-sm font-bold">
-                                                    <?php echo $index + 1; ?>
-                                                </div>
-                                                <span class="text-xs <?php echo $test['priority'] === 'urgent' ? 'text-red-600' : 'text-yellow-600'; ?> mt-1">
-                                                    <?php echo $test['priority'] === 'urgent' ? 'URGENT' : 'Queue'; ?>
-                                                </span>
+                                        <!-- Queue Number -->
+                                        <div class="flex flex-col items-center">
+                                            <div class="w-8 h-8 <?php echo $patient['priority'] === 'urgent' ? 'bg-red-500' : 'bg-yellow-500'; ?> 
+                                          text-white rounded-full flex items-center justify-center text-sm font-bold">
+                                                <?php echo $index + 1; ?>
                                             </div>
+                                            <span class="text-xs <?php echo $patient['priority'] === 'urgent' ? 'text-red-600' : 'text-yellow-600'; ?> mt-1">
+                                                <?php echo $patient['priority'] === 'urgent' ? 'URGENT' : 'Queue'; ?>
+                                            </span>
+                                        </div>
 
-                                            <!-- Patient & Test Info -->
-                                            <div class="flex-1">
-                                                <div class="flex items-center space-x-3 mb-2">
-                                                    <h4 class="font-semibold text-gray-900">
-                                                        <?php echo htmlspecialchars($test['first_name'] . ' ' . $test['last_name']); ?>
-                                                    </h4>
-                                                    <span class="bg-gray-100 text-gray-600 px-2 py-1 rounded text-xs">
-                                                        ID: <?php echo str_pad($test['patient_id'], 4, '0', STR_PAD_LEFT); ?>
-                                                    </span>
-                                                    <?php if($test['lab_tests_paid']): ?>
-                                                        <span class="bg-green-100 text-green-800 px-2 py-1 rounded text-xs">
-                                                            <i class="fas fa-check-circle mr-1"></i>Paid
-                                                        </span>
-                                                    <?php endif; ?>
-                                                </div>
-                                                <div class="grid grid-cols-2 gap-4 text-sm text-gray-600">
-                                                    <div class="flex items-center">
-                                                        <i class="fas fa-flask mr-2 text-gray-400"></i>
-                                                        <span><strong>Test:</strong> <?php echo htmlspecialchars($test['test_name']); ?></span>
-                                                    </div>
-                                                    <div class="flex items-center">
-                                                        <i class="fas fa-clock mr-2 text-gray-400"></i>
-                                                        <span><strong>Requested:</strong> 
-                                                            <?php echo date('M j, H:i', strtotime($test['created_at'])); ?>
-                                                        </span>
-                                                    </div>
-                                                </div>
-                                                <?php if($test['notes']): ?>
-                                                    <div class="mt-2 text-sm text-gray-500">
-                                                        <i class="fas fa-comment-medical mr-2"></i>
-                                                        <?php echo htmlspecialchars($test['notes']); ?>
-                                                    </div>
-                                                <?php endif; ?>
+                                        <!-- Patient Info (Simplified: Name, Reg Number only) -->
+                                        <div class="flex-1 ml-4">
+                                            <div class="flex items-center space-x-3 mb-2">
+                                                <h4 class="font-semibold text-gray-900">
+                                                    <?php echo htmlspecialchars($patient['first_name'] . ' ' . $patient['last_name']); ?>
+                                                </h4>
+                                                <span class="bg-gray-100 text-gray-600 px-2 py-1 rounded text-xs">
+                                                    <?php echo htmlspecialchars($patient['registration_number'] ?? str_pad($patient['registration_number'], STR_PAD_LEFT)); ?>
+                                                </span>
+                                               
                                             </div>
                                         </div>
 
-                                        <!-- Action Buttons -->
+                                        <!-- Action Button (Start Testing Form) -->
                                         <div class="flex items-center space-x-2">
-                                            <?php if($test['lab_tests_paid']): ?>
-                                                <button onclick="startTest(<?php echo $test['id']; ?>, '<?php echo htmlspecialchars($test['test_name']); ?>')" 
-                                                        class="bg-green-500 hover:bg-green-600 text-white px-3 py-2 rounded-lg text-sm font-medium transition-colors">
-                                                    <i class="fas fa-play mr-1"></i>Start Test
-                                                </button>
-                                            <?php endif; ?>
-                                            <a href="/KJ/lab/view_test/<?php echo $test['id']; ?>"
-                                               class="bg-blue-500 hover:bg-blue-600 text-white px-3 py-2 rounded-lg text-sm font-medium transition-colors">
+                                            
+                                            <a href="/KJ/lab/view_test/<?php echo $patient['id']; ?>"
+                                                class="bg-blue-500 hover:bg-blue-600 text-white px-3 py-2 rounded-lg text-sm font-medium transition-colors">
                                                 <i class="fas fa-eye mr-1"></i>Details
                                             </a>
                                         </div>
@@ -266,7 +237,7 @@
                                 <i class="fas fa-check mr-1"></i>Operational
                             </span>
                         </div>
-                        
+
                         <!-- Chemistry Analyzer -->
                         <div class="flex items-center justify-between p-3 bg-green-50 rounded-lg">
                             <div class="flex items-center">
@@ -277,7 +248,7 @@
                                 <i class="fas fa-check mr-1"></i>Operational
                             </span>
                         </div>
-                        
+
                         <!-- Hematology Analyzer -->
                         <div class="flex items-center justify-between p-3 bg-yellow-50 rounded-lg">
                             <div class="flex items-center">
@@ -288,7 +259,7 @@
                                 <i class="fas fa-exclamation-triangle mr-1"></i>Maintenance
                             </span>
                         </div>
-                        
+
                         <!-- Centrifuge -->
                         <div class="flex items-center justify-between p-3 bg-green-50 rounded-lg">
                             <div class="flex items-center">
@@ -299,7 +270,7 @@
                                 <i class="fas fa-check mr-1"></i>Operational
                             </span>
                         </div>
-                        
+
                         <!-- Rapid Test Kit -->
                         <div class="flex items-center justify-between p-3 bg-red-50 rounded-lg">
                             <div class="flex items-center">
@@ -311,7 +282,7 @@
                             </span>
                         </div>
                     </div>
-                    
+
                     <button onclick="openEquipmentModal()" class="w-full mt-4 bg-indigo-500 hover:bg-indigo-600 text-white py-2 rounded-lg text-sm font-medium transition-colors">
                         <i class="fas fa-cog mr-2"></i>Manage Equipment
                     </button>
@@ -337,7 +308,7 @@
                                 <div class="text-sm text-gray-600">Complete test history</div>
                             </div>
                         </a>
-                        
+
                         <a href="/KJ/lab/results" class="flex items-center p-3 bg-green-50 hover:bg-green-100 rounded-lg transition-colors group">
                             <div class="bg-green-500 group-hover:bg-green-600 text-white rounded-lg p-2 mr-3">
                                 <i class="fas fa-edit"></i>
@@ -347,7 +318,7 @@
                                 <div class="text-sm text-gray-600">Enter test results</div>
                             </div>
                         </a>
-                        
+
                         <button onclick="openReportModal()" class="flex items-center p-3 bg-purple-50 hover:bg-purple-100 rounded-lg transition-colors group w-full text-left">
                             <div class="bg-purple-500 group-hover:bg-purple-600 text-white rounded-lg p-2 mr-3">
                                 <i class="fas fa-chart-bar"></i>
@@ -357,7 +328,7 @@
                                 <div class="text-sm text-gray-600">Daily/weekly reports</div>
                             </div>
                         </button>
-                        
+
                         <button onclick="openInventoryModal()" class="flex items-center p-3 bg-orange-50 hover:bg-orange-100 rounded-lg transition-colors group w-full text-left">
                             <div class="bg-orange-500 group-hover:bg-orange-600 text-white rounded-lg p-2 mr-3">
                                 <i class="fas fa-boxes"></i>
@@ -392,7 +363,7 @@
                         <p class="text-xs text-gray-500">2 minutes ago</p>
                     </div>
                 </div>
-                
+
                 <div class="flex items-center p-3 bg-blue-50 rounded-lg">
                     <div class="w-8 h-8 bg-blue-500 rounded-full flex items-center justify-center text-white mr-3">
                         <i class="fas fa-play text-sm"></i>
@@ -402,7 +373,7 @@
                         <p class="text-xs text-gray-500">15 minutes ago</p>
                     </div>
                 </div>
-                
+
                 <div class="flex items-center p-3 bg-yellow-50 rounded-lg">
                     <div class="w-8 h-8 bg-yellow-500 rounded-full flex items-center justify-center text-white mr-3">
                         <i class="fas fa-tools text-sm"></i>
@@ -518,7 +489,7 @@
                     <label class="block text-sm font-medium text-gray-700 mb-2">Test Name</label>
                     <input type="text" id="testName" readonly class="w-full px-3 py-2 border border-gray-300 rounded-md bg-gray-50">
                 </div>
-                
+
                 <div>
                     <label class="block text-sm font-medium text-gray-700 mb-2">Equipment Required</label>
                     <select class="w-full px-3 py-2 border border-gray-300 rounded-md">
@@ -528,7 +499,7 @@
                         <option>Centrifuge</option>
                     </select>
                 </div>
-                
+
                 <div>
                     <label class="block text-sm font-medium text-gray-700 mb-2">Estimated Duration</label>
                     <select class="w-full px-3 py-2 border border-gray-300 rounded-md">
@@ -538,20 +509,20 @@
                         <option>2 hours</option>
                     </select>
                 </div>
-                
+
                 <div>
                     <label class="block text-sm font-medium text-gray-700 mb-2">Notes</label>
-                    <textarea rows="3" class="w-full px-3 py-2 border border-gray-300 rounded-md" 
-                              placeholder="Any special instructions or observations..."></textarea>
+                    <textarea rows="3" class="w-full px-3 py-2 border border-gray-300 rounded-md"
+                        placeholder="Any special instructions or observations..."></textarea>
                 </div>
-                
+
                 <div class="flex justify-end space-x-3 pt-4 border-t">
-                    <button type="button" onclick="closeTestStartModal()" 
-                            class="px-4 py-2 bg-gray-300 text-gray-700 rounded-md hover:bg-gray-400">
+                    <button type="button" onclick="closeTestStartModal()"
+                        class="px-4 py-2 bg-gray-300 text-gray-700 rounded-md hover:bg-gray-400">
                         Cancel
                     </button>
-                    <button type="submit" 
-                            class="px-6 py-2 bg-green-500 text-white rounded-md hover:bg-green-600">
+                    <button type="submit"
+                        class="px-6 py-2 bg-green-500 text-white rounded-md hover:bg-green-600">
                         <i class="fas fa-play mr-2"></i>Start Test
                     </button>
                 </div>
@@ -581,19 +552,19 @@
                         <div class="font-medium">Daily Report</div>
                         <div class="text-sm text-gray-600">Today's activities</div>
                     </button>
-                    
+
                     <button class="p-4 border-2 border-dashed border-gray-300 rounded-lg hover:border-purple-500 hover:bg-purple-50 transition-colors">
                         <i class="fas fa-calendar-week text-2xl text-purple-600 mb-2"></i>
                         <div class="font-medium">Weekly Report</div>
                         <div class="text-sm text-gray-600">Last 7 days</div>
                     </button>
-                    
+
                     <button class="p-4 border-2 border-dashed border-gray-300 rounded-lg hover:border-purple-500 hover:bg-purple-50 transition-colors">
                         <i class="fas fa-flask text-2xl text-purple-600 mb-2"></i>
                         <div class="font-medium">Test Summary</div>
                         <div class="text-sm text-gray-600">By test type</div>
                     </button>
-                    
+
                     <button class="p-4 border-2 border-dashed border-gray-300 rounded-lg hover:border-purple-500 hover:bg-purple-50 transition-colors">
                         <i class="fas fa-tools text-2xl text-purple-600 mb-2"></i>
                         <div class="font-medium">Equipment Report</div>
@@ -626,7 +597,7 @@
                     <button class="px-4 py-2 text-gray-600 hover:text-orange-600">Consumables</button>
                     <button class="px-4 py-2 text-gray-600 hover:text-orange-600">Test Kits</button>
                 </div>
-                
+
                 <!-- Inventory Items -->
                 <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 max-h-64 overflow-y-auto">
                     <div class="border rounded-lg p-3">
@@ -640,7 +611,7 @@
                             <p>Expires: Dec 2025</p>
                         </div>
                     </div>
-                    
+
                     <div class="border rounded-lg p-3 bg-yellow-50">
                         <div class="flex justify-between items-start mb-2">
                             <h4 class="font-medium">Hemoglobin Reagent</h4>
@@ -652,7 +623,7 @@
                             <p>Expires: Jan 2026</p>
                         </div>
                     </div>
-                    
+
                     <div class="border rounded-lg p-3 bg-red-50">
                         <div class="flex justify-between items-start mb-2">
                             <h4 class="font-medium">Urine Test Strips</h4>
@@ -665,7 +636,7 @@
                         </div>
                     </div>
                 </div>
-                
+
                 <div class="flex justify-end space-x-3 pt-4 border-t">
                     <button class="px-4 py-2 bg-orange-500 text-white rounded-md hover:bg-orange-600">
                         <i class="fas fa-download mr-2"></i>Export Inventory
@@ -680,87 +651,87 @@
 </div>
 
 <script>
-// Enhanced Dashboard Functions
+    // Enhanced Dashboard Functions
 
-// Real-time Clock Update
-function updateClock() {
-    const now = new Date();
-    const timeString = now.toLocaleTimeString('en-US', { 
-        hour: '2-digit', 
-        minute: '2-digit', 
-        hour12: true 
-    });
-    document.getElementById('current-time').textContent = timeString;
-}
+    // Real-time Clock Update
+    function updateClock() {
+        const now = new Date();
+        const timeString = now.toLocaleTimeString('en-US', {
+            hour: '2-digit',
+            minute: '2-digit',
+            hour12: true
+        });
+        document.getElementById('current-time').textContent = timeString;
+    }
 
-// Update clock every minute
-setInterval(updateClock, 60000);
+    // Update clock every minute
+    setInterval(updateClock, 60000);
 
-// Equipment Modal Functions
-function openEquipmentModal() {
-    document.getElementById('equipmentModal').classList.remove('hidden');
-}
+    // Equipment Modal Functions
+    function openEquipmentModal() {
+        document.getElementById('equipmentModal').classList.remove('hidden');
+    }
 
-function closeEquipmentModal() {
-    document.getElementById('equipmentModal').classList.add('hidden');
-}
+    function closeEquipmentModal() {
+        document.getElementById('equipmentModal').classList.add('hidden');
+    }
 
-// Test Start Modal Functions
-function startTest(testId, testName) {
-    document.getElementById('testName').value = testName;
-    document.getElementById('testStartModal').classList.remove('hidden');
-}
+    // Test Start Modal Functions
+    function startTest(testId, testName) {
+        document.getElementById('testName').value = testName;
+        document.getElementById('testStartModal').classList.remove('hidden');
+    }
 
-function closeTestStartModal() {
-    document.getElementById('testStartModal').classList.add('hidden');
-}
+    function closeTestStartModal() {
+        document.getElementById('testStartModal').classList.add('hidden');
+    }
 
-// Enhanced Statistics Functions
-function showTestDetails(type) {
-    const details = {
-        total: {
-            title: 'Total Tests Overview',
-            content: 'View complete testing history and analytics'
-        },
-        pending: {
-            title: 'Pending Tests Queue',
-            content: 'Manage and prioritize pending laboratory tests'
-        },
-        completed: {
-            title: 'Completed Tests',
-            content: 'Review completed tests and results'
-        },
-        today: {
-            title: 'Today\'s Performance',
-            content: 'Track daily productivity and goals'
+    // Enhanced Statistics Functions
+    function showTestDetails(type) {
+        const details = {
+            total: {
+                title: 'Total Tests Overview',
+                content: 'View complete testing history and analytics'
+            },
+            pending: {
+                title: 'Pending Tests Queue',
+                content: 'Manage and prioritize pending laboratory tests'
+            },
+            completed: {
+                title: 'Completed Tests',
+                content: 'Review completed tests and results'
+            },
+            today: {
+                title: 'Today\'s Performance',
+                content: 'Track daily productivity and goals'
+            }
+        };
+
+        if (details[type]) {
+            showNotification(details[type].title, details[type].content, 'info');
         }
-    };
-    
-    if (details[type]) {
-        showNotification(details[type].title, details[type].content, 'info');
     }
-}
 
-// Emergency Alert System
-function triggerEmergencyAlert() {
-    if (confirm('Are you sure you want to trigger an emergency alert? This will notify all medical staff.')) {
-        showNotification('Emergency Alert Triggered', 'All medical staff have been notified', 'warning');
-        // In real implementation, this would send actual alerts
+    // Emergency Alert System
+    function triggerEmergencyAlert() {
+        if (confirm('Are you sure you want to trigger an emergency alert? This will notify all medical staff.')) {
+            showNotification('Emergency Alert Triggered', 'All medical staff have been notified', 'warning');
+            // In real implementation, this would send actual alerts
+        }
     }
-}
 
-// Enhanced Notification System
-function showNotification(title, message, type = 'info') {
-    const colors = {
-        info: 'bg-blue-500',
-        success: 'bg-green-500',
-        warning: 'bg-yellow-500',
-        error: 'bg-red-500'
-    };
-    
-    const notification = document.createElement('div');
-    notification.className = `fixed top-4 right-4 ${colors[type]} text-white px-6 py-4 rounded-lg shadow-lg transform translate-x-full transition-transform duration-300 z-50`;
-    notification.innerHTML = `
+    // Enhanced Notification System
+    function showNotification(title, message, type = 'info') {
+        const colors = {
+            info: 'bg-blue-500',
+            success: 'bg-green-500',
+            warning: 'bg-yellow-500',
+            error: 'bg-red-500'
+        };
+
+        const notification = document.createElement('div');
+        notification.className = `fixed top-4 right-4 ${colors[type]} text-white px-6 py-4 rounded-lg shadow-lg transform translate-x-full transition-transform duration-300 z-50`;
+        notification.innerHTML = `
         <div class="flex items-center justify-between">
             <div>
                 <div class="font-semibold">${title}</div>
@@ -771,134 +742,134 @@ function showNotification(title, message, type = 'info') {
             </button>
         </div>
     `;
-    
-    document.body.appendChild(notification);
-    
-    // Slide in
-    setTimeout(() => {
-        notification.classList.remove('translate-x-full');
-    }, 100);
-    
-    // Auto remove after 5 seconds
-    setTimeout(() => {
-        notification.classList.add('translate-x-full');
-        setTimeout(() => notification.remove(), 300);
-    }, 5000);
-}
 
-// Auto-refresh pending tests count (simulated)
-function refreshTestCounts() {
-    // In real implementation, this would fetch from API
-    console.log('Refreshing test counts...');
-}
+        document.body.appendChild(notification);
 
-// Refresh every 30 seconds
-setInterval(refreshTestCounts, 30000);
+        // Slide in
+        setTimeout(() => {
+            notification.classList.remove('translate-x-full');
+        }, 100);
 
-// Check for new patients
-function checkNewPatients() {
-    fetch('/KJ/lab/check_new_patients', {
-        method: 'GET',
-        headers: {
-            'Content-Type': 'application/json',
+        // Auto remove after 5 seconds
+        setTimeout(() => {
+            notification.classList.add('translate-x-full');
+            setTimeout(() => notification.remove(), 300);
+        }, 5000);
+    }
+
+    // Auto-refresh pending tests count (simulated)
+    function refreshTestCounts() {
+        // In real implementation, this would fetch from API
+        console.log('Refreshing test counts...');
+    }
+
+    // Refresh every 30 seconds
+    setInterval(refreshTestCounts, 30000);
+
+    // Check for new patients
+    function checkNewPatients() {
+        fetch('/KJ/lab/check_new_patients', {
+                method: 'GET',
+                headers: {
+                    'Content-Type': 'application/json',
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.new_patients > 0) {
+                    showNotification(
+                        'New Patients Waiting',
+                        `${data.new_patients} patient(s) waiting for lab tests`,
+                        'info'
+                    );
+                    // Refresh the pending patients list
+                    location.reload();
+                }
+            });
+    }
+
+    // Check every 30 seconds for new patients
+    setInterval(checkNewPatients, 30000);
+
+    // Keyboard shortcuts
+    document.addEventListener('keydown', function(e) {
+        // Alt + E for Equipment
+        if (e.altKey && e.key === 'e') {
+            e.preventDefault();
+            openEquipmentModal();
         }
-    })
-    .then(response => response.json())
-    .then(data => {
-        if (data.new_patients > 0) {
-            showNotification(
-                'New Patients Waiting',
-                `${data.new_patients} patient(s) waiting for lab tests`,
-                'info'
-            );
-            // Refresh the pending patients list
-            location.reload();
+
+        // Alt + R for Reports
+        if (e.altKey && e.key === 'r') {
+            e.preventDefault();
+            openReportModal();
+        }
+
+        // Alt + I for Inventory
+        if (e.altKey && e.key === 'i') {
+            e.preventDefault();
+            openInventoryModal();
         }
     });
-}
 
-// Check every 30 seconds for new patients
-setInterval(checkNewPatients, 30000);
-
-// Keyboard shortcuts
-document.addEventListener('keydown', function(e) {
-    // Alt + E for Equipment
-    if (e.altKey && e.key === 'e') {
-        e.preventDefault();
-        openEquipmentModal();
-    }
-    
-    // Alt + R for Reports
-    if (e.altKey && e.key === 'r') {
-        e.preventDefault();
-        openReportModal();
-    }
-    
-    // Alt + I for Inventory
-    if (e.altKey && e.key === 'i') {
-        e.preventDefault();
-        openInventoryModal();
-    }
-});
-
-// Show keyboard shortcuts help
-function showKeyboardShortcuts() {
-    const shortcuts = `
+    // Show keyboard shortcuts help
+    function showKeyboardShortcuts() {
+        const shortcuts = `
         <div class="space-y-2">
             <div><kbd class="px-2 py-1 bg-gray-100 rounded text-sm">Alt + E</kbd> - Equipment Status</div>
             <div><kbd class="px-2 py-1 bg-gray-100 rounded text-sm">Alt + R</kbd> - Generate Reports</div>
             <div><kbd class="px-2 py-1 bg-gray-100 rounded text-sm">Alt + I</kbd> - Check Inventory</div>
         </div>
     `;
-    showNotification('Keyboard Shortcuts', shortcuts, 'info');
-}
+        showNotification('Keyboard Shortcuts', shortcuts, 'info');
+    }
 
-// Initialize dashboard
-document.addEventListener('DOMContentLoaded', function() {
-    updateClock();
-    console.log('Lab Dashboard Enhanced - Ready for optimal workflow!');
-});
-
-// Report Modal Functions
-function openReportModal() {
-    document.getElementById('reportModal').classList.remove('hidden');
-}
-
-function closeReportModal() {
-    document.getElementById('reportModal').classList.add('hidden');
-}
-
-// Inventory Modal Functions
-function openInventoryModal() {
-    document.getElementById('inventoryModal').classList.remove('hidden');
-}
-
-function closeInventoryModal() {
-    document.getElementById('inventoryModal').classList.add('hidden');
-}
-
-// Close modals when clicking outside
-document.addEventListener('click', function(e) {
-    const modals = ['equipmentModal', 'testStartModal', 'reportModal', 'inventoryModal'];
-    modals.forEach(modalId => {
-        const modal = document.getElementById(modalId);
-        if (e.target === modal) {
-            modal.classList.add('hidden');
-        }
+    // Initialize dashboard
+    document.addEventListener('DOMContentLoaded', function() {
+        updateClock();
+        console.log('Lab Dashboard Enhanced - Ready for optimal workflow!');
     });
-});
 
-// Start Test Form Submission
-document.getElementById('startTestForm').addEventListener('submit', function(e) {
-    e.preventDefault();
-    // Add your test start logic here
-    alert('Test started successfully!');
-    closeTestStartModal();
-});
+    // Report Modal Functions
+    function openReportModal() {
+        document.getElementById('reportModal').classList.remove('hidden');
+    }
 
-// Auto-refresh dashboard every 30 seconds
-setInterval(function() {
-    // You can add AJAX call here to refresh pending tests
-    console.log('Auto-refreshing dashboard...');
-}, 30000);
+    function closeReportModal() {
+        document.getElementById('reportModal').classList.add('hidden');
+    }
+
+    // Inventory Modal Functions
+    function openInventoryModal() {
+        document.getElementById('inventoryModal').classList.remove('hidden');
+    }
+
+    function closeInventoryModal() {
+        document.getElementById('inventoryModal').classList.add('hidden');
+    }
+
+    // Close modals when clicking outside
+    document.addEventListener('click', function(e) {
+        const modals = ['equipmentModal', 'testStartModal', 'reportModal', 'inventoryModal'];
+        modals.forEach(modalId => {
+            const modal = document.getElementById(modalId);
+            if (e.target === modal) {
+                modal.classList.add('hidden');
+            }
+        });
+    });
+
+    // Start Test Form Submission
+    document.getElementById('startTestForm').addEventListener('submit', function(e) {
+        e.preventDefault();
+        // Add your test start logic here
+        alert('Test started successfully!');
+        closeTestStartModal();
+    });
+
+    // Auto-refresh dashboard every 30 seconds
+    setInterval(function() {
+        // You can add AJAX call here to refresh pending tests
+        console.log('Auto-refreshing dashboard...');
+    }, 30000);
 </script>
