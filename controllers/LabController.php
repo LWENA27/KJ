@@ -13,9 +13,9 @@ class LabController extends BaseController {
 
         // Pending tests
         $stmt = $this->pdo->prepare("
-            SELECT lr.*, t.name as test_name, p.first_name, p.last_name, c.appointment_date
+            SELECT lr.*, t.test_name as test_name, t.test_code as test_code, t.category_id as category, p.first_name, p.last_name, c.appointment_date
             FROM lab_results lr
-            JOIN tests t ON lr.test_id = t.id
+            JOIN lab_tests t ON lr.test_id = t.id
             JOIN consultations c ON lr.consultation_id = c.id
             JOIN patients p ON c.patient_id = p.id
             WHERE lr.technician_id = ? AND lr.status = 'pending'
@@ -55,17 +55,17 @@ class LabController extends BaseController {
     public function tests() {
         $technician_id = $_SESSION['user_id'];
 
-        $stmt = $this->pdo->prepare("
-            SELECT lr.*, t.name as test_name, t.category, p.first_name, p.last_name, c.appointment_date,
-                   ws.consultation_registration_paid, ws.lab_tests_paid, ws.results_review_paid
-            FROM lab_results lr
-            JOIN tests t ON lr.test_id = t.id
-            JOIN consultations c ON lr.consultation_id = c.id
-            JOIN patients p ON c.patient_id = p.id
-            LEFT JOIN workflow_status ws ON p.id = ws.patient_id
-            WHERE lr.technician_id = ?
-            ORDER BY lr.status ASC, lr.created_at DESC
-        ");
+         $stmt = $this->pdo->prepare("
+         SELECT lr.*, t.test_name as test_name, t.test_code as test_code, t.category_id as category, p.first_name, p.last_name, c.appointment_date,
+             ws.consultation_registration_paid, ws.lab_tests_paid, ws.results_review_paid
+         FROM lab_results lr
+         JOIN lab_tests t ON lr.test_id = t.id
+         JOIN consultations c ON lr.consultation_id = c.id
+         JOIN patients p ON c.patient_id = p.id
+         LEFT JOIN workflow_status ws ON p.id = ws.patient_id
+         WHERE lr.technician_id = ?
+         ORDER BY lr.status ASC, lr.created_at DESC
+     ");
         $stmt->execute([$technician_id]);
         $tests = $stmt->fetchAll();
 
@@ -81,10 +81,10 @@ class LabController extends BaseController {
 
         // Get test details
         $stmt = $this->pdo->prepare("
-            SELECT lr.*, t.name as test_name, t.category, t.normal_range, p.first_name, p.last_name,
+            SELECT lr.*, t.test_name as test_name, t.test_code as test_code, t.category_id as category, t.normal_range, p.first_name, p.last_name,
                    ws.consultation_registration_paid, ws.lab_tests_paid
             FROM lab_results lr
-            JOIN tests t ON lr.test_id = t.id
+            JOIN lab_tests t ON lr.test_id = t.id
             JOIN consultations c ON lr.consultation_id = c.id
             JOIN patients p ON c.patient_id = p.id
             LEFT JOIN workflow_status ws ON p.id = ws.patient_id
@@ -153,9 +153,9 @@ class LabController extends BaseController {
         $technician_id = $_SESSION['user_id'];
 
         $stmt = $this->pdo->prepare("
-            SELECT lr.*, t.name as test_name, t.normal_range, t.unit, p.first_name, p.last_name
+            SELECT lr.*, t.test_name as test_name, t.test_code as test_code, t.normal_range, t.unit, p.first_name, p.last_name
             FROM lab_results lr
-            JOIN tests t ON lr.test_id = t.id
+            JOIN lab_tests t ON lr.test_id = t.id
             JOIN consultations c ON lr.consultation_id = c.id
             JOIN patients p ON c.patient_id = p.id
             WHERE lr.technician_id = ? AND lr.status = 'pending'
@@ -250,9 +250,9 @@ class LabController extends BaseController {
 
             // First check if test exists and belongs to current technician
             $stmt = $this->pdo->prepare("
-                SELECT lr.*, t.name as test_name
+                SELECT lr.*, t.test_name as test_name, t.test_code as test_code
                 FROM lab_results lr
-                JOIN tests t ON lr.test_id = t.id
+                JOIN lab_tests t ON lr.test_id = t.id
                 WHERE lr.id = ? AND lr.technician_id = ?
             ");
             $stmt->execute([$test_id, $_SESSION['user_id']]);
@@ -392,10 +392,10 @@ class LabController extends BaseController {
 
         // Get samples to be collected
         $stmt = $this->pdo->prepare("
-            SELECT lr.*, t.name as test_name, t.category, p.first_name, p.last_name, c.appointment_date,
+            SELECT lr.*, t.test_name as test_name, t.test_code as test_code, t.category_id as category, p.first_name, p.last_name, c.appointment_date,
                    ws.consultation_registration_paid, ws.lab_tests_paid
             FROM lab_results lr
-            JOIN tests t ON lr.test_id = t.id
+            JOIN lab_tests t ON lr.test_id = t.id
             JOIN consultations c ON lr.consultation_id = c.id
             JOIN patients p ON c.patient_id = p.id
             LEFT JOIN workflow_status ws ON p.id = ws.patient_id

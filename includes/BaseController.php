@@ -178,9 +178,9 @@ class BaseController {
 
         // Get lab results
         $stmt = $this->pdo->prepare("
-            SELECT lr.*, t.name as test_name, u.first_name as technician_first, u.last_name as technician_last
+            SELECT lr.*, t.test_name as test_name, t.test_code as test_code, u.first_name as technician_first, u.last_name as technician_last
             FROM lab_results lr
-            JOIN tests t ON lr.test_id = t.id
+            JOIN lab_tests t ON lr.test_id = t.id
             JOIN consultations c ON lr.consultation_id = c.id
             JOIN users u ON lr.technician_id = u.id
             WHERE c.patient_id = ?

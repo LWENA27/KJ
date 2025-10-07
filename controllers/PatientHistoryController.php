@@ -92,14 +92,14 @@ class PatientHistoryController extends BaseController {
             $vitals_trends = $stmt->fetchAll();
 
             // Get lab trends
-            $stmt = $this->pdo->prepare("
-                SELECT lr.created_at, t.name as test_name, lr.result_value, t.normal_range
-                FROM lab_results lr
-                JOIN tests t ON lr.test_id = t.id
-                JOIN consultations c ON lr.consultation_id = c.id
-                WHERE c.patient_id = ? AND lr.created_at >= DATE_SUB(NOW(), INTERVAL 1 YEAR)
-                ORDER BY lr.created_at
-            ");
+                $stmt = $this->pdo->prepare("
+                    SELECT lr.created_at, t.test_name as test_name, lr.result_value, t.normal_range
+                    FROM lab_results lr
+                    JOIN lab_tests t ON lr.test_id = t.id
+                    JOIN consultations c ON lr.consultation_id = c.id
+                    WHERE c.patient_id = ? AND lr.created_at >= DATE_SUB(NOW(), INTERVAL 1 YEAR)
+                    ORDER BY lr.created_at
+                ");
             $stmt->execute([$patient_id]);
             $lab_trends = $stmt->fetchAll();
 
@@ -180,12 +180,12 @@ class PatientHistoryController extends BaseController {
 
             // Check for abnormal lab trends
             $stmt = $this->pdo->prepare("
-                SELECT t.name, lr.result_value, lr.created_at
+                SELECT t.test_name as name, lr.result_value, lr.created_at
                 FROM lab_results lr
-                JOIN tests t ON lr.test_id = t.id
+                JOIN lab_tests t ON lr.test_id = t.id
                 JOIN consultations c ON lr.consultation_id = c.id
                 WHERE c.patient_id = ? AND lr.created_at >= DATE_SUB(NOW(), INTERVAL 90 DAY)
-                ORDER BY t.name, lr.created_at DESC
+                ORDER BY t.test_name, lr.created_at DESC
             ");
             $stmt->execute([$patient_id]);
             $recent_labs = $stmt->fetchAll();
@@ -277,9 +277,9 @@ class PatientHistoryController extends BaseController {
 
             // Recent test results
             $stmt = $this->pdo->prepare("
-                SELECT t.name, lr.result_value, lr.created_at
+                SELECT t.test_name as name, lr.result_value, lr.created_at
                 FROM lab_results lr
-                JOIN tests t ON lr.test_id = t.id
+                JOIN lab_tests t ON lr.test_id = t.id
                 JOIN consultations c ON lr.consultation_id = c.id
                 WHERE c.patient_id = ?
                 ORDER BY lr.created_at DESC

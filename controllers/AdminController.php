@@ -226,7 +226,8 @@ class AdminController extends BaseController {
     }
 
     public function tests() {
-        $tests = $this->pdo->query("SELECT id, name, category, price FROM tests ORDER BY name")->fetchAll();
+        // lab_tests table uses `test_name`, `test_code`, `category_id`, `price`
+        $tests = $this->pdo->query("SELECT id, test_name as name, test_code as code, category_id, price FROM lab_tests ORDER BY test_name")->fetchAll();
 
         $this->render('admin/tests', [
             'tests' => $tests

@@ -40,10 +40,10 @@ try {
     
     echo "Testing samples to be collected query...\n";
     $stmt = $pdo->prepare("
-        SELECT lr.*, t.name as test_name, t.category, p.first_name, p.last_name, c.appointment_date,
+        SELECT lr.*, t.test_name as test_name, t.test_code as test_code, t.category_id as category, p.first_name, p.last_name, c.appointment_date,
                ws.consultation_registration_paid, ws.lab_tests_paid
         FROM lab_results lr
-        JOIN tests t ON lr.test_id = t.id
+        JOIN lab_tests t ON lr.test_id = t.id
         JOIN consultations c ON lr.consultation_id = c.id
         JOIN patients p ON c.patient_id = p.id
         LEFT JOIN workflow_status ws ON p.id = ws.patient_id

@@ -49,11 +49,11 @@ class DoctorController extends BaseController {
             JOIN workflow_status ws ON p.id = ws.patient_id
             LEFT JOIN (
                 SELECT c.patient_id,
-               GROUP_CONCAT(t.name SEPARATOR ', ') AS test_names,
+               GROUP_CONCAT(t.test_name SEPARATOR ', ') AS test_names,
                MAX(lr.created_at) AS latest_result_date
                 FROM lab_results lr
                 JOIN consultations c ON lr.consultation_id = c.id
-                JOIN tests t ON lr.test_id = t.id
+                JOIN lab_tests t ON lr.test_id = t.id
                 WHERE lr.status = 'completed' AND c.doctor_id = ?
                 GROUP BY c.patient_id
             ) ag ON p.id = ag.patient_id
@@ -74,9 +74,9 @@ class DoctorController extends BaseController {
 
         // Recent lab results
         $stmt = $this->pdo->prepare("
-            SELECT lr.*, t.name as test_name, p.first_name, p.last_name
+                SELECT lr.*, t.test_name as test_name, p.first_name, p.last_name
             FROM lab_results lr
-            JOIN tests t ON lr.test_id = t.id
+                JOIN lab_tests t ON lr.test_id = t.id
             JOIN consultations c ON lr.consultation_id = c.id
             JOIN patients p ON c.patient_id = p.id
             WHERE c.doctor_id = ?
@@ -417,10 +417,10 @@ class DoctorController extends BaseController {
 
         try {
             $stmt = $this->pdo->prepare("
-                SELECT id, name, category, price, description
-                FROM tests
-                WHERE name LIKE ? OR category LIKE ? OR description LIKE ?
-                ORDER BY name
+                SELECT id, test_name as name, test_code as code, category_id as category, price, description
+                FROM lab_tests
+                WHERE test_name LIKE ? OR test_code LIKE ? OR description LIKE ?
+                ORDER BY test_name
                 LIMIT 20
             ");
             $search = "%{$query}%";
@@ -482,16 +482,16 @@ class DoctorController extends BaseController {
         }
 
         // Get lab results for this patient
-        $stmt = $this->pdo->prepare("
-            SELECT lr.*, t.name as test_name, t.category, t.normal_range, t.unit,
-                   c.appointment_date, p.first_name, p.last_name
-            FROM lab_results lr
-            JOIN tests t ON lr.test_id = t.id
-            JOIN consultations c ON lr.consultation_id = c.id
-            JOIN patients p ON c.patient_id = p.id
-            WHERE c.patient_id = ? AND lr.status = 'completed'
-            ORDER BY lr.result_date DESC
-        ");
+            $stmt = $this->pdo->prepare("
+                SELECT lr.*, t.test_name as test_name, t.test_code as test_code, t.category_id as category, t.normal_range, t.unit,
+                       c.appointment_date, p.first_name, p.last_name
+                FROM lab_results lr
+                JOIN lab_tests t ON lr.test_id = t.id
+                JOIN consultations c ON lr.consultation_id = c.id
+                JOIN patients p ON c.patient_id = p.id
+                WHERE c.patient_id = ? AND lr.status = 'completed'
+                ORDER BY lr.created_at DESC
+            ");
         $stmt->execute([$patient_id]);
         $lab_results = $stmt->fetchAll();
 
@@ -511,8 +511,8 @@ class DoctorController extends BaseController {
     public function lab_results() {
         $doctor_id = $_SESSION['user_id'];
 
-        // Fetch recent lab results for patients that belong to this doctor
-        $stmt = $this->pdo->prepare("\n            SELECT lr.*, t.name as test_name, p.first_name, p.last_name, c.appointment_date, lr.result_value, lr.result_text, lr.status, lr.created_at as created_at\n            FROM lab_results lr\n            JOIN tests t ON lr.test_id = t.id\n            JOIN consultations c ON lr.consultation_id = c.id\n            JOIN patients p ON c.patient_id = p.id\n            WHERE c.doctor_id = ?\n            ORDER BY lr.created_at DESC\n            LIMIT 200\n        ");
+    // Fetch recent lab results for patients that belong to this doctor (use lab_tests)
+    $stmt = $this->pdo->prepare("\n            SELECT lr.*, t.test_name as test_name, p.first_name, p.last_name, c.appointment_date, lr.result_value, lr.result_text, lr.status, lr.created_at as created_at\n            FROM lab_results lr\n            JOIN lab_tests t ON lr.test_id = t.id\n            JOIN consultations c ON lr.consultation_id = c.id\n            JOIN patients p ON c.patient_id = p.id\n            WHERE c.doctor_id = ?\n            ORDER BY lr.created_at DESC\n            LIMIT 200\n        ");
         $stmt->execute([$doctor_id]);
         $results = $stmt->fetchAll();
 
