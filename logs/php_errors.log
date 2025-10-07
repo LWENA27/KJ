@@ -81,3 +81,69 @@
 [07-Oct-2025 09:01:22 Europe/Berlin] PHP Deprecated:  trim(): Passing null to parameter #1 ($string) of type string is deprecated in C:\xampp\htdocs\KJ\includes\BaseController.php on line 58
 [07-Oct-2025 09:02:29 Europe/Berlin] PHP Warning:  Undefined array key "address" in C:\xampp\htdocs\KJ\controllers\ReceptionistController.php on line 176
 [07-Oct-2025 09:02:29 Europe/Berlin] PHP Deprecated:  trim(): Passing null to parameter #1 ($string) of type string is deprecated in C:\xampp\htdocs\KJ\includes\BaseController.php on line 58
+[07-Oct-2025 09:13:14 Europe/Berlin] Error in controller: SQLSTATE[42S02]: Base table or view not found: 1146 Table 'zahanati.tests' doesn't exist
+[07-Oct-2025 09:13:50 Europe/Berlin] Error in controller: SQLSTATE[42S02]: Base table or view not found: 1146 Table 'zahanati.tests' doesn't exist
+[07-Oct-2025 09:14:03 Europe/Berlin] Error in controller: SQLSTATE[42S02]: Base table or view not found: 1146 Table 'zahanati.tests' doesn't exist
+[07-Oct-2025 09:27:53 Europe/Berlin] Error in controller: SQLSTATE[42S22]: Column not found: 1054 Unknown column 'blood_pressure' in 'field list'
+[07-Oct-2025 09:29:14 Europe/Berlin] Error in controller: SQLSTATE[42S22]: Column not found: 1054 Unknown column 'blood_pressure' in 'field list'
+[07-Oct-2025 09:31:19 Europe/Berlin] Error in controller: SQLSTATE[42S02]: Base table or view not found: 1146 Table 'zahanati.tests' doesn't exist
+[07-Oct-2025 09:33:06 Europe/Berlin] PHP Warning:  Undefined array key "address" in C:\xampp\htdocs\KJ\controllers\ReceptionistController.php on line 176
+[07-Oct-2025 09:33:06 Europe/Berlin] PHP Deprecated:  trim(): Passing null to parameter #1 ($string) of type string is deprecated in C:\xampp\htdocs\KJ\includes\BaseController.php on line 58
+[07-Oct-2025 09:35:15 Europe/Berlin] Error in controller: SQLSTATE[42S02]: Base table or view not found: 1146 Table 'zahanati.tests' doesn't exist
+[07-Oct-2025 09:36:52 Europe/Berlin] Error in controller: SQLSTATE[42S22]: Column not found: 1054 Unknown column 't.name' in 'field list'
+[07-Oct-2025 09:36:53 Europe/Berlin] Error in controller: SQLSTATE[42S22]: Column not found: 1054 Unknown column 't.name' in 'field list'
+[07-Oct-2025 09:36:53 Europe/Berlin] Error in controller: SQLSTATE[42S22]: Column not found: 1054 Unknown column 't.name' in 'field list'
+[07-Oct-2025 09:36:54 Europe/Berlin] Error in controller: SQLSTATE[42S22]: Column not found: 1054 Unknown column 't.name' in 'field list'
+[07-Oct-2025 09:36:54 Europe/Berlin] Error in controller: SQLSTATE[42S22]: Column not found: 1054 Unknown column 't.name' in 'field list'
+[07-Oct-2025 09:36:54 Europe/Berlin] Error in controller: SQLSTATE[42S22]: Column not found: 1054 Unknown column 't.name' in 'field list'
+[07-Oct-2025 09:37:28 Europe/Berlin] Error in controller: SQLSTATE[42000]: Syntax error or access violation: 1064 You have an error in your SQL syntax; check the manual that corresponds to your MariaDB server version for the right syntax to use near 'p.first_name, p.last_name, c.appointment_date
+            FROM lab_results l...' at line 1
+[07-Oct-2025 09:39:06 Europe/Berlin] Error in controller: SQLSTATE[42S22]: Column not found: 1054 Unknown column 'lt.category' in 'field list'
+[07-Oct-2025 09:39:13 Europe/Berlin] Error in controller: SQLSTATE[42S22]: Column not found: 1054 Unknown column 'lt.category' in 'field list'
+[07-Oct-2025 09:39:17 Europe/Berlin] Error in controller: SQLSTATE[42S02]: Base table or view not found: 1146 Table 'zahanati.tests' doesn't exist
+[07-Oct-2025 09:39:35 Europe/Berlin] Error in controller: SQLSTATE[42S22]: Column not found: 1054 Unknown column 'lt.category' in 'field list'
+[07-Oct-2025 09:42:59 Europe/Berlin] PHP Warning:  Undefined variable $stats in C:\xampp\htdocs\KJ\views\doctor\dashboard.php on line 18
+[07-Oct-2025 09:42:59 Europe/Berlin] PHP Warning:  Trying to access array offset on value of type null in C:\xampp\htdocs\KJ\views\doctor\dashboard.php on line 18
+[07-Oct-2025 09:42:59 Europe/Berlin] PHP Warning:  Undefined variable $stats in C:\xampp\htdocs\KJ\views\doctor\dashboard.php on line 30
+[07-Oct-2025 09:42:59 Europe/Berlin] PHP Warning:  Trying to access array offset on value of type null in C:\xampp\htdocs\KJ\views\doctor\dashboard.php on line 30
+[07-Oct-2025 09:42:59 Europe/Berlin] PHP Warning:  Undefined variable $stats in C:\xampp\htdocs\KJ\views\doctor\dashboard.php on line 42
+[07-Oct-2025 09:42:59 Europe/Berlin] PHP Warning:  Trying to access array offset on value of type null in C:\xampp\htdocs\KJ\views\doctor\dashboard.php on line 42
+[07-Oct-2025 09:42:59 Europe/Berlin] PHP Warning:  Undefined variable $other_doctors in C:\xampp\htdocs\KJ\views\doctor\dashboard.php on line 458
+[07-Oct-2025 09:42:59 Europe/Berlin] PHP Warning:  foreach() argument must be of type array|object, null given in C:\xampp\htdocs\KJ\views\doctor\dashboard.php on line 458
+[07-Oct-2025 09:43:07 Europe/Berlin] PHP Warning:  Undefined variable $stats in C:\xampp\htdocs\KJ\views\doctor\dashboard.php on line 18
+[07-Oct-2025 09:43:07 Europe/Berlin] PHP Warning:  Trying to access array offset on value of type null in C:\xampp\htdocs\KJ\views\doctor\dashboard.php on line 18
+[07-Oct-2025 09:43:07 Europe/Berlin] PHP Warning:  Undefined variable $stats in C:\xampp\htdocs\KJ\views\doctor\dashboard.php on line 30
+[07-Oct-2025 09:43:07 Europe/Berlin] PHP Warning:  Trying to access array offset on value of type null in C:\xampp\htdocs\KJ\views\doctor\dashboard.php on line 30
+[07-Oct-2025 09:43:07 Europe/Berlin] PHP Warning:  Undefined variable $stats in C:\xampp\htdocs\KJ\views\doctor\dashboard.php on line 42
+[07-Oct-2025 09:43:07 Europe/Berlin] PHP Warning:  Trying to access array offset on value of type null in C:\xampp\htdocs\KJ\views\doctor\dashboard.php on line 42
+[07-Oct-2025 09:43:07 Europe/Berlin] PHP Warning:  Undefined variable $other_doctors in C:\xampp\htdocs\KJ\views\doctor\dashboard.php on line 458
+[07-Oct-2025 09:43:07 Europe/Berlin] PHP Warning:  foreach() argument must be of type array|object, null given in C:\xampp\htdocs\KJ\views\doctor\dashboard.php on line 458
+[07-Oct-2025 13:04:22 Europe/Berlin] Error in controller: SQLSTATE[42S22]: Column not found: 1054 Unknown column 'lt.category' in 'field list'
+[07-Oct-2025 13:07:47 Europe/Berlin] PHP Deprecated:  strtotime(): Passing null to parameter #1 ($datetime) of type string is deprecated in C:\xampp\htdocs\KJ\views\admin\patients.php on line 42
+[07-Oct-2025 13:07:47 Europe/Berlin] PHP Deprecated:  date_create(): Passing null to parameter #1 ($datetime) of type string is deprecated in C:\xampp\htdocs\KJ\views\admin\patients.php on line 44
+[07-Oct-2025 13:07:47 Europe/Berlin] PHP Deprecated:  ucfirst(): Passing null to parameter #1 ($string) of type string is deprecated in C:\xampp\htdocs\KJ\views\admin\patients.php on line 50
+[07-Oct-2025 13:07:47 Europe/Berlin] PHP Deprecated:  strtotime(): Passing null to parameter #1 ($datetime) of type string is deprecated in C:\xampp\htdocs\KJ\views\admin\patients.php on line 42
+[07-Oct-2025 13:07:47 Europe/Berlin] PHP Deprecated:  date_create(): Passing null to parameter #1 ($datetime) of type string is deprecated in C:\xampp\htdocs\KJ\views\admin\patients.php on line 44
+[07-Oct-2025 13:07:47 Europe/Berlin] PHP Deprecated:  ucfirst(): Passing null to parameter #1 ($string) of type string is deprecated in C:\xampp\htdocs\KJ\views\admin\patients.php on line 50
+[07-Oct-2025 13:08:51 Europe/Berlin] PHP Deprecated:  strtotime(): Passing null to parameter #1 ($datetime) of type string is deprecated in C:\xampp\htdocs\KJ\views\admin\patients.php on line 42
+[07-Oct-2025 13:08:51 Europe/Berlin] PHP Deprecated:  date_create(): Passing null to parameter #1 ($datetime) of type string is deprecated in C:\xampp\htdocs\KJ\views\admin\patients.php on line 44
+[07-Oct-2025 13:08:51 Europe/Berlin] PHP Deprecated:  ucfirst(): Passing null to parameter #1 ($string) of type string is deprecated in C:\xampp\htdocs\KJ\views\admin\patients.php on line 50
+[07-Oct-2025 13:08:51 Europe/Berlin] PHP Deprecated:  strtotime(): Passing null to parameter #1 ($datetime) of type string is deprecated in C:\xampp\htdocs\KJ\views\admin\patients.php on line 42
+[07-Oct-2025 13:08:51 Europe/Berlin] PHP Deprecated:  date_create(): Passing null to parameter #1 ($datetime) of type string is deprecated in C:\xampp\htdocs\KJ\views\admin\patients.php on line 44
+[07-Oct-2025 13:08:51 Europe/Berlin] PHP Deprecated:  ucfirst(): Passing null to parameter #1 ($string) of type string is deprecated in C:\xampp\htdocs\KJ\views\admin\patients.php on line 50
+[07-Oct-2025 13:22:59 Europe/Berlin] Error in controller: SQLSTATE[HY093]: Invalid parameter number
+[07-Oct-2025 13:24:21 Europe/Berlin] PHP Warning:  Array to string conversion in C:\xampp\htdocs\KJ\controllers\LabController.php on line 50
+[07-Oct-2025 13:24:21 Europe/Berlin] Error in controller: SQLSTATE[HY093]: Invalid parameter number
+[07-Oct-2025 13:24:44 Europe/Berlin] Error in controller: SQLSTATE[HY093]: Invalid parameter number
+[07-Oct-2025 13:25:19 Europe/Berlin] Error in controller: SQLSTATE[HY093]: Invalid parameter number
+[07-Oct-2025 13:27:21 Europe/Berlin] Error in controller: SQLSTATE[42S22]: Column not found: 1054 Unknown column 'lt.category' in 'field list'
+[07-Oct-2025 13:29:30 Europe/Berlin] Error in controller: SQLSTATE[42000]: Syntax error or access violation: 1064 You have an error in your SQL syntax; check the manual that corresponds to your MariaDB server version for the right syntax to use near ')
+            ORDER BY p.created_at ASC' at line 7
+[07-Oct-2025 13:34:19 Europe/Berlin] PHP Warning:  Undefined array key "lab_tests_paid" in C:\xampp\htdocs\KJ\controllers\LabController.php on line 38
+[07-Oct-2025 13:34:24 Europe/Berlin] Error in controller: SQLSTATE[42S22]: Column not found: 1054 Unknown column 'lt.category' in 'field list'
+[07-Oct-2025 13:34:26 Europe/Berlin] PHP Warning:  Undefined array key "lab_tests_paid" in C:\xampp\htdocs\KJ\controllers\LabController.php on line 38
+[07-Oct-2025 13:40:58 Europe/Berlin] PHP Warning:  Undefined array key "lab_tests_paid" in C:\xampp\htdocs\KJ\controllers\LabController.php on line 38
+[07-Oct-2025 13:40:58 Europe/Berlin] PHP Warning:  Undefined array key "registration_number" in C:\xampp\htdocs\KJ\views\lab\dashboard.php on line 195
+[07-Oct-2025 13:40:58 Europe/Berlin] PHP Deprecated:  str_pad(): Passing null to parameter #1 ($string) of type string is deprecated in C:\xampp\htdocs\KJ\views\lab\dashboard.php on line 195
+[07-Oct-2025 13:41:54 Europe/Berlin] PHP Warning:  Undefined array key "lab_tests_paid" in C:\xampp\htdocs\KJ\controllers\LabController.php on line 39
+[07-Oct-2025 13:46:50 Europe/Berlin] PHP Warning:  Undefined array key "lab_tests_paid" in C:\xampp\htdocs\KJ\controllers\LabController.php on line 39
