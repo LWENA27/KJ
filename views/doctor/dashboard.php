@@ -120,144 +120,82 @@
     </div>
 
     <!-- Available Patients -->
-    <div class="bg-white rounded-lg shadow">
-        <div class="px-6 py-4 border-b border-gray-200">
-            <h3 class="text-lg font-medium text-gray-900">All Patients</h3>
-            <p class="text-sm text-gray-600">Patients who have paid for consultation and are ready to be seen</p>
-        </div>
-        <div class="p-6">
-            <?php if (empty($available_patients)): ?>
-            <p class="text-gray-500 text-center py-4">No patients available for consultation</p>
-            <?php else: ?>
-            <div class="space-y-4">
-                <?php foreach ($available_patients as $patient): ?>
-                    <div class="flex items-center justify-between p-4 border border-gray-200 rounded-lg hover:bg-gray-50 transition duration-200">
-                    <div class="flex items-center">
-                        <div class="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center mr-4">
-                            <i class="fas fa-user-check text-green-600"></i>
-                        </div>
-                        <div>
-                            <p class="font-medium text-gray-900">
-                                <?php echo htmlspecialchars($patient['first_name'] . ' ' . $patient['last_name']); ?>
-                        <!-- Patients Registered for Consultation -->
-                        <div class="bg-white rounded-lg shadow mt-6">
-                            <div class="px-6 py-4 border-b border-gray-200">
-                                <h3 class="text-lg font-medium text-gray-900">Patients Registered for Consultation</h3>
-                                <p class="text-sm text-gray-600">Patients who are registered/ scheduled and waiting for consultation</p>
-                            </div>
-                            <div class="p-6">
-                                <?php if (empty($pending_consultations)): ?>
-                                    <p class="text-gray-500 text-center py-4">No registered consultations at the moment</p>
-                                <?php else: ?>
-                                    <div class="hidden md:block overflow-x-auto">
-                                        <table class="min-w-full divide-y divide-gray-200">
-                                            <thead class="bg-gray-50">
-                                                <tr>
-                                                    <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Patient</th>
-                                                    <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Phone</th>
-                                                    <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Registered At</th>
-                                                    <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
-                                                    <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Actions</th>
-                                                </tr>
-                                            </thead>
-                                            <tbody class="bg-white divide-y divide-gray-200">
-                                                <?php foreach ($pending_consultations as $c): ?>
-                                                <tr>
-                                                    <td class="px-4 py-3">
-                                                        <div class="font-medium text-gray-900"><?php echo htmlspecialchars($c['first_name'] . ' ' . $c['last_name']); ?></div>
-                                                        <div class="text-xs text-gray-500">DOB: <?php echo htmlspecialchars($c['date_of_birth'] ?? 'N/A'); ?></div>
-                                                    </td>
-                                                    <td class="px-4 py-3 text-sm text-gray-700"><?php echo htmlspecialchars($c['phone'] ?? 'N/A'); ?></td>
-                                                    <td class="px-4 py-3 text-sm text-gray-700"><?php echo date('M j, Y H:i', strtotime($c['created_at'] ?? $c['appointment_date'] ?? 'now')); ?></td>
-                                                    <td class="px-4 py-3 text-sm">
-                                                        <span class="inline-flex px-2 py-1 text-xs font-medium rounded-full <?php echo ($c['status'] === 'pending_lab_results') ? 'bg-purple-100 text-purple-800' : 'bg-yellow-100 text-yellow-800'; ?>">
-                                                            <?php echo ucwords(str_replace('_', ' ', $c['status'])); ?>
-                                                        </span>
-                                                    </td>
-                                                    <td class="px-4 py-3 text-sm">
-                                                        <button onclick="viewPatientDetails(<?php echo $c['patient_id']; ?>)" class="px-3 py-1 bg-blue-500 text-white rounded-md">View</button>
-                                                        <button onclick="attendPatient(<?php echo $c['patient_id']; ?>)" class="px-3 py-1 bg-green-500 text-white rounded-md ml-2">Attend</button>
-                                                    </td>
-                                                </tr>
-                                                <?php endforeach; ?>
-                                            </tbody>
-                                        </table>
-                                    </div>
-
-                                    <!-- Mobile cards -->
-                                    <div class="md:hidden space-y-4">
-                                        <?php foreach ($pending_consultations as $c): ?>
-                                        <div class="p-4 border border-gray-200 rounded-lg">
-                                            <div class="flex items-center justify-between">
-                                                <div>
-                                                    <div class="font-medium text-gray-900"><?php echo htmlspecialchars($c['first_name'] . ' ' . $c['last_name']); ?></div>
-                                                    <div class="text-xs text-gray-500">Phone: <?php echo htmlspecialchars($c['phone'] ?? 'N/A'); ?></div>
-                                                </div>
-                                                <div class="text-right">
-                                                    <div class="text-xs text-gray-500"><?php echo date('M j, Y', strtotime($c['created_at'] ?? $c['appointment_date'] ?? 'now')); ?></div>
-                                                    <div class="mt-2">
-                                                        <span class="inline-flex px-2 py-1 text-xs font-medium rounded-full <?php echo ($c['status'] === 'pending_lab_results') ? 'bg-purple-100 text-purple-800' : 'bg-yellow-100 text-yellow-800'; ?>">
-                                                            <?php echo ucwords(str_replace('_', ' ', $c['status'])); ?>
-                                                        </span>
-                                                    </div>
-                                                </div>
+    <!-- Available Patients for Consultation -->
+<div class="bg-white rounded-lg shadow mt-6">
+    <div class="px-6 py-4 border-b border-gray-200">
+        <h3 class="text-lg font-medium text-gray-900">Patients Waiting for Consultation</h3>
+        <p class="text-sm text-gray-600">Patients who have registered for consultation today</p>
+    </div>
+    <div class="p-6">
+        <?php if (empty($available_patients)): ?>
+            <p class="text-gray-500 text-center py-4">No patients waiting for consultation</p>
+        <?php else: ?>
+            <div class="overflow-x-auto">
+                <table class="min-w-full divide-y divide-gray-200">
+                    <thead class="bg-gray-50">
+                        <tr>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Patient</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Contact</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Registration Time</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody class="bg-white divide-y divide-gray-200">
+                        <?php foreach ($available_patients as $patient): ?>
+                            <tr>
+                                <td class="px-6 py-4 whitespace-nowrap">
+                                    <div class="flex items-center">
+                                        <div>
+                                            <div class="text-sm font-medium text-gray-900">
+                                                <?php echo htmlspecialchars($patient['first_name'] . ' ' . $patient['last_name']); ?>
                                             </div>
-                                            <div class="mt-4 flex space-x-2">
-                                                <button onclick="viewPatientDetails(<?php echo $c['patient_id']; ?>)" class="flex-1 bg-blue-500 text-white px-4 py-2 rounded-md">View</button>
-                                                <button onclick="attendPatient(<?php echo $c['patient_id']; ?>)" class="flex-1 bg-green-500 text-white px-4 py-2 rounded-md">Attend</button>
+                                            <div class="text-sm text-gray-500">
+                                                Age: <?php 
+                                                    if (!empty($patient['date_of_birth'])) {
+                                                        $age = date_diff(date_create($patient['date_of_birth']), date_create('today'))->y;
+                                                        echo $age . ' years';
+                                                    } else {
+                                                        echo 'N/A';
+                                                    }
+                                                ?>
                                             </div>
                                         </div>
-                                        <?php endforeach; ?>
                                     </div>
-                                <?php endif; ?>
-                            </div>
-                        </div>
-                            </p>
-                            <p class="text-sm text-gray-600">
-                                Age: <?php
-                                    $dob = $patient['date_of_birth'] ?? null;
-                                    if (!empty($dob)) {
-                                        $age = date_diff(date_create($dob), date_create('today'))->y;
-                                        echo (int)$age;
-                                    } else {
-                                        echo 'N/A';
-                                    }
-                                ?> |
-                                Phone: <?php echo htmlspecialchars($patient['phone'] ?? 'N/A'); ?> |
-                                Visits: <?php echo $patient['consultation_count']; ?>
-                            </p>
-                        </div>
-                    </div>
-                    <div class="flex space-x-2 items-center">
-                        <button onclick="viewPatientDetails(<?php echo $patient['id']; ?>)"
-                                class="px-3 py-1 bg-blue-500 hover:bg-blue-600 text-white text-sm rounded-md transition duration-200">
-                            <i class="fas fa-eye mr-1"></i>View
-                        </button>
-                        <button onclick="attendPatient(<?php echo $patient['id']; ?>)"
-                                class="px-3 py-1 bg-green-500 hover:bg-green-600 text-white text-sm rounded-md transition duration-200">
-                            <i class="fas fa-stethoscope mr-1"></i>Attend
-                        </button>
-                        <div class="patient-action-group">
-                            <button onclick="openAllocateModal(<?php echo $patient['id']; ?>, '<?php echo htmlspecialchars($patient['first_name'] . ' ' . $patient['last_name']); ?>')"
-                                    class="btn-action btn-allocate" title="Allocate to another doctor">
-                                <i class="fas fa-user-md mr-1"></i>Allocate
-                            </button>
-                            <button onclick="openLabModal(<?php echo $patient['id']; ?>, '<?php echo htmlspecialchars($patient['first_name'] . ' ' . $patient['last_name']); ?>')"
-                                    class="btn-action btn-lab" title="Send to lab">
-                                <i class="fas fa-vial mr-1"></i>Send to Lab
-                            </button>
-                            <button onclick="openMedicineModal(<?php echo $patient['id']; ?>, '<?php echo htmlspecialchars($patient['first_name'] . ' ' . $patient['last_name']); ?>')"
-                                    class="btn-action btn-prescribe" title="Prescribe medicine">
-                                <i class="fas fa-pills mr-1"></i>Prescribe
-                            </button>
-                        </div>
-                    </div>
-                </div>
-                <?php endforeach; ?>
+                                </td>
+                                <td class="px-6 py-4 whitespace-nowrap">
+                                    <div class="text-sm text-gray-900"><?php echo htmlspecialchars($patient['phone']); ?></div>
+                                    <div class="text-sm text-gray-500"><?php echo htmlspecialchars($patient['address']); ?></div>
+                                </td>
+                                <td class="px-6 py-4 whitespace-nowrap">
+                                    <div class="text-sm text-gray-900">
+                                        <?php echo date('h:i A', strtotime($patient['created_at'])); ?>
+                                    </div>
+                                </td>
+                                <td class="px-6 py-4 whitespace-nowrap">
+                                    <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full 
+                                        <?php echo $patient['consultation_registration_paid'] ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'; ?>">
+                                        <?php echo $patient['consultation_registration_paid'] ? 'Paid' : 'Pending Payment'; ?>
+                                    </span>
+                                </td>
+                                <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                                    <button onclick="attendPatient(<?php echo $patient['id']; ?>)"
+                                            class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded mr-2">
+                                        <i class="fas fa-stethoscope mr-1"></i>Attend
+                                    </button>
+                                    <button onclick="viewPatientDetails(<?php echo $patient['id']; ?>)"
+                                            class="bg-gray-500 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded">
+                                        <i class="fas fa-eye mr-1"></i>View
+                                    </button>
+                                </td>
+                            </tr>
+                        <?php endforeach; ?>
+                    </tbody>
+                </table>
             </div>
-            <?php endif; ?>
-        </div>
+        <?php endif; ?>
     </div>
+</div>
 
     <!-- Recent Lab Results -->
     <div class="bg-white rounded-lg shadow">
