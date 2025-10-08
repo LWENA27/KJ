@@ -174,7 +174,7 @@
                                     </div>
                                     <div class="text-sm text-gray-600 flex items-center">
                                         <i class="fas fa-id-badge mr-1 text-gray-400"></i>
-                                        ID: #<?php echo str_pad($patient['id'], 4, '0', STR_PAD_LEFT); ?>
+                                        RegNo: <?php echo htmlspecialchars($patient['registration_number']); ?>
                                     </div>
                                 </div>
                             </div>
