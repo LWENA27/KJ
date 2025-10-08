@@ -162,7 +162,8 @@ class DoctorController extends BaseController {
         $consultations = $stmt->fetchAll();
 
         $this->render('doctor/consultations', [
-            'consultations' => $consultations
+            'consultations' => $consultations,
+            'csrf_token' => $this->generateCSRF()
         ]);
     }
 

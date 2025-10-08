@@ -305,17 +305,19 @@
 </div>
 
 <!-- Attend Patient Modal -->
-<div id="attendModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full hidden z-50">
-    <div class="relative top-10 mx-auto p-5 border w-11/12 md:w-5/6 lg:w-4/5 shadow-lg rounded-md bg-white max-h-screen overflow-y-auto">
-        <div class="mt-3">
-            <div class="flex items-center justify-between mb-4 sticky top-0 bg-white pb-4 border-b">
-                <h3 class="text-lg font-medium text-gray-900">Complete Patient Consultation</h3>
-                <button onclick="closeAttendModal()" class="text-gray-400 hover:text-gray-600">
-                    <i class="fas fa-times"></i>
-                </button>
+<div id="attendModal" class="fixed inset-0 bg-gray-900 bg-opacity-75 overflow-y-auto h-full w-full hidden" style="z-index: 9999;">
+    <div class="relative min-h-screen flex items-center justify-center p-4">
+        <div class="relative bg-white rounded-lg shadow-xl w-full max-w-6xl max-h-[90vh] overflow-y-auto">
+            <div class="sticky top-0 bg-white p-6 border-b rounded-t-lg">
+                <div class="flex items-center justify-between">
+                    <h3 class="text-xl font-semibold text-gray-900">Patient Consultation Form</h3>
+                    <button onclick="closeAttendModal()" class="text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-full p-2">
+                        <i class="fas fa-times text-xl"></i>
+                    </button>
+                </div>
             </div>
 
-            <form id="attendForm" method="POST" action="/KJ/doctor/start_consultation" onsubmit="return validateConsultationForm()" class="space-y-6">
+            <form id="attendForm" method="POST" action="/KJ/doctor/start_consultation" onsubmit="return validateConsultationForm()" class="p-6 space-y-6">
                 <input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars($csrf_token); ?>">
                 <input type="hidden" id="attendPatientId" name="patient_id">
                 <input type="hidden" id="selectedTests" name="selected_tests" value="">
@@ -443,15 +445,17 @@
                     </div>
                 </div>
 
-                <div class="flex justify-end space-x-3 pt-4 border-t sticky bottom-0 bg-white">
-                    <button type="button" onclick="closeAttendModal()"
-                            class="px-4 py-2 bg-gray-300 text-gray-700 rounded-md hover:bg-gray-400">
-                        Cancel
-                    </button>
-                    <button type="submit"
-                            class="px-6 py-2 bg-green-500 text-white rounded-md hover:bg-green-600">
-                        <i class="fas fa-save mr-2"></i>Complete Consultation
-                    </button>
+                <div class="bg-white border-t p-6 rounded-b-lg">
+                    <div class="flex justify-end space-x-4">
+                        <button type="button" onclick="closeAttendModal()"
+                                class="px-6 py-2 bg-gray-300 text-gray-700 rounded-md hover:bg-gray-400 transition duration-150">
+                            <i class="fas fa-times mr-2"></i>Cancel
+                        </button>
+                        <button type="submit"
+                                class="px-8 py-2 bg-green-500 text-white rounded-md hover:bg-green-600 transition duration-150">
+                            <i class="fas fa-save mr-2"></i>Complete Consultation
+                        </button>
+                    </div>
                 </div>
             </form>
         </div>
@@ -514,10 +518,14 @@ function attendPatient(patientId) {
     selectedMedicines = [];
     updateSelectedTestsList();
     updateSelectedMedicinesList();
+    // Prevent body scrolling when modal is open
+    document.body.style.overflow = 'hidden';
 }
 
 function closeAttendModal() {
     document.getElementById('attendModal').classList.add('hidden');
+    // Restore body scrolling
+    document.body.style.overflow = 'auto';
 }
 
 function toggleSection(section) {

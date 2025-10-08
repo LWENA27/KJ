@@ -32,3 +32,19 @@ Paid patients now appear on the doctor's list.
 Affected Tables
 
 patients, consultations, workflow_status, patient_payments
+
+
+
+todo
+   1. form attend patient create page that will use the same view and fields.
+         dispear from waiting consalitation
+   2. must be viewed by reception for process payment (paymethod).
+   3. lab (processes)
+
+
+   todo medicine
+   1. form attend patient create page that will use the same view and fields.
+         dispear from waiting consalitation
+   2. must be viewed by reception for process payment (paymethod).
+          patial/full link
+   3. provide medicine (half dose 1)

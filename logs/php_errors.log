@@ -198,3 +198,6 @@
 [08-Oct-2025 08:51:08 Europe/Berlin] Error in controller: SQLSTATE[42S22]: Column not found: 1054 Unknown column 'ws.registration_number' in 'field list'
 [08-Oct-2025 08:51:09 Europe/Berlin] Error in controller: SQLSTATE[42S22]: Column not found: 1054 Unknown column 'ws.registration_number' in 'field list'
 [08-Oct-2025 08:53:46 Europe/Berlin] Error in controller: SQLSTATE[42S22]: Column not found: 1054 Unknown column 'ws.registration_number' in 'field list'
+[08-Oct-2025 18:06:20 Europe/Berlin] PHP Deprecated:  htmlspecialchars(): Passing null to parameter #1 ($string) of type string is deprecated in C:\xampp\htdocs\KJ\views\receptionist\patients.php on line 177
+[08-Oct-2025 18:06:20 Europe/Berlin] PHP Deprecated:  htmlspecialchars(): Passing null to parameter #1 ($string) of type string is deprecated in C:\xampp\htdocs\KJ\views\receptionist\patients.php on line 177
+[08-Oct-2025 18:06:20 Europe/Berlin] PHP Deprecated:  htmlspecialchars(): Passing null to parameter #1 ($string) of type string is deprecated in C:\xampp\htdocs\KJ\views\receptionist\patients.php on line 177

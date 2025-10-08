@@ -419,3 +419,119 @@
         <?php endif; ?>
     </div>
 </div>
+
+<!-- Attend Patient Modal -->
+<div id="attendModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full hidden z-50">
+    <div class="relative top-20 mx-auto p-5 border w-11/12 md:w-3/4 lg:w-1/2 shadow-lg rounded-md bg-white">
+        <div class="mt-3">
+            <div class="flex items-center justify-between mb-4">
+                <h3 class="text-lg font-medium text-gray-900">Patient Consultation</h3>
+                <button onclick="closeAttendModal()" class="text-gray-400 hover:text-gray-600">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+
+            <form id="attendForm" method="POST" action="<?= $BASE_PATH ?>/doctor/start_consultation" class="space-y-4">
+                <input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars($csrf_token); ?>">
+                <input type="hidden" id="attendPatientId" name="patient_id">
+
+                <!-- M/C (Main Complaint) -->
+                <div>
+                    <label for="mainComplaint" class="block text-sm font-medium text-gray-700 mb-2">M/C - Main Complaint *</label>
+                    <textarea id="mainComplaint" name="main_complaint" rows="3" required
+                              class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                              placeholder="Patient's main complaint and symptoms..."></textarea>
+                </div>
+
+                <!-- O/E (On Examination) -->
+                <div>
+                    <label for="onExamination" class="block text-sm font-medium text-gray-700 mb-2">O/E - On Examination *</label>
+                    <textarea id="onExamination" name="on_examination" rows="4" required
+                              class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                              placeholder="Physical examination findings..."></textarea>
+                </div>
+
+                <!-- Preliminary Diagnosis -->
+                <div>
+                    <label for="preliminaryDiagnosis" class="block text-sm font-medium text-gray-700 mb-2">Preliminary Diagnosis</label>
+                    <textarea id="preliminaryDiagnosis" name="preliminary_diagnosis" rows="2"
+                              class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                              placeholder="Working diagnosis..."></textarea>
+                </div>
+
+                <!-- Final Diagnosis -->
+                <div>
+                    <label for="finalDiagnosis" class="block text-sm font-medium text-gray-700 mb-2">Final Diagnosis</label>
+                    <textarea id="finalDiagnosis" name="final_diagnosis" rows="2"
+                              class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                              placeholder="Final confirmed diagnosis..."></textarea>
+                </div>
+
+                <!-- Treatment Decision -->
+                <div class="bg-yellow-50 p-4 rounded-lg">
+                    <h4 class="text-sm font-medium text-gray-700 mb-3">Treatment Decision</h4>
+                    <div class="space-y-2">
+                        <label class="flex items-center">
+                            <input type="radio" name="treatment_decision" value="lab_tests" 
+                                   class="mr-2 text-blue-600" required>
+                            <span class="text-sm">Send for Lab Tests</span>
+                        </label>
+                        <label class="flex items-center">
+                            <input type="radio" name="treatment_decision" value="prescribe_medicine" 
+                                   class="mr-2 text-blue-600" required>
+                            <span class="text-sm">Prescribe Medicine</span>
+                        </label>
+                        <label class="flex items-center">
+                            <input type="radio" name="treatment_decision" value="both" 
+                                   class="mr-2 text-blue-600" required>
+                            <span class="text-sm">Both Lab & Medicine</span>
+                        </label>
+                        <label class="flex items-center">
+                            <input type="radio" name="treatment_decision" value="discharge" 
+                                   class="mr-2 text-blue-600" required>
+                            <span class="text-sm">Discharge Patient</span>
+                        </label>
+                    </div>
+                </div>
+
+                <div class="flex justify-end space-x-3 pt-4">
+                    <button type="button" onclick="closeAttendModal()"
+                            class="px-4 py-2 bg-gray-300 text-gray-700 rounded-md hover:bg-gray-400 transition duration-150">
+                        Cancel
+                    </button>
+                    <button type="submit"
+                            class="px-6 py-2 bg-green-500 text-white rounded-md hover:bg-green-600 transition duration-150">
+                        <i class="fas fa-save mr-2"></i>Complete Consultation
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+function attendPatient(patientId) {
+    document.getElementById('attendPatientId').value = patientId;
+    document.getElementById('attendModal').classList.remove('hidden');
+    document.getElementById('attendForm').reset();
+    document.getElementById('attendPatientId').value = patientId; // Reset after form reset
+}
+
+function closeAttendModal() {
+    document.getElementById('attendModal').classList.add('hidden');
+}
+
+// Close modal when clicking outside
+document.getElementById('attendModal')?.addEventListener('click', function(e) {
+    if (e.target === this) {
+        closeAttendModal();
+    }
+});
+
+// Close modal with Escape key
+document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape' && !document.getElementById('attendModal').classList.contains('hidden')) {
+        closeAttendModal();
+    }
+});
+</script>
