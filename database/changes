@@ -36,7 +36,7 @@ patients, consultations, workflow_status, patient_payments
 
 
 todo
-   1. form attend patient create page that will use the same view and fields.
+   1. form attend patient create page that will use the same view and fields.---checked/Done
          dispear from waiting consalitation
    2. must be viewed by reception for process payment (paymethod).
    3. lab (processes)

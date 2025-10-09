@@ -797,5 +797,42 @@ class DoctorController extends BaseController {
             $this->redirect('doctor/dashboard');
         }
     }
+
+    public function attend_patient($patient_id = null) {
+        // Get patient ID from URL param or query string
+        if ($patient_id === null) {
+            $patient_id = filter_input(INPUT_GET, 'id', FILTER_VALIDATE_INT) ?: null;
+        }
+        
+        if (!$patient_id) {
+            $_SESSION['error'] = 'Invalid patient ID';
+            $this->redirect('doctor/patients');
+            return;
+        }
+
+        // Get patient details
+        $stmt = $this->pdo->prepare("SELECT * FROM patients WHERE id = ?");
+        $stmt->execute([$patient_id]);
+        $patient = $stmt->fetch();
+
+        if (!$patient) {
+            $_SESSION['error'] = 'Patient not found';
+            $this->redirect('doctor/patients');
+            return;
+        }
+
+        // Check workflow access
+        $access_check = $this->checkWorkflowAccess($patient_id, 'consultation');
+        if (!$access_check['access']) {
+            $_SESSION['error'] = $access_check['message'];
+            $this->redirect('doctor/patients');
+            return;
+        }
+
+        $this->render('doctor/attend_patient', [
+            'patient' => $patient,
+            'csrf_token' => $this->generateCSRF()
+        ]);
+    }
 }
 ?>

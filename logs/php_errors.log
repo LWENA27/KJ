@@ -201,3 +201,5 @@
 [08-Oct-2025 18:06:20 Europe/Berlin] PHP Deprecated:  htmlspecialchars(): Passing null to parameter #1 ($string) of type string is deprecated in C:\xampp\htdocs\KJ\views\receptionist\patients.php on line 177
 [08-Oct-2025 18:06:20 Europe/Berlin] PHP Deprecated:  htmlspecialchars(): Passing null to parameter #1 ($string) of type string is deprecated in C:\xampp\htdocs\KJ\views\receptionist\patients.php on line 177
 [08-Oct-2025 18:06:20 Europe/Berlin] PHP Deprecated:  htmlspecialchars(): Passing null to parameter #1 ($string) of type string is deprecated in C:\xampp\htdocs\KJ\views\receptionist\patients.php on line 177
+[09-Oct-2025 11:22:20 Europe/Berlin] Error in controller: syntax error, unexpected token "<", expecting end of file
+[09-Oct-2025 11:22:23 Europe/Berlin] Error in controller: syntax error, unexpected token "<", expecting end of file
