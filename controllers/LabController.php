@@ -89,7 +89,7 @@ class LabController extends BaseController {
             AND pay.payment_type = 'lab_test'
             AND pay.item_type = 'lab_order'
             AND pay.item_id = lto.id
-        WHERE (pay.payment_status = 'paid' OR pay.payment_status IS NULL)
+        WHERE pay.payment_status = 'paid'
         ORDER BY 
             CASE 
                 WHEN lto.priority = 'urgent' THEN 1

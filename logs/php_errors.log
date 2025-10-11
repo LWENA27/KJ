@@ -5,3 +5,15 @@
 [11-Oct-2025 17:34:10 Europe/Berlin] Selected tests: [6,5]
 [11-Oct-2025 17:34:10 Europe/Berlin] Selected medicines: 
 [11-Oct-2025 18:00:38 Europe/Berlin] Error in controller: SQLSTATE[42S22]: Column not found: 1054 Unknown column 'lto.payment_status' in 'where clause'
+[11-Oct-2025 15:28:05 Europe/Berlin] Workflow status tracking not available: SQLSTATE[42S02]: Base table or view not found: 1146 Table 'zahanati.patient_workflow_status' doesn't exist
+[11-Oct-2025 15:28:55 Europe/Berlin] Consultation submission - Patient ID: 4, Visit ID: 4, Consultation ID: 4
+[11-Oct-2025 15:28:55 Europe/Berlin] Selected tests: [4]
+[11-Oct-2025 15:28:55 Europe/Berlin] Selected medicines: 
+[11-Oct-2025 15:39:02 Europe/Berlin] Workflow status tracking not available: SQLSTATE[42S02]: Base table or view not found: 1146 Table 'zahanati.patient_workflow_status' doesn't exist
+[11-Oct-2025 15:40:09 Europe/Berlin] Consultation submission - Patient ID: 5, Visit ID: 5, Consultation ID: 5
+[11-Oct-2025 15:40:09 Europe/Berlin] Selected tests: [4]
+[11-Oct-2025 15:40:09 Europe/Berlin] Selected medicines: 
+[11-Oct-2025 16:05:20 Europe/Berlin] Workflow status tracking not available: SQLSTATE[42S02]: Base table or view not found: 1146 Table 'zahanati.patient_workflow_status' doesn't exist
+[11-Oct-2025 16:06:09 Europe/Berlin] Consultation submission - Patient ID: 6, Visit ID: 6, Consultation ID: 6
+[11-Oct-2025 16:06:09 Europe/Berlin] Selected tests: [4]
+[11-Oct-2025 16:06:09 Europe/Berlin] Selected medicines: 

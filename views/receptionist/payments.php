@@ -178,7 +178,7 @@
                                     </div>
                                 </td>
                                 <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                                    <button onclick="openPaymentModal(<?php echo $payment['patient_id']; ?>, <?php echo $payment['visit_id']; ?>, 'lab_test', <?php echo $payment['total_amount']; ?>, '<?php echo htmlspecialchars($payment['first_name'] . ' ' . $payment['last_name'], ENT_QUOTES); ?>')"
+                                    <button onclick="openPaymentModal(<?php echo $payment['patient_id']; ?>, <?php echo $payment['visit_id']; ?>, 'lab_test', <?php echo $payment['total_amount']; ?>, '<?php echo htmlspecialchars($payment['first_name'] . ' ' . $payment['last_name'], ENT_QUOTES); ?>', <?php echo $payment['order_id']; ?>, 'lab_order')"
                                             class="inline-flex items-center px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 transition-colors">
                                         <i class="fas fa-credit-card mr-2"></i>
                                         Record Payment
@@ -264,7 +264,7 @@
                                     </div>
                                 </td>
                                 <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                                    <button onclick="openPaymentModal(<?php echo $payment['patient_id']; ?>, <?php echo $payment['visit_id']; ?>, 'medicine', <?php echo $payment['total_amount']; ?>, '<?php echo htmlspecialchars($payment['first_name'] . ' ' . $payment['last_name'], ENT_QUOTES); ?>')"
+                                    <button onclick="openPaymentModal(<?php echo $payment['patient_id']; ?>, <?php echo $payment['visit_id']; ?>, 'medicine', <?php echo $payment['total_amount']; ?>, '<?php echo htmlspecialchars($payment['first_name'] . ' ' . $payment['last_name'], ENT_QUOTES); ?>', <?php echo $payment['prescription_id']; ?>, 'prescription')"
                                             class="inline-flex items-center px-4 py-2 bg-orange-600 text-white rounded-md hover:bg-orange-700 transition-colors">
                                         <i class="fas fa-credit-card mr-2"></i>
                                         Record Payment
@@ -297,6 +297,8 @@
             <input type="hidden" id="modal_visit_id" name="visit_id">
             <input type="hidden" id="modal_payment_type" name="payment_type">
             <input type="hidden" id="modal_amount" name="amount">
+            <input type="hidden" id="modal_item_id" name="item_id">
+            <input type="hidden" id="modal_item_type" name="item_type">
 
             <div class="space-y-4">
                 <!-- Patient Name Display -->
@@ -359,11 +361,13 @@
 </div>
 
 <script>
-function openPaymentModal(patientId, visitId, paymentType, amount, patientName) {
+function openPaymentModal(patientId, visitId, paymentType, amount, patientName, itemId, itemType) {
     document.getElementById('modal_patient_id').value = patientId;
     document.getElementById('modal_visit_id').value = visitId;
     document.getElementById('modal_payment_type').value = paymentType;
     document.getElementById('modal_amount').value = amount;
+    document.getElementById('modal_item_id').value = itemId || '';
+    document.getElementById('modal_item_type').value = itemType || '';
     
     document.getElementById('modal_patient_name').textContent = patientName;
     

@@ -536,17 +536,23 @@ class ReceptionistController extends BaseController
                 throw new Exception('Payment already recorded for this item');
             }
 
+            // Get item_id and item_type from POST
+            $item_id = $_POST['item_id'] ?? null;
+            $item_type = $_POST['item_type'] ?? null;
+
             // Insert payment record
             $stmt = $this->pdo->prepare("
                 INSERT INTO payments 
-                (visit_id, patient_id, payment_type, amount, payment_method, payment_status, 
+                (visit_id, patient_id, payment_type, item_id, item_type, amount, payment_method, payment_status, 
                  reference_number, collected_by, payment_date)
-                VALUES (?, ?, ?, ?, ?, 'paid', ?, ?, NOW())
+                VALUES (?, ?, ?, ?, ?, ?, ?, 'paid', ?, ?, NOW())
             ");
             $stmt->execute([
                 $visit_id,
                 $patient_id,
                 $payment_type,
+                $item_id,
+                $item_type,
                 $amount,
                 $payment_method,
                 $reference_number,

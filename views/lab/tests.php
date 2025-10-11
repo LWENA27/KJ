@@ -9,22 +9,16 @@
             <p class="text-gray-600 mt-1">Manage and process laboratory test requests</p>
             <div class="flex items-center mt-2 space-x-4">
                 <div class="flex items-center">
-                    <div class="w-2 h-2 bg-yellow-500 rounded-full mr-2 animate-pulse"></div>
-                    <span class="text-xs text-yellow-600 font-medium"><?php echo count(array_filter($tests, fn($t) => $t['status'] === 'pending')); ?> Pending Tests</span>
+                    <div class="w-2 h-2 bg-green-500 rounded-full mr-2 animate-pulse"></div>
+                    <span class="text-xs text-green-600 font-medium"><?php echo count($tests); ?> Ready for Testing</span>
                 </div>
                 <div class="flex items-center">
-                    <div class="w-2 h-2 bg-green-500 rounded-full mr-2"></div>
-                    <span class="text-xs text-green-600 font-medium"><?php echo count(array_filter($tests, fn($t) => $t['status'] === 'completed')); ?> Completed Today</span>
+                    <div class="w-2 h-2 bg-blue-500 rounded-full mr-2"></div>
+                    <span class="text-xs text-blue-600 font-medium">All tests are paid and ready</span>
                 </div>
             </div>
         </div>
         <div class="flex items-center space-x-3">
-            <button onclick="filterTests('pending')" class="bg-yellow-500 hover:bg-yellow-600 text-white px-4 py-2 rounded-lg text-sm font-medium">
-                <i class="fas fa-clock mr-2"></i>Pending Only
-            </button>
-            <button onclick="filterTests('all')" class="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-medium">
-                <i class="fas fa-list mr-2"></i>All Tests
-            </button>
             <a href="/KJ/lab/tests" class="bg-indigo-500 hover:bg-indigo-600 text-white px-4 py-2 rounded-lg text-sm font-medium">
                 <i class="fas fa-refresh mr-2"></i>Refresh
             </a>
@@ -32,15 +26,15 @@
     </div>
 
     <!-- Statistics Cards -->
-    <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
-        <div class="bg-gradient-to-r from-yellow-500 to-orange-500 rounded-lg shadow-lg p-4 text-white transform hover:scale-105 transition-all duration-300">
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+        <div class="bg-gradient-to-r from-green-500 to-green-600 rounded-lg shadow-lg p-4 text-white transform hover:scale-105 transition-all duration-300">
             <div class="flex items-center justify-between">
                 <div>
-                    <p class="text-yellow-100 text-sm font-medium">Pending Tests</p>
-                    <p class="text-2xl font-bold"><?php echo count(array_filter($tests, fn($t) => $t['status'] === 'pending')); ?></p>
+                    <p class="text-green-100 text-sm font-medium">Ready for Testing</p>
+                    <p class="text-2xl font-bold"><?php echo count($tests); ?></p>
                 </div>
-                <div class="bg-yellow-400 bg-opacity-30 rounded-full p-2">
-                    <i class="fas fa-clock text-xl"></i>
+                <div class="bg-green-400 bg-opacity-30 rounded-full p-2">
+                    <i class="fas fa-check-circle text-xl"></i>
                 </div>
             </div>
         </div>
@@ -48,23 +42,11 @@
         <div class="bg-gradient-to-r from-blue-500 to-blue-600 rounded-lg shadow-lg p-4 text-white transform hover:scale-105 transition-all duration-300">
             <div class="flex items-center justify-between">
                 <div>
-                    <p class="text-blue-100 text-sm font-medium">In Progress</p>
-                    <p class="text-2xl font-bold"><?php echo count(array_filter($tests, fn($t) => $t['status'] === 'processing')); ?></p>
+                    <p class="text-blue-100 text-sm font-medium">Payment Status</p>
+                    <p class="text-xl font-bold">All Paid</p>
                 </div>
                 <div class="bg-blue-400 bg-opacity-30 rounded-full p-2">
-                    <i class="fas fa-flask text-xl"></i>
-                </div>
-            </div>
-        </div>
-        
-        <div class="bg-gradient-to-r from-green-500 to-green-600 rounded-lg shadow-lg p-4 text-white transform hover:scale-105 transition-all duration-300">
-            <div class="flex items-center justify-between">
-                <div>
-                    <p class="text-green-100 text-sm font-medium">Completed</p>
-                    <p class="text-2xl font-bold"><?php echo count(array_filter($tests, fn($t) => $t['status'] === 'completed')); ?></p>
-                </div>
-                <div class="bg-green-400 bg-opacity-30 rounded-full p-2">
-                    <i class="fas fa-check-circle text-xl"></i>
+                    <i class="fas fa-credit-card text-xl"></i>
                 </div>
             </div>
         </div>
@@ -121,7 +103,7 @@
                         </th>
                         <th class="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
                             <div class="flex items-center">
-                                <i class="fas fa-info-circle mr-2"></i>Status & Priority
+                                <i class="fas fa-check-circle mr-2"></i>Payment Status
                             </div>
                         </th>
                         <th class="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
@@ -184,11 +166,9 @@
                             </div>
                         </td>
                         <td class="px-6 py-4">
-                            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium
-                                <?php echo $test['status'] === 'pending' ? 'bg-yellow-100 text-yellow-800' : 
-                                          ($test['status'] === 'in_progress' ? 'bg-blue-100 text-blue-800' : 
-                                           'bg-green-100 text-green-800'); ?>">
-                                <?php echo ucfirst($test['status']); ?>
+                            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                                <i class="fas fa-check-circle mr-1"></i>
+                                Paid & Ready
                             </span>
                         </td>
                         <td class="px-6 py-4 text-sm text-gray-500">
@@ -196,44 +176,10 @@
                             <div><?php echo date('M j, Y g:i A', strtotime($test['created_at'])); ?></div>
                         </td>
                         <td class="px-6 py-4 text-right text-sm font-medium">
-                            <?php 
-                            // Check if there's a paid payment record
-                            $stmt = $this->pdo->prepare("
-                                SELECT payment_status 
-                                FROM payments 
-                                WHERE visit_id = ? 
-                                AND payment_type = 'lab_test_fee' 
-                                AND item_id = ?
-                                ORDER BY payment_date DESC 
-                                LIMIT 1
-                            ");
-                            $stmt->execute([$test['visit_id'], $test['id']]);
-                            $payment = $stmt->fetch();
-                            
-                            if ($payment && $payment['payment_status'] === 'paid'): 
-                            ?>
-                                <?php if ($test['status'] === 'pending'): ?>
-                                    <button onclick="startTest(<?php echo $test['id']; ?>, '<?php echo htmlspecialchars($test['test_name']); ?>')"
-                                            class="bg-indigo-500 hover:bg-indigo-600 text-white px-4 py-2 rounded-md text-sm">
-                                        <i class="fas fa-play mr-2"></i>Start Test
-                                    </button>
-                                <?php elseif ($test['status'] === 'in_progress'): ?>
-                                    <button onclick="openCompleteTestModal(<?php echo $test['id']; ?>, 
-                                                '<?php echo htmlspecialchars($test['test_name']); ?>', 
-                                                '<?php echo htmlspecialchars($test['first_name'] . ' ' . $test['last_name']); ?>')"
-                                            class="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded-md text-sm">
-                                        <i class="fas fa-check mr-2"></i>Complete Test
-                                    </button>
-                                <?php elseif ($test['status'] === 'completed'): ?>
-                                    <span class="text-gray-400">
-                                        <i class="fas fa-check-circle mr-2"></i>Completed
-                                    </span>
-                                <?php endif; ?>
-                            <?php else: ?>
-                                <span class="text-orange-500">
-                                    <i class="fas fa-clock mr-2"></i>Payment Pending
-                                </span>
-                            <?php endif; ?>
+                            <a href="/KJ/lab/view_test/<?php echo $test['id']; ?>" 
+                               class="bg-indigo-500 hover:bg-indigo-600 text-white px-4 py-2 rounded-md text-sm inline-flex items-center">
+                                <i class="fas fa-eye mr-2"></i>Process Test
+                            </a>
                         </td>
                     </tr>
                     <?php endforeach; ?>
@@ -273,31 +219,6 @@ function filterByStatus() {
             row.style.display = '';
         } else {
             row.style.display = 'none';
-        }
-    });
-}
-
-// Filter tests by type
-function filterTests(type) {
-    const rows = document.querySelectorAll('.test-row');
-    
-    rows.forEach(row => {
-        const status = row.getAttribute('data-status');
-        if (type === 'all' || (type === 'pending' && status === 'pending')) {
-            row.style.display = '';
-            row.classList.add('animate-slide-in-left');
-        } else if (type === 'pending') {
-            row.style.display = 'none';
-        }
-    });
-    
-    // Update filter button states
-    document.querySelectorAll('button[onclick^="filterTests"]').forEach(btn => {
-        btn.classList.remove('bg-blue-600', 'bg-yellow-600');
-        if (btn.textContent.includes('Pending') && type === 'pending') {
-            btn.classList.add('bg-yellow-600');
-        } else if (btn.textContent.includes('All') && type === 'all') {
-            btn.classList.add('bg-blue-600');
         }
     });
 }
