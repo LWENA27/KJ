@@ -59,29 +59,53 @@ class LabController extends BaseController {
     ]);
 }
     public function tests() {
-        $technician_id = $_SESSION['user_id'];
-
+        // Modify query to join with payments table to check payment status
         $stmt = $this->pdo->prepare("
-         SELECT lr.*, lto.id as order_id, lto.status as order_status, lt.test_name as test_name, lt.test_code as test_code, lt.category_id as category, p.first_name, p.last_name, c.created_at as consultation_created_at,
-             COALESCE(c.follow_up_date, pv.visit_date, DATE(c.created_at)) as appointment_date,
-                   (SELECT IF(EXISTS(SELECT 1 FROM payments pay WHERE pay.visit_id = (SELECT id FROM patient_visits pv WHERE pv.patient_id = p.id ORDER BY pv.created_at DESC LIMIT 1) AND pay.payment_type = 'registration' AND pay.payment_status = 'paid'),1,0)) AS consultation_registration_paid,
-                   (SELECT IF(EXISTS(SELECT 1 FROM payments pay2 WHERE pay2.visit_id = (SELECT id FROM patient_visits pv2 WHERE pv2.patient_id = p.id ORDER BY pv2.created_at DESC LIMIT 1) AND pay2.payment_type = 'lab_test' AND pay2.payment_status = 'paid'),1,0)) AS lab_tests_paid,
-                   (SELECT IF(EXISTS(SELECT 1 FROM payments pay3 WHERE pay3.visit_id = (SELECT id FROM patient_visits pv3 WHERE pv3.patient_id = p.id ORDER BY pv3.created_at DESC LIMIT 1) AND pay3.payment_type = 'lab_test' AND pay3.payment_status = 'paid'),1,0)) AS results_review_paid
-            FROM lab_results lr
-            JOIN lab_test_orders lto ON lr.order_id = lto.id
-            JOIN lab_tests lt ON lr.test_id = lt.id
-            JOIN consultations c ON lto.consultation_id = c.id
-            JOIN patients p ON c.patient_id = p.id
-            LEFT JOIN patient_visits pv ON c.visit_id = pv.id
-            WHERE lr.technician_id = ?
-            ORDER BY lto.status ASC, lr.completed_at DESC
-        ");
-        $stmt->execute([$technician_id]);
-        $tests = $stmt->fetchAll();
+        SELECT 
+            lto.id,
+            lto.visit_id,
+            lto.patient_id,
+            lto.test_id,
+            lto.status,
+            lto.priority,
+            lto.created_at,
+            p.first_name,
+            p.last_name,
+            p.registration_number,
+            lt.test_name,
+            lt.category_id,
+            lt.price,
+            u.first_name as doctor_first_name,
+            u.last_name as doctor_last_name,
+            ltc.category_name,
+            COALESCE(pay.payment_status, 'pending') as payment_status,
+            pay.amount as paid_amount
+        FROM lab_test_orders lto
+        JOIN patients p ON lto.patient_id = p.id
+        JOIN lab_tests lt ON lto.test_id = lt.id
+        JOIN users u ON lto.ordered_by = u.id
+        JOIN lab_test_categories ltc ON lt.category_id = ltc.id
+        LEFT JOIN payments pay ON lto.visit_id = pay.visit_id 
+            AND pay.payment_type = 'lab_test'
+            AND pay.item_type = 'lab_order'
+            AND pay.item_id = lto.id
+        WHERE (pay.payment_status = 'paid' OR pay.payment_status IS NULL)
+        ORDER BY 
+            CASE 
+                WHEN lto.priority = 'urgent' THEN 1
+                WHEN lto.priority = 'high' THEN 2
+                ELSE 3
+            END,
+            lto.created_at DESC
+    ");
+    
+    $stmt->execute();
+    $tests = $stmt->fetchAll();
 
-        $this->render('lab/tests', [
-            'tests' => $tests
-        ]);
+    $this->render('lab/tests', [
+        'tests' => $tests,
+        'csrf_token' => $this->generateCSRF()
+    ]);
     }
 
     public function view_test($test_id) {
@@ -332,27 +356,42 @@ class LabController extends BaseController {
         }
 
         try {
+            // Check if test has been paid for
             $stmt = $this->pdo->prepare("
-                UPDATE lab_test_orders lto
-                JOIN lab_results lr ON lto.id = lr.order_id
-                SET lto.status = 'in_progress'
-                WHERE lr.id = ? AND lr.technician_id = ? AND lto.status = 'pending'
+                SELECT lto.*, p.payment_status
+                FROM lab_test_orders lto
+                LEFT JOIN payments p ON lto.visit_id = p.visit_id 
+                    AND p.payment_type = 'lab_test'
+                    AND p.item_type = 'lab_order'
+                    AND p.item_id = lto.id
+                WHERE lto.id = ?
             ");
-            $stmt->execute([$test_id, $_SESSION['user_id']]);
+            $stmt->execute([$test_id]);
+            $test = $stmt->fetch();
 
-            if ($stmt->rowCount() > 0) {
-                header('Content-Type: application/json');
-                echo json_encode(['success' => true, 'message' => 'Test started successfully']);
-            } else {
-                header('Content-Type: application/json');
-                echo json_encode(['success' => false, 'message' => 'Test not found or already started']);
+            if (!$test) {
+                throw new Exception('Test not found');
             }
 
+            if ($test['payment_status'] !== 'paid') {
+                throw new Exception('Test payment pending');
+            }
+
+            $stmt = $this->pdo->prepare("
+                UPDATE lab_test_orders 
+                SET status = 'in_progress',
+                    assigned_to = ?,
+                    sample_collected_at = NOW()
+                WHERE id = ?
+            ");
+            
+            $stmt->execute([$_SESSION['user_id'], $test_id]);
+            
+            $this->jsonResponse(['success' => true, 'message' => 'Test started successfully']);
+
         } catch (Exception $e) {
-            header('Content-Type: application/json');
-            echo json_encode(['success' => false, 'message' => 'Failed to start test: ' . $e->getMessage()]);
+            $this->jsonResponse(['success' => false, 'message' => $e->getMessage()]);
         }
-        exit;
     }
 
     public function collect_sample() {
@@ -460,6 +499,40 @@ class LabController extends BaseController {
         $this->render('lab/reports', [
             'stats' => $stats,
             'csrf_token' => $this->generateCSRF()
+        ]);
+    }
+
+    // Helper method to send JSON response and exit
+    private function jsonResponse($data) {
+        header('Content-Type: application/json');
+        echo json_encode($data);
+        exit;
+    }
+
+    public function check_payment_status() {
+        $test_id = $_GET['test_id'] ?? null;
+        
+        if (!$test_id) {
+            $this->jsonResponse(['is_paid' => false]);
+            return;
+        }
+
+        $stmt = $this->pdo->prepare("
+            SELECT p.payment_status 
+            FROM lab_test_orders lto
+            LEFT JOIN payments p ON lto.visit_id = p.visit_id 
+                AND p.payment_type = 'lab_test_fee'
+                AND p.item_id = lto.id
+            WHERE lto.id = ?
+            ORDER BY p.payment_date DESC 
+            LIMIT 1
+        ");
+        
+        $stmt->execute([$test_id]);
+        $payment = $stmt->fetch();
+        
+        $this->jsonResponse([
+            'is_paid' => ($payment && $payment['payment_status'] === 'paid')
         ]);
     }
 }

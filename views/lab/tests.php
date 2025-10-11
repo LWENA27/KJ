@@ -137,131 +137,103 @@
                     </tr>
                 </thead>
                 <tbody class="bg-white divide-y divide-gray-100">
-                    <?php foreach ($tests as $index => $test): 
-                        $priority = ['low', 'normal', 'high', 'urgent'][rand(0, 3)];
-                        $urgency_hours = rand(1, 48);
-                    ?>
-                    <tr class="hover:bg-gray-50 transition-colors duration-200 test-row" data-status="<?php echo $test['status']; ?>">
+                    <?php foreach ($tests as $test): ?>
+                    <tr class="hover:bg-gray-50 transition-colors duration-200 test-row" 
+                        data-status="<?php echo $test['status']; ?>"
+                        data-payment="<?php echo $test['payment_status']; ?>">
                         <td class="px-6 py-4 whitespace-nowrap">
                             <div class="flex items-center">
-                                <div class="w-12 h-12 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-lg flex items-center justify-center mr-4 shadow-sm">
-                                    <i class="fas fa-user text-white text-lg"></i>
-                                </div>
-                                <div>
-                                    <div class="text-sm font-semibold text-gray-900">
+                                <div class="ml-4">
+                                    <div class="text-sm font-medium text-gray-900">
                                         <?php echo htmlspecialchars($test['first_name'] . ' ' . $test['last_name']); ?>
                                     </div>
-                                    <div class="text-xs text-gray-500 flex items-center">
-                                        <i class="fas fa-calendar mr-1"></i>
-                                        <?php echo htmlspecialchars($test['appointment_date'] ? date('M j, Y', strtotime($test['appointment_date'])) : 'Walk-in'); ?>
-                                    </div>
-                                    <div class="text-xs text-blue-600 font-medium">
-                                        ID: <?php echo str_pad($test['id'], 4, '0', STR_PAD_LEFT); ?>
+                                    <div class="text-sm text-gray-500">
+                                        #<?php echo htmlspecialchars($test['registration_number']); ?>
                                     </div>
                                 </div>
                             </div>
                         </td>
                         <td class="px-6 py-4">
-                            <div class="space-y-1">
-                                <div class="text-sm font-semibold text-gray-900 flex items-center">
-                                    <div class="w-2 h-2 bg-<?php echo $priority === 'urgent' ? 'red' : ($priority === 'high' ? 'orange' : ($priority === 'normal' ? 'yellow' : 'green')); ?>-500 rounded-full mr-2"></div>
-                                    <?php echo htmlspecialchars($test['test_name']); ?>
-                                </div>
-                                <div class="text-xs text-gray-600 bg-gray-100 px-2 py-1 rounded">
-                                    <?php echo htmlspecialchars($test['category'] ?? 'General'); ?>
-                                </div>
-                                <div class="text-xs text-gray-500">
-                                    <i class="fas fa-stopwatch mr-1"></i>Est. <?php echo rand(15, 120); ?> min
-                                </div>
-                            </div>
-                        </td>
-                        <td class="px-6 py-4">
-                            <div class="space-y-2">
-                                <span class="inline-flex items-center px-3 py-1 text-xs font-semibold rounded-full
-                                    <?php
-                                    switch ($test['status']) {
-                                        case 'pending':
-                                            echo 'bg-yellow-100 text-yellow-800 border border-yellow-200';
-                                            break;
-                                        case 'processing':
-                                            echo 'bg-blue-100 text-blue-800 border border-blue-200';
-                                            break;
-                                        case 'completed':
-                                            echo 'bg-green-100 text-green-800 border border-green-200';
-                                            break;
-                                        case 'reviewed':
-                                            echo 'bg-purple-100 text-purple-800 border border-purple-200';
-                                            break;
-                                        default:
-                                            echo 'bg-gray-100 text-gray-800 border border-gray-200';
-                                    }
-                                    ?>">
-                                    <i class="fas fa-<?php echo $test['status'] === 'pending' ? 'clock' : ($test['status'] === 'processing' ? 'spinner fa-spin' : ($test['status'] === 'completed' ? 'check' : 'eye')); ?> mr-1"></i>
-                                    <?php echo ucfirst($test['status']); ?>
+                            <div class="text-sm text-gray-900"><?php echo htmlspecialchars($test['test_name']); ?></div>
+                            <div class="text-xs text-gray-500"><?php echo htmlspecialchars($test['category_name']); ?></div>
+                            <div class="text-xs text-blue-600">Tsh <?php echo number_format($test['price'], 2); ?></div>
+                            <!-- Add payment status badge -->
+                            <div class="mt-1">
+                                <?php 
+                                $stmt = $this->pdo->prepare("
+                                    SELECT payment_status 
+                                    FROM payments 
+                                    WHERE visit_id = ? 
+                                    AND payment_type = 'lab_test_fee' 
+                                    AND item_id = ?
+                                    ORDER BY payment_date DESC 
+                                    LIMIT 1
+                                ");
+                                $stmt->execute([$test['visit_id'], $test['id']]);
+                                $payment = $stmt->fetch();
+                                
+                                $badgeClass = $payment && $payment['payment_status'] === 'paid' 
+                                    ? 'bg-green-100 text-green-800' 
+                                    : 'bg-yellow-100 text-yellow-800';
+                                $paymentStatus = $payment ? ucfirst($payment['payment_status']) : 'Pending';
+                                ?>
+                                <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium <?php echo $badgeClass; ?>">
+                                    <i class="fas <?php echo $payment && $payment['payment_status'] === 'paid' ? 'fa-check-circle' : 'fa-clock'; ?> mr-1"></i>
+                                    <?php echo $paymentStatus; ?>
                                 </span>
-                                <div class="text-xs">
-                                    <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium
-                                        <?php echo $priority === 'urgent' ? 'bg-red-100 text-red-700' : ($priority === 'high' ? 'bg-orange-100 text-orange-700' : ($priority === 'normal' ? 'bg-yellow-100 text-yellow-700' : 'bg-green-100 text-green-700')); ?>">
-                                        <i class="fas fa-flag mr-1"></i><?php echo ucfirst($priority); ?>
-                                    </span>
-                                </div>
                             </div>
                         </td>
                         <td class="px-6 py-4">
-                            <div class="space-y-2">
-                                <div class="text-sm text-gray-900">
-                                    <i class="fas fa-plus-circle mr-2 text-green-500"></i>
-                                    <?php echo date('M j, H:i', strtotime($test['created_at'])); ?>
-                                </div>
+                            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium
+                                <?php echo $test['status'] === 'pending' ? 'bg-yellow-100 text-yellow-800' : 
+                                          ($test['status'] === 'in_progress' ? 'bg-blue-100 text-blue-800' : 
+                                           'bg-green-100 text-green-800'); ?>">
+                                <?php echo ucfirst($test['status']); ?>
+                            </span>
+                        </td>
+                        <td class="px-6 py-4 text-sm text-gray-500">
+                            <div>Dr. <?php echo htmlspecialchars($test['doctor_first_name'] . ' ' . $test['doctor_last_name']); ?></div>
+                            <div><?php echo date('M j, Y g:i A', strtotime($test['created_at'])); ?></div>
+                        </td>
+                        <td class="px-6 py-4 text-right text-sm font-medium">
+                            <?php 
+                            // Check if there's a paid payment record
+                            $stmt = $this->pdo->prepare("
+                                SELECT payment_status 
+                                FROM payments 
+                                WHERE visit_id = ? 
+                                AND payment_type = 'lab_test_fee' 
+                                AND item_id = ?
+                                ORDER BY payment_date DESC 
+                                LIMIT 1
+                            ");
+                            $stmt->execute([$test['visit_id'], $test['id']]);
+                            $payment = $stmt->fetch();
+                            
+                            if ($payment && $payment['payment_status'] === 'paid'): 
+                            ?>
                                 <?php if ($test['status'] === 'pending'): ?>
-                                <div class="text-xs text-orange-600 flex items-center">
-                                    <i class="fas fa-hourglass-half mr-1"></i>
-                                    Waiting <?php echo round((time() - strtotime($test['created_at'])) / 60); ?> min
-                                </div>
+                                    <button onclick="startTest(<?php echo $test['id']; ?>, '<?php echo htmlspecialchars($test['test_name']); ?>')"
+                                            class="bg-indigo-500 hover:bg-indigo-600 text-white px-4 py-2 rounded-md text-sm">
+                                        <i class="fas fa-play mr-2"></i>Start Test
+                                    </button>
+                                <?php elseif ($test['status'] === 'in_progress'): ?>
+                                    <button onclick="openCompleteTestModal(<?php echo $test['id']; ?>, 
+                                                '<?php echo htmlspecialchars($test['test_name']); ?>', 
+                                                '<?php echo htmlspecialchars($test['first_name'] . ' ' . $test['last_name']); ?>')"
+                                            class="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded-md text-sm">
+                                        <i class="fas fa-check mr-2"></i>Complete Test
+                                    </button>
                                 <?php elseif ($test['status'] === 'completed'): ?>
-                                <div class="text-xs text-green-600 flex items-center">
-                                    <i class="fas fa-check-circle mr-1"></i>
-                                    Completed <?php echo date('H:i', strtotime($test['created_at']) + rand(3600, 7200)); ?>
-                                </div>
+                                    <span class="text-gray-400">
+                                        <i class="fas fa-check-circle mr-2"></i>Completed
+                                    </span>
                                 <?php endif; ?>
-                                <?php if ($priority === 'urgent'): ?>
-                                <div class="text-xs text-red-600 font-medium flex items-center">
-                                    <i class="fas fa-exclamation-triangle mr-1"></i>
-                                    Due in <?php echo $urgency_hours; ?>h
-                                </div>
-                                <?php endif; ?>
-                            </div>
-                        </td>
-                        <td class="px-6 py-4">
-                            <div class="flex items-center space-x-2">
-                                <?php if ($test['status'] === 'pending'): ?>
-                                <button onclick="startTest(<?php echo $test['id']; ?>, '<?php echo htmlspecialchars($test['test_name']); ?>')"
-                                        class="bg-green-500 hover:bg-green-600 text-white px-3 py-1.5 rounded-lg text-xs font-medium transition-all duration-200 transform hover:scale-105">
-                                    <i class="fas fa-play mr-1"></i>Start
-                                </button>
-                                <a href="/KJ/lab/view_test/<?php echo $test['id']; ?>"
-                                   class="bg-blue-500 hover:bg-blue-600 text-white px-3 py-1.5 rounded-lg text-xs font-medium transition-all duration-200 transform hover:scale-105">
-                                    <i class="fas fa-eye mr-1"></i>View
-                                </a>
-                                <?php elseif ($test['status'] === 'processing'): ?>
-                                <button onclick="openCompleteTestModal(<?php echo $test['id']; ?>, '<?php echo htmlspecialchars($test['test_name']); ?>', '<?php echo htmlspecialchars($test['first_name'] . ' ' . $test['last_name']); ?>')"
-                                        class="bg-orange-500 hover:bg-orange-600 text-white px-3 py-1.5 rounded-lg text-xs font-medium transition-all duration-200 transform hover:scale-105">
-                                    <i class="fas fa-clipboard-check mr-1"></i>Complete
-                                </button>
-                                <a href="/KJ/lab/view_test/<?php echo $test['id']; ?>"
-                                   class="bg-blue-500 hover:bg-blue-600 text-white px-3 py-1.5 rounded-lg text-xs font-medium transition-all duration-200 transform hover:scale-105">
-                                    <i class="fas fa-eye mr-1"></i>View
-                                </a>
-                                <?php else: ?>
-                                <a href="/KJ/lab/view_test/<?php echo $test['id']; ?>"
-                                   class="bg-indigo-500 hover:bg-indigo-600 text-white px-3 py-1.5 rounded-lg text-xs font-medium transition-all duration-200 transform hover:scale-105">
-                                    <i class="fas fa-file-alt mr-1"></i>Report
-                                </a>
-                                <span class="text-xs text-gray-500 px-2">
-                                    <i class="fas fa-check-circle mr-1 text-green-500"></i>Done
+                            <?php else: ?>
+                                <span class="text-orange-500">
+                                    <i class="fas fa-clock mr-2"></i>Payment Pending
                                 </span>
-                                <?php endif; ?>
-                            </div>
+                            <?php endif; ?>
                         </td>
                     </tr>
                     <?php endforeach; ?>
@@ -332,31 +304,67 @@ function filterTests(type) {
 
 // Start test function
 function startTest(testId, testName) {
-    if (confirm(`Start processing "${testName}"?`)) {
-        showNotification('Test Started', `Processing of ${testName} has begun`, 'success');
-        // In real implementation, this would update the database
-        updateTestStatus(testId, 'processing');
-    }
-}
-
-// Complete test modal function
-function openCompleteTestModal(testId, testName, patientName) {
-    showNotification('Complete Test', `Ready to record results for ${testName} - ${patientName}`, 'info');
-    // In real implementation, this would open a results entry modal
-}
-
-// Update test status (simulated)
-function updateTestStatus(testId, newStatus) {
-    const row = document.querySelector(`tr[data-test-id="${testId}"]`);
-    if (row) {
-        row.setAttribute('data-status', newStatus);
-        // Update visual status indicator
-        const statusBadge = row.querySelector('.inline-flex');
-        if (statusBadge && newStatus === 'processing') {
-            statusBadge.className = 'inline-flex items-center px-3 py-1 text-xs font-semibold rounded-full bg-blue-100 text-blue-800 border border-blue-200';
-            statusBadge.innerHTML = '<i class="fas fa-spinner fa-spin mr-1"></i>Processing';
+    fetch(`/KJ/lab/check_payment_status?test_id=${testId}`)
+    .then(response => response.json())
+    .then(data => {
+        if (data.is_paid) {
+            if (confirm(`Start processing "${testName}"?`)) {
+                fetch('/KJ/lab/start_test', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/x-www-form-urlencoded',
+                    },
+                    body: `test_id=${testId}&csrf_token=${document.querySelector('[name="csrf_token"]').value}`
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        showNotification('Test Started', `Processing of ${testName} has begun`, 'success');
+                        location.reload();
+                    } else {
+                        showNotification('Error', data.message, 'error');
+                    }
+                });
+            }
+        } else {
+            showNotification('Error', 'Payment is required before starting the test', 'error');
         }
-    }
+    });
+}
+
+// Update the openCompleteTestModal function to check payment status
+function openCompleteTestModal(testId, testName, patientName) {
+    fetch(`/KJ/lab/check_payment_status?test_id=${testId}`)
+    .then(response => response.json())
+    .then(data => {
+        if (data.is_paid) {
+            document.getElementById('modalTestId').value = testId;
+            document.getElementById('modalTestName').textContent = testName;
+            document.getElementById('modalPatientName').textContent = patientName;
+            document.getElementById('completeTestModal').classList.remove('hidden');
+        } else {
+            showNotification('Error', 'Payment is required before completing the test', 'error');
+        }
+    });
+}
+
+// Update the test status update function
+function updateTestStatus(testId, newStatus) {
+    fetch('/KJ/lab/update_test_status', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/x-www-form-urlencoded',
+        },
+        body: `test_id=${testId}&status=${newStatus}&csrf_token=${document.querySelector('[name="csrf_token"]').value}`
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            location.reload();
+        } else {
+            showNotification('Error', data.message, 'error');
+        }
+    });
 }
 
 // Enhanced notification system
