@@ -17,3 +17,9 @@
 [11-Oct-2025 16:06:09 Europe/Berlin] Consultation submission - Patient ID: 6, Visit ID: 6, Consultation ID: 6
 [11-Oct-2025 16:06:09 Europe/Berlin] Selected tests: [4]
 [11-Oct-2025 16:06:09 Europe/Berlin] Selected medicines: 
+[11-Oct-2025 20:11:57 Europe/Berlin] Workflow status tracking not available: SQLSTATE[42S02]: Base table or view not found: 1146 Table 'hospitali.patient_workflow_status' doesn't exist
+[11-Oct-2025 20:14:20 Europe/Berlin] Consultation submission - Patient ID: 4, Visit ID: 4, Consultation ID: 4
+[11-Oct-2025 20:14:20 Europe/Berlin] Selected tests: [4,5]
+[11-Oct-2025 20:14:20 Europe/Berlin] Selected medicines: 
+[11-Oct-2025 20:14:42 Europe/Berlin] PHP Warning:  Undefined array key "status" in C:\xampp\htdocs\HOSPITALI\views\doctor\patient_journey.php on line 238
+[11-Oct-2025 20:14:42 Europe/Berlin] PHP Deprecated:  ucfirst(): Passing null to parameter #1 ($string) of type string is deprecated in C:\xampp\htdocs\HOSPITALI\views\doctor\patient_journey.php on line 238
