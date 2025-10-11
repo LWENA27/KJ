@@ -535,5 +535,160 @@ class LabController extends BaseController {
             'is_paid' => ($payment && $payment['payment_status'] === 'paid')
         ]);
     }
+
+    public function take_sample() {
+        if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+            $_SESSION['error'] = 'Invalid request method';
+            $this->redirect('lab/tests');
+            return;
+        }
+
+        $this->validateCSRF();
+
+        try {
+            $test_order_id = $_POST['test_order_id'];
+            $sample_notes = $_POST['sample_notes'] ?? '';
+            $collection_time = $_POST['collection_time'];
+            $technician_id = $_SESSION['user_id'];
+
+            // Update the lab test order status to 'sample_taken'
+            $stmt = $this->pdo->prepare("
+                UPDATE lab_test_orders 
+                SET status = 'sample_taken', 
+                    sample_collected_at = ?, 
+                    sample_notes = ?,
+                    updated_at = NOW() 
+                WHERE id = ?
+            ");
+            $stmt->execute([$collection_time, $sample_notes, $test_order_id]);
+
+            // Create a lab_results entry with sample_taken status
+            $stmt = $this->pdo->prepare("
+                SELECT patient_id, test_id, visit_id FROM lab_test_orders WHERE id = ?
+            ");
+            $stmt->execute([$test_order_id]);
+            $order = $stmt->fetch();
+
+            if ($order) {
+                // Insert or update lab_results record
+                $stmt = $this->pdo->prepare("
+                    INSERT INTO lab_results 
+                    (order_id, patient_id, test_id, visit_id, technician_id, status, sample_collected_at, created_at, updated_at)
+                    VALUES (?, ?, ?, ?, ?, 'sample_taken', ?, NOW(), NOW())
+                    ON DUPLICATE KEY UPDATE
+                    status = 'sample_taken',
+                    sample_collected_at = VALUES(sample_collected_at),
+                    updated_at = NOW()
+                ");
+                $stmt->execute([
+                    $test_order_id,
+                    $order['patient_id'],
+                    $order['test_id'],
+                    $order['visit_id'],
+                    $technician_id,
+                    $collection_time
+                ]);
+            }
+
+            $_SESSION['success'] = 'Sample collection recorded successfully';
+        } catch (Exception $e) {
+            $_SESSION['error'] = 'Failed to record sample collection: ' . $e->getMessage();
+        }
+
+        $this->redirect('lab/view_test/' . $test_order_id);
+    }
+
+    public function add_result() {
+        if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+            $_SESSION['error'] = 'Invalid request method';
+            $this->redirect('lab/tests');
+            return;
+        }
+
+        $this->validateCSRF();
+
+        try {
+            $test_order_id = $_POST['test_order_id'];
+            $result_value = $_POST['result_value'];
+            $unit = $_POST['unit'] ?? '';
+            $result_status = $_POST['result_status'] ?? 'normal';
+            $result_notes = $_POST['result_notes'] ?? '';
+            $completion_time = $_POST['completion_time'];
+            $technician_id = $_SESSION['user_id'];
+
+            // Get order details
+            $stmt = $this->pdo->prepare("
+                SELECT patient_id, test_id, visit_id FROM lab_test_orders WHERE id = ?
+            ");
+            $stmt->execute([$test_order_id]);
+            $order = $stmt->fetch();
+
+            if (!$order) {
+                throw new Exception('Test order not found');
+            }
+
+            $this->pdo->beginTransaction();
+
+            // Update lab test order status to completed
+            $stmt = $this->pdo->prepare("
+                UPDATE lab_test_orders 
+                SET status = 'completed', 
+                    completed_at = ?,
+                    updated_at = NOW() 
+                WHERE id = ?
+            ");
+            $stmt->execute([$completion_time, $test_order_id]);
+
+            // Insert or update lab_results record
+            $stmt = $this->pdo->prepare("
+                INSERT INTO lab_results 
+                (order_id, patient_id, test_id, visit_id, technician_id, result_value, unit, 
+                 result_text, result_status, status, completed_at, created_at, updated_at)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'completed', ?, NOW(), NOW())
+                ON DUPLICATE KEY UPDATE
+                result_value = VALUES(result_value),
+                unit = VALUES(unit),
+                result_text = VALUES(result_text),
+                result_status = VALUES(result_status),
+                status = 'completed',
+                completed_at = VALUES(completed_at),
+                updated_at = NOW()
+            ");
+            $stmt->execute([
+                $test_order_id,
+                $order['patient_id'],
+                $order['test_id'],
+                $order['visit_id'],
+                $technician_id,
+                $result_value,
+                $unit,
+                $result_notes,
+                $result_status,
+                $completion_time
+            ]);
+
+            // Update patient workflow status if all tests for this visit are completed
+            $stmt = $this->pdo->prepare("
+                SELECT COUNT(*) as pending_tests
+                FROM lab_test_orders 
+                WHERE visit_id = ? AND status != 'completed'
+            ");
+            $stmt->execute([$order['visit_id']]);
+            $pending = $stmt->fetch();
+
+            if ($pending['pending_tests'] == 0) {
+                // All tests completed, update patient workflow
+                $this->updateWorkflowStatus($order['patient_id'], 'results_ready');
+            }
+
+            $this->pdo->commit();
+            $_SESSION['success'] = 'Test result saved successfully';
+        } catch (Exception $e) {
+            $this->pdo->rollBack();
+            $_SESSION['error'] = 'Failed to save test result: ' . $e->getMessage();
+        }
+
+        $this->redirect('lab/view_test/' . $test_order_id);
+    }
 }
 ?>
