@@ -18,7 +18,7 @@
 <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
     <?php
     $totalAppointments = count($appointments);
-    $todayAppointments = count(array_filter($appointments, fn($a) => date('Y-m-d', strtotime($a['appointment_date'])) === date('Y-m-d')));
+    $todayAppointments = count(array_filter($appointments, fn($a) => date('Y-m-d', strtotime($a['appointment_date'] ?? $a['visit_date'] ?? $a['created_at'])) === date('Y-m-d')));
     $scheduledAppointments = count(array_filter($appointments, fn($a) => $a['status'] === 'scheduled'));
     $completedAppointments = count(array_filter($appointments, fn($a) => $a['status'] === 'completed'));
     
@@ -110,10 +110,11 @@
                         </td>
                         <td class="px-6 py-4 whitespace-nowrap">
                             <div class="text-sm text-gray-900">
-                                <div class="font-medium"><?php echo date('M j, Y', strtotime($appointment['appointment_date'])); ?></div>
+                                <?php $apt = $appointment['appointment_date'] ?? $appointment['visit_date'] ?? $appointment['created_at']; ?>
+                                <div class="font-medium"><?php echo date('M j, Y', strtotime($apt)); ?></div>
                                 <div class="text-gray-600 flex items-center">
                                     <i class="fas fa-clock mr-1 text-gray-400"></i>
-                                    <?php echo date('H:i', strtotime($appointment['appointment_date'])); ?>
+                                    <?php echo date('H:i', strtotime($apt)); ?>
                                 </div>
                             </div>
                         </td>

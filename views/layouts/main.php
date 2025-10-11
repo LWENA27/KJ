@@ -980,7 +980,8 @@
                                 ['url' => 'receptionist/dashboard', 'icon' => 'fas fa-chart-line', 'text' => 'Dashboard', 'badge' => '', 'color' => 'blue'],
                                 ['url' => 'receptionist/patients', 'icon' => 'fas fa-users', 'text' => 'Patients', 'badge' => isset($sidebar_data['pending_patients']) ? $sidebar_data['pending_patients'] : '0', 'color' => 'blue'],
                                 ['url' => 'receptionist/appointments', 'icon' => 'fas fa-calendar-check', 'text' => 'Appointments', 'badge' => isset($sidebar_data['upcoming_appointments']) ? $sidebar_data['upcoming_appointments'] : '0', 'color' => 'green'],
-                                ['url' => 'receptionist/payments', 'icon' => 'fas fa-credit-card', 'text' => 'Payments', 'badge' => '', 'color' => 'purple'],
+                                ['url' => 'receptionist/payments', 'icon' => 'fas fa-exclamation-circle', 'text' => 'Pending Payments', 'badge' => '', 'color' => 'red'],
+                                ['url' => 'receptionist/payment_history', 'icon' => 'fas fa-history', 'text' => 'Payment History', 'badge' => '', 'color' => 'purple'],
                                 ['url' => 'receptionist/medicine', 'icon' => 'fas fa-pills', 'text' => 'Medicine', 'badge' => isset($sidebar_data['low_stock_medicines']) && $sidebar_data['low_stock_medicines'] > 0 ? '!' : '', 'color' => 'yellow'],
                                 ['url' => 'receptionist/reports', 'icon' => 'fas fa-chart-bar', 'text' => 'Reports', 'badge' => '', 'color' => 'indigo'],
                             ];
@@ -1583,10 +1584,29 @@
             }
         });
 
+        // Language switcher function
+        function switchLanguage(lang) {
+            // Store preference
+            localStorage.setItem('preferred_language', lang);
+            
+            // Update active state
+            document.querySelectorAll('.language-option').forEach(option => {
+                option.classList.remove('active');
+                if (option.getAttribute('onclick').includes(`'${lang}'`)) {
+                    option.classList.add('active');
+                }
+            });
+            
+            // Here you would apply translations
+            console.log('Language switched to:', lang);
+        }
+
         // Load saved language preference
         document.addEventListener('DOMContentLoaded', function() {
             const savedLang = localStorage.getItem('preferred_language') || 'en';
-            switchLanguage(savedLang);
+            if (typeof switchLanguage === 'function') {
+                switchLanguage(savedLang);
+            }
         });
 
         // Toast notification system

@@ -148,7 +148,8 @@
                                         <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
                                             Dr. <?php echo htmlspecialchars($consultation['doctor_first'] . ' ' . $consultation['doctor_last']); ?>
                                         </span>
-                                        <span class="text-xs text-gray-500"><?php echo date('M j, Y H:i', strtotime($consultation['appointment_date'])); ?></span>
+                                        <?php $apt = $consultation['appointment_date'] ?? $consultation['visit_date'] ?? $consultation['created_at']; ?>
+                                        <span class="text-xs text-gray-500"><?php echo date('M j, Y H:i', strtotime($apt)); ?></span>
                                     </div>
                                     <?php if (!empty($consultation['main_complaint'])): ?>
                                     <p class="text-sm text-gray-500 mt-1">

@@ -204,7 +204,9 @@
                 'medicine_dispensing' => ['class' => 'bg-indigo-100 text-indigo-800 border border-indigo-300', 'icon' => 'fas fa-pills', 'text' => 'Medicine'],
                 'completed' => ['class' => 'bg-green-100 text-green-800 border border-green-300', 'icon' => 'fas fa-check-circle', 'text' => 'Completed']
             ];
-            $currentStatus = $statusConfig[$patient['current_step']] ?? $statusConfig['registration'];
+            // Guard against undefined index: use a local step variable with sensible default
+            $step = $patient['current_step'] ?? 'registration';
+            $currentStatus = $statusConfig[$step] ?? $statusConfig['registration'];
             ?>
             <span class="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium <?php echo $currentStatus['class']; ?> shadow-sm">
                 <i class="<?php echo $currentStatus['icon']; ?> mr-2"></i>
@@ -253,7 +255,7 @@
                 </a>
                 <?php endif; ?>
                 
-                <?php if ($patient['current_step'] === 'medicine_dispensing' && isset($patient['medicine_prescribed']) && $patient['medicine_prescribed'] && (!isset($patient['medicine_dispensed']) || !$patient['medicine_dispensed'])): ?>
+                <?php if ($step === 'medicine_dispensing' && isset($patient['medicine_prescribed']) && $patient['medicine_prescribed'] && (!isset($patient['medicine_dispensed']) || !$patient['medicine_dispensed'])): ?>
                 <a href="/KJ/receptionist/dispense_medicines?patient_id=<?php echo $patient['id']; ?>" 
                    class="bg-purple-100 hover:bg-purple-200 text-purple-700 px-3 py-1 rounded-lg text-sm font-medium transition-all duration-300 transform hover:scale-105" title="Dispense Medicine">
                     <i class="fas fa-pills"></i>

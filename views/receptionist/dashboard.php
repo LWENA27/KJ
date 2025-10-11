@@ -212,8 +212,8 @@
                                     <div class="flex items-center mb-2">
                                         <i class="fas fa-clock mr-2 text-gray-500"></i>
                                         <p class="text-lg font-bold text-gray-900">
-                                            <?php echo date('H:i', strtotime($appointment['appointment_date'])); ?>
-                                        </p>
+                                                <?php $apt = $appointment['appointment_date'] ?? $appointment['visit_date'] ?? $appointment['created_at']; echo date('H:i', strtotime($apt)); ?>
+                                            </p>
                                     </div>
                                     <span class="inline-flex px-3 py-1 text-xs font-semibold rounded-full
                                         <?php

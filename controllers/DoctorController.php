@@ -13,17 +13,19 @@ class DoctorController extends BaseController {
 
         // Patients ready for consultation removed from dashboard UI - no query needed
 
-                // Today's completed consultations (check both created_at and appointment_date for robustness)
-                                $stmt = $this->pdo->prepare("                        SELECT c.*, p.first_name, p.last_name, p.date_of_birth, p.phone
+                // Today's completed consultations (check both created_at and follow_up_date for robustness)
+                                $stmt = $this->pdo->prepare("                        SELECT c.*, p.first_name, p.last_name, p.date_of_birth, p.phone,
+                                                COALESCE(c.follow_up_date, pv.visit_date, DATE(c.created_at)) as appointment_date
                                                 FROM consultations c
                                                 JOIN patients p ON c.patient_id = p.id
+                                                LEFT JOIN patient_visits pv ON c.visit_id = pv.id
                                                 WHERE c.doctor_id = ?
                                                     AND c.status = 'completed'
                                                     AND (
                                                                         DATE(c.created_at) = CURDATE()
-                                                                        OR DATE(c.appointment_date) = CURDATE()
+                                                                        OR DATE(COALESCE(c.follow_up_date, pv.visit_date, c.created_at)) = CURDATE()
                                                                     )
-                                                ORDER BY COALESCE(c.created_at, c.appointment_date) DESC
+                                                ORDER BY COALESCE(c.created_at, COALESCE(c.follow_up_date, pv.visit_date, c.created_at)) DESC
                                 ");
                 $stmt->execute([$doctor_id]);
         $today_completed = $stmt->fetchAll();
@@ -40,24 +42,25 @@ class DoctorController extends BaseController {
         $stmt->execute([$doctor_id]);
         $stats = $stmt->fetch();
 
-    // Patients waiting for lab results review (join lab_results with tests to get names)
+        // Patients waiting for lab results review (join lab_results with tests to get names)
         // Scope to consultations that belong to this doctor
-        $stmt = $this->pdo->prepare("            SELECT p.*, ws.current_step,
+        $stmt = $this->pdo->prepare("
+            SELECT p.*,
                    ag.test_names,
                    ag.latest_result_date as result_date
             FROM patients p
-            JOIN workflow_status ws ON p.id = ws.patient_id
             LEFT JOIN (
                 SELECT c.patient_id,
-               GROUP_CONCAT(lt.test_name SEPARATOR ', ') AS test_names,
-               MAX(lr.created_at) AS latest_result_date
+                       GROUP_CONCAT(lt.test_name SEPARATOR ', ') AS test_names,
+                       MAX(lr.completed_at) AS latest_result_date
                 FROM lab_results lr
-                JOIN consultations c ON lr.consultation_id = c.id
+                JOIN lab_test_orders lto ON lr.order_id = lto.id
+                JOIN consultations c ON lto.consultation_id = c.id
                 JOIN lab_tests lt ON lr.test_id = lt.id
-                WHERE lr.status = 'completed' AND c.doctor_id = ?
+                WHERE lto.status = 'completed' AND c.doctor_id = ?
                 GROUP BY c.patient_id
             ) ag ON p.id = ag.patient_id
-            WHERE ws.current_step = 'results_review' AND ag.test_names IS NOT NULL
+            WHERE (SELECT pvx2.status FROM patient_visits pvx2 WHERE pvx2.patient_id = p.id ORDER BY pvx2.created_at DESC LIMIT 1) = 'results_review' AND ag.test_names IS NOT NULL
             ORDER BY ag.latest_result_date DESC
         ");
         $stmt->execute([$doctor_id]);
@@ -76,11 +79,12 @@ class DoctorController extends BaseController {
         $stmt = $this->pdo->prepare("
             SELECT lr.*, lt.test_name as test_name, p.first_name, p.last_name
             FROM lab_results lr
+            JOIN lab_test_orders lto ON lr.order_id = lto.id
             JOIN lab_tests lt ON lr.test_id = lt.id
-            JOIN consultations c ON lr.consultation_id = c.id
+            JOIN consultations c ON lto.consultation_id = c.id
             JOIN patients p ON c.patient_id = p.id
             WHERE c.doctor_id = ?
-            ORDER BY lr.created_at DESC
+            ORDER BY lr.completed_at DESC
             LIMIT 5
         ");
         $stmt->execute([$doctor_id]);
@@ -93,20 +97,31 @@ class DoctorController extends BaseController {
 
         $sql = "
             SELECT p.*,
+                   pv.visit_date,
+                   pv.visit_type,
+                   pv.created_at as visit_created_at,
                    COALESCE(cc.consultation_count, 0) as consultation_count,
                    c.status as consultation_status,
-                   c.consultation_type
+                   c.consultation_type,
+                   IF(EXISTS(
+                       SELECT 1 FROM payments pay 
+                       WHERE pay.visit_id = pv.id 
+                       AND pay.payment_type = 'registration' 
+                       AND pay.payment_status = 'paid'
+                   ), 1, 0) as consultation_registration_paid
             FROM patients p
+            JOIN patient_visits pv ON p.id = pv.patient_id
             LEFT JOIN (
                 SELECT patient_id, COUNT(*) as consultation_count
                 FROM consultations 
                 GROUP BY patient_id
             ) cc ON p.id = cc.patient_id
-            LEFT JOIN consultations c ON p.id = c.patient_id
-            WHERE p.visit_type = 'consultation' 
-            AND DATE(p.created_at) = CURDATE()
+            LEFT JOIN consultations c ON p.id = c.patient_id AND c.visit_id = pv.id
+            WHERE pv.visit_type = 'consultation' 
+            AND DATE(pv.visit_date) = CURDATE()
+            AND pv.status = 'active'
             AND (c.status IS NULL OR c.status NOT IN ('completed', 'cancelled'))
-            ORDER BY p.created_at ASC
+            ORDER BY pv.created_at ASC
         ";
 
         $stmt = $this->pdo->prepare($sql);
@@ -114,14 +129,14 @@ class DoctorController extends BaseController {
         $available_patients = $stmt->fetchAll();
 
                 // Pending consultations (registered / scheduled / waiting) for this doctor
-                $stmt = $this->pdo->prepare(
-                        "SELECT c.*, p.first_name AS patient_first, p.last_name AS patient_last, p.date_of_birth AS patient_dob, p.phone AS patient_phone, ws.consultation_registration_paid
+                        $stmt = $this->pdo->prepare(
+                        "SELECT c.*, p.first_name AS patient_first, p.last_name AS patient_last, p.date_of_birth AS patient_dob, p.phone AS patient_phone,
+                         (SELECT IF(EXISTS(SELECT 1 FROM payments pay WHERE pay.visit_id = (SELECT id FROM patient_visits pv WHERE pv.patient_id = p.id ORDER BY pv.created_at DESC LIMIT 1) AND pay.payment_type = 'registration' AND pay.payment_status = 'paid'),1,0)) as consultation_registration_paid
                          FROM consultations c
                          JOIN patients p ON c.patient_id = p.id
-                         LEFT JOIN workflow_status ws ON p.id = ws.patient_id
                          WHERE c.doctor_id = ?
                              AND c.status NOT IN ('completed', 'cancelled')
-                         ORDER BY COALESCE(c.created_at, c.appointment_date) ASC"
+                         ORDER BY COALESCE(c.created_at, c.follow_up_date) ASC"
                 );
                 $stmt->execute([$doctor_id]);
                 $pending_consultations = $stmt->fetchAll();
@@ -147,16 +162,19 @@ class DoctorController extends BaseController {
 
         $stmt = $this->pdo->prepare("
             SELECT c.*, p.first_name, p.last_name, p.date_of_birth, p.phone,
-                   ws.consultation_registration_paid, ws.lab_tests_paid, ws.results_review_paid,
+                   pv.visit_date,
+                   (SELECT IF(EXISTS(SELECT 1 FROM payments pay WHERE pay.visit_id = (SELECT id FROM patient_visits pv WHERE pv.patient_id = p.id ORDER BY pv.created_at DESC LIMIT 1) AND pay.payment_type = 'registration' AND pay.payment_status = 'paid'),1,0)) as consultation_registration_paid,
+                   (SELECT IF(EXISTS(SELECT 1 FROM payments pay2 WHERE pay2.visit_id = (SELECT id FROM patient_visits pv2 WHERE pv2.patient_id = p.id ORDER BY pv2.created_at DESC LIMIT 1) AND pay2.payment_type = 'lab_test' AND pay2.payment_status = 'paid'),1,0)) as lab_tests_paid,
+                   (SELECT IF(EXISTS(SELECT 1 FROM payments pay3 WHERE pay3.visit_id = (SELECT id FROM patient_visits pv3 WHERE pv3.patient_id = p.id ORDER BY pv3.created_at DESC LIMIT 1) AND pay3.payment_type = 'lab_test' AND pay3.payment_status = 'paid'),1,0)) as results_review_paid,
                    COALESCE(c.main_complaint, c.symptoms) as main_complaint,
                    COALESCE(c.final_diagnosis, c.preliminary_diagnosis, c.diagnosis) as final_diagnosis,
                    c.preliminary_diagnosis,
-                   COALESCE(c.appointment_date, c.visit_date, c.created_at) as appointment_date
+                   COALESCE(c.follow_up_date, pv.visit_date, DATE(c.created_at)) as appointment_date
             FROM consultations c
             JOIN patients p ON c.patient_id = p.id
-            LEFT JOIN workflow_status ws ON p.id = ws.patient_id
+            LEFT JOIN patient_visits pv ON c.visit_id = pv.id
             WHERE c.doctor_id = ?
-            ORDER BY COALESCE(c.appointment_date, c.visit_date, c.created_at) DESC
+            ORDER BY COALESCE(c.follow_up_date, pv.visit_date, c.created_at) DESC
         ");
             $stmt->execute([$doctor_id]);
         $consultations = $stmt->fetchAll();
@@ -198,13 +216,32 @@ class DoctorController extends BaseController {
         }
 
         // Get existing consultations
-        $stmt = $this->pdo->prepare("SELECT * FROM consultations WHERE patient_id = ? ORDER BY appointment_date DESC");
+        $stmt = $this->pdo->prepare("
+            SELECT c.*, pv.visit_date
+            FROM consultations c
+            LEFT JOIN patient_visits pv ON c.visit_id = pv.id
+            WHERE c.patient_id = ? 
+            ORDER BY COALESCE(c.follow_up_date, pv.visit_date, c.created_at) DESC
+        ");
         $stmt->execute([$patient_id]);
         $consultations = $stmt->fetchAll();
+
+        // Get latest vital signs for this patient
+        $stmt = $this->pdo->prepare("
+            SELECT vs.*, pv.visit_date
+            FROM vital_signs vs
+            LEFT JOIN patient_visits pv ON vs.visit_id = pv.id
+            WHERE vs.patient_id = ?
+            ORDER BY vs.recorded_at DESC
+            LIMIT 1
+        ");
+        $stmt->execute([$patient_id]);
+        $vital_signs = $stmt->fetch();
 
         $this->render('doctor/view_patient', [
             'patient' => $patient,
             'consultations' => $consultations,
+            'vital_signs' => $vital_signs,
             'csrf_token' => $this->generateCSRF()
         ]);
     }
@@ -213,21 +250,20 @@ class DoctorController extends BaseController {
         $doctor_id = $_SESSION['user_id'];
 
         $stmt = $this->pdo->prepare("
-            SELECT p.*,
-                   COALESCE(consultation_counts.consultation_count, 0) as consultation_count,
-                   ws.current_step as workflow_status,
-                   ws.consultation_registration_paid,
-                   ws.lab_tests_paid,
-                   ws.results_review_paid
-            FROM patients p
-            LEFT JOIN workflow_status ws ON p.id = ws.patient_id
+         SELECT p.*,
+             COALESCE(consultation_counts.consultation_count, 0) as consultation_count,
+                   (SELECT pv3.status FROM patient_visits pv3 WHERE pv3.patient_id = p.id ORDER BY pv3.created_at DESC LIMIT 1) as workflow_status,
+             (SELECT IF(EXISTS(SELECT 1 FROM payments pay WHERE pay.visit_id = (SELECT id FROM patient_visits pv2 WHERE pv2.patient_id = p.id ORDER BY pv2.created_at DESC LIMIT 1) AND pay.payment_type = 'registration' AND pay.payment_status = 'paid'),1,0)) AS consultation_registration_paid,
+             (SELECT IF(EXISTS(SELECT 1 FROM payments pay2 WHERE pay2.visit_id = (SELECT id FROM patient_visits pv3 WHERE pv3.patient_id = p.id ORDER BY pv3.created_at DESC LIMIT 1) AND pay2.payment_type = 'lab_test' AND pay2.payment_status = 'paid'),1,0)) AS lab_tests_paid,
+             (SELECT IF(EXISTS(SELECT 1 FROM payments pay3 WHERE pay3.visit_id = (SELECT id FROM patient_visits pv4 WHERE pv4.patient_id = p.id ORDER BY pv4.created_at DESC LIMIT 1) AND pay3.payment_type = 'lab_test' AND pay3.payment_status = 'paid'),1,0)) AS results_review_paid
+         FROM patients p
             LEFT JOIN (
                 SELECT patient_id, COUNT(*) as consultation_count
                 FROM consultations
                 WHERE doctor_id = ?
                 GROUP BY patient_id
             ) consultation_counts ON p.id = consultation_counts.patient_id
-            WHERE ws.consultation_registration_paid = TRUE
+                WHERE (SELECT IF(EXISTS(SELECT 1 FROM payments pay WHERE pay.visit_id = (SELECT id FROM patient_visits pv WHERE pv.patient_id = p.id ORDER BY pv.created_at DESC LIMIT 1) AND pay.payment_type = 'registration' AND pay.payment_status = 'paid'),1,0)) = 1
             ORDER BY p.first_name
         ");
         $stmt->execute([$doctor_id]);
@@ -249,71 +285,85 @@ class DoctorController extends BaseController {
         $patient_id = $_POST['patient_id'];
         $doctor_id = $_SESSION['user_id'];
 
-        // Check workflow access
-        $access_check = $this->checkWorkflowAccess($patient_id, 'consultation');
-        if (!$access_check['access']) {
-            $_SESSION['error'] = $access_check['message'];
+        // Determine latest visit for patient
+        $stmt = $this->pdo->prepare("SELECT id FROM patient_visits WHERE patient_id = ? ORDER BY created_at DESC LIMIT 1");
+        $stmt->execute([$patient_id]);
+        $row = $stmt->fetch();
+        $visit_id = $row['id'] ?? null;
+
+        if (!$visit_id) {
+            $_SESSION['error'] = 'No visit found for this patient';
             $this->redirect('doctor/view_patient/' . $patient_id);
         }
 
-        // Start transaction
-        $this->pdo->beginTransaction();
+        // Check if doctor can attend this visit
+        $can = $this->canAttend($visit_id);
+        if (!$can['ok']) {
+            $_SESSION['error'] = 'Cannot start consultation: ' . $can['reason'];
+            $this->redirect('doctor/view_patient/' . $patient_id);
+        }
 
+        // Start or resume consultation using BaseController helper
+        $start = $this->startConsultation($visit_id, $doctor_id);
+        if (!$start['ok']) {
+            $_SESSION['error'] = 'Failed to start consultation: ' . ($start['message'] ?? $start['reason'] ?? 'unknown');
+            $this->redirect('doctor/view_patient/' . $patient_id);
+        }
+
+        $consultation_id = $start['consultation_id'];
+
+        // Now proceed to handle submitted consultation details (lab tests, medicines, diagnosis)
         try {
-            // Create or update consultation
-            $stmt = $this->pdo->prepare("
-                INSERT INTO consultations (patient_id, doctor_id, appointment_date, status, main_complaint, on_examination,
-                                         preliminary_diagnosis, final_diagnosis, lab_investigation, prescription, treatment_plan)
-                VALUES (?, ?, NOW(), 'completed', ?, ?, ?, ?, ?, ?, ?)
-                ON DUPLICATE KEY UPDATE
-                status = 'completed',
-                main_complaint = VALUES(main_complaint),
-                on_examination = VALUES(on_examination),
-                preliminary_diagnosis = VALUES(preliminary_diagnosis),
-                final_diagnosis = VALUES(final_diagnosis),
-                lab_investigation = VALUES(lab_investigation),
-                prescription = VALUES(prescription),
-                treatment_plan = VALUES(treatment_plan)
-            ");
+            $this->pdo->beginTransaction();
 
+            // Debug logging
+            error_log("Consultation submission - Patient ID: $patient_id, Visit ID: $visit_id, Consultation ID: $consultation_id");
+            error_log("Selected tests: " . ($_POST['selected_tests'] ?? 'EMPTY'));
+            error_log("Selected medicines: " . ($_POST['selected_medicines'] ?? 'EMPTY'));
+
+            // Update the consultation record with submitted data
+            $stmt = $this->pdo->prepare("UPDATE consultations SET main_complaint = ?, on_examination = ?, preliminary_diagnosis = ?, final_diagnosis = ?, lab_investigation = ?, prescription = ?, treatment_plan = ?, status = 'completed', completed_at = NOW(), updated_at = NOW() WHERE id = ?");
             $stmt->execute([
-                $patient_id,
-                $doctor_id,
                 $_POST['main_complaint'] ?? '',
                 $_POST['on_examination'] ?? '',
                 $_POST['preliminary_diagnosis'] ?? '',
                 $_POST['final_diagnosis'] ?? '',
                 $_POST['lab_investigation'] ?? '',
                 $_POST['prescription'] ?? '',
-                $_POST['treatment_plan'] ?? ''
+                $_POST['treatment_plan'] ?? '',
+                $consultation_id
             ]);
 
-            $consultation_id = $this->pdo->lastInsertId();
-
-            // Handle selected lab tests
+            // Handle selected lab tests - create lab test orders
             if (!empty($_POST['selected_tests'])) {
                 $selected_tests = json_decode($_POST['selected_tests'], true);
                 if (is_array($selected_tests)) {
-                    // Get the first available lab technician
-                    $stmt = $this->pdo->prepare("SELECT id FROM users WHERE role = 'lab_technician' AND is_active = 1 LIMIT 1");
-                    $stmt->execute();
-                    $technician = $stmt->fetch();
+                    // Find a lab technician for assignment
+                    $stmtTech = $this->pdo->prepare("SELECT id FROM users WHERE role = 'lab_technician' AND is_active = 1 LIMIT 1");
+                    $stmtTech->execute();
+                    $technician = $stmtTech->fetch();
+                    $technician_id = $technician['id'] ?? null;
 
-                    if ($technician) {
-                        $technician_id = $technician['id'];
-                    } else {
-                        // Fallback to first lab technician if none found
-                        $technician_id = 4; // Default lab technician ID
-                    }
-
+                    // Create lab test orders for each selected test
+                    $stmtOrder = $this->pdo->prepare("
+                        INSERT INTO lab_test_orders 
+                        (visit_id, patient_id, consultation_id, test_id, ordered_by, assigned_to, status, created_at) 
+                        VALUES (?, ?, ?, ?, ?, ?, 'pending', NOW())
+                    ");
+                    
                     foreach ($selected_tests as $test_id) {
-                        $stmt = $this->pdo->prepare("
-                            INSERT INTO lab_results (consultation_id, test_id, technician_id, status)
-                            VALUES (?, ?, ?, 'pending')
-                        ");
-                        $stmt->execute([$consultation_id, $test_id, $technician_id]);
+                        $stmtOrder->execute([
+                            $visit_id,
+                            $patient_id,
+                            $consultation_id,
+                            $test_id,
+                            $doctor_id,
+                            $technician_id
+                        ]);
                     }
-                    $this->updateWorkflowStatus($patient_id, 'lab_testing');
+                    
+                    // Update workflow - patient needs to pay for lab tests
+                    $this->updateWorkflowStatus($patient_id, 'pending_payment', ['lab_tests_ordered' => true]);
                 }
             }
 
@@ -321,34 +371,40 @@ class DoctorController extends BaseController {
             if (!empty($_POST['selected_medicines'])) {
                 $selected_medicines = json_decode($_POST['selected_medicines'], true);
                 if (is_array($selected_medicines)) {
+                    // Create prescriptions for each selected medicine
+                    $stmtPrescription = $this->pdo->prepare("
+                        INSERT INTO prescriptions 
+                        (visit_id, patient_id, consultation_id, doctor_id, medicine_id, 
+                         quantity_prescribed, dosage, frequency, duration, instructions, status, created_at) 
+                        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending', NOW())
+                    ");
+                    
                     foreach ($selected_medicines as $medicine_data) {
-                        $stmt = $this->pdo->prepare("
-                            INSERT INTO medicine_allocations (consultation_id, medicine_id, quantity, dosage, instructions, allocated_by)
-                            VALUES (?, ?, ?, ?, ?, ?)
-                        ");
-                        $stmt->execute([
+                        $stmtPrescription->execute([
+                            $visit_id,
+                            $patient_id,
                             $consultation_id,
+                            $doctor_id,
                             $medicine_data['id'],
                             $medicine_data['quantity'] ?? 1,
                             $medicine_data['dosage'] ?? '',
+                            $medicine_data['frequency'] ?? 'as prescribed',
+                            $medicine_data['duration'] ?? '',
                             $medicine_data['instructions'] ?? '',
-                            $doctor_id
                         ]);
                     }
+                    
+                    $this->updateWorkflowStatus($patient_id, 'pending_payment', ['medicine_prescribed' => true]);
                 }
             }
 
-            // If no lab tests or medicines, mark as completed
+            // Final workflow update
             if (empty($_POST['selected_tests']) && empty($_POST['selected_medicines'])) {
                 $this->updateWorkflowStatus($patient_id, 'completed');
-            } elseif (!empty($_POST['selected_medicines'])) {
-                // Medicines selected, set to medicine dispensing
-                $this->updateWorkflowStatus($patient_id, 'medicine_dispensing', ['medicine_prescribed' => true]);
             }
 
             $this->pdo->commit();
             $_SESSION['success'] = 'Consultation completed successfully';
-
         } catch (Exception $e) {
             $this->pdo->rollBack();
             $_SESSION['error'] = 'Failed to complete consultation: ' . $e->getMessage();
@@ -444,11 +500,14 @@ class DoctorController extends BaseController {
 
         try {
             $stmt = $this->pdo->prepare("
-                SELECT id, name, generic_name, unit_price, description, stock_quantity
-                FROM medicines
-                WHERE (name LIKE ? OR generic_name LIKE ? OR description LIKE ?)
-                AND stock_quantity > 0
-                ORDER BY name
+                SELECT m.id, m.name, m.generic_name, m.unit_price, m.description, 
+                       COALESCE(SUM(mb.quantity_remaining), 0) as stock_quantity
+                FROM medicines m
+                LEFT JOIN medicine_batches mb ON m.id = mb.medicine_id
+                WHERE (m.name LIKE ? OR m.generic_name LIKE ? OR m.description LIKE ?)
+                GROUP BY m.id, m.name, m.generic_name, m.unit_price, m.description
+                HAVING stock_quantity > 0
+                ORDER BY m.name
                 LIMIT 20
             ");
             $search = "%{$query}%";
@@ -475,13 +534,15 @@ class DoctorController extends BaseController {
         // Get lab results for this patient
             $stmt = $this->pdo->prepare("
                 SELECT lr.*, t.test_name as test_name, t.test_code as test_code, t.category_id as category, t.normal_range, t.unit,
-                       c.appointment_date, p.first_name, p.last_name
+                       pv.visit_date, p.first_name, p.last_name, lto.status
                 FROM lab_results lr
+                JOIN lab_test_orders lto ON lr.order_id = lto.id
                 JOIN lab_tests t ON lr.test_id = t.id
-                JOIN consultations c ON lr.consultation_id = c.id
+                JOIN consultations c ON lto.consultation_id = c.id
                 JOIN patients p ON c.patient_id = p.id
-                WHERE c.patient_id = ? AND lr.status = 'completed'
-                ORDER BY lr.created_at DESC
+                LEFT JOIN patient_visits pv ON c.visit_id = pv.id
+                WHERE c.patient_id = ? AND lto.status = 'completed'
+                ORDER BY lr.completed_at DESC
             ");
         $stmt->execute([$patient_id]);
         $lab_results = $stmt->fetchAll();
@@ -503,7 +564,18 @@ class DoctorController extends BaseController {
         $doctor_id = $_SESSION['user_id'];
 
     // Fetch recent lab results for patients that belong to this doctor (use lab_tests)
-    $stmt = $this->pdo->prepare("\n            SELECT lr.*, t.test_name as test_name, p.first_name, p.last_name, c.appointment_date, lr.result_value, lr.result_text, lr.status, lr.created_at as created_at\n            FROM lab_results lr\n            JOIN lab_tests t ON lr.test_id = t.id\n            JOIN consultations c ON lr.consultation_id = c.id\n            JOIN patients p ON c.patient_id = p.id\n            WHERE c.doctor_id = ?\n            ORDER BY lr.created_at DESC\n            LIMIT 200\n        ");
+    $stmt = $this->pdo->prepare("
+            SELECT lr.*, t.test_name as test_name, p.first_name, p.last_name, pv.visit_date, lr.result_value, lr.result_text, lto.status, lr.completed_at as created_at
+            FROM lab_results lr
+            JOIN lab_test_orders lto ON lr.order_id = lto.id
+            JOIN lab_tests t ON lr.test_id = t.id
+            JOIN consultations c ON lto.consultation_id = c.id
+            JOIN patients p ON c.patient_id = p.id
+            LEFT JOIN patient_visits pv ON c.visit_id = pv.id
+            WHERE c.doctor_id = ?
+            ORDER BY lr.completed_at DESC
+            LIMIT 200
+        ");
         $stmt->execute([$doctor_id]);
         $results = $stmt->fetchAll();
 
@@ -689,40 +761,44 @@ class DoctorController extends BaseController {
 
             $this->pdo->beginTransaction();
 
-            // Check if consultation payment is made
-            $stmt = $this->pdo->prepare("
-                SELECT consultation_registration_paid FROM workflow_status WHERE patient_id = ?
-            ");
+            // Verify consultation registration payment: check latest visit's payments
+            $stmt = $this->pdo->prepare("SELECT id FROM patient_visits WHERE patient_id = ? ORDER BY created_at DESC LIMIT 1");
             $stmt->execute([$patient_id]);
-            $workflow = $stmt->fetch();
+            $visit = $stmt->fetch();
+            if (!$visit) {
+                throw new Exception('No visit found for patient');
+            }
+            $visit_id = $visit['id'];
 
-            if (!$workflow || !$workflow['consultation_registration_paid']) {
+            $stmt = $this->pdo->prepare("SELECT COUNT(*) FROM payments WHERE visit_id = ? AND payment_type = 'registration' AND payment_status = 'paid'");
+            $stmt->execute([$visit_id]);
+            $paid = (int)$stmt->fetchColumn();
+            if ($paid === 0) {
                 throw new Exception('Patient must complete consultation payment first');
             }
 
-            // Update workflow status
-            $stmt = $this->pdo->prepare("
-                UPDATE workflow_status 
-                SET current_step = 'lab_tests', lab_tests_required = 1
-                WHERE patient_id = ?
-            ");
-            $stmt->execute([$patient_id]);
+            // Record a patient_workflow_status entry marking lab_tests started (non-fatal)
+            try {
+                $stmt = $this->pdo->prepare("INSERT INTO patient_workflow_status (patient_id, workflow_step, status, started_at, created_at, updated_at) VALUES (?, 'lab_tests', 'pending', NOW(), NOW(), NOW())");
+                $stmt->execute([$patient_id]);
+            } catch (Exception $e) {
+                error_log('Failed to insert patient_workflow_status: ' . $e->getMessage());
+            }
 
-            // Create lab test requests
+            // Find consultation in progress (if any) to associate orders
+            $stmt = $this->pdo->prepare("SELECT id FROM consultations WHERE patient_id = ? AND doctor_id = ? AND status = 'in_progress' ORDER BY created_at DESC LIMIT 1");
+            $stmt->execute([$patient_id, $_SESSION['user_id']]);
+            $consultation_row = $stmt->fetch();
+            $consultation_id = $consultation_row['id'] ?? null;
+
+            // Create lab test orders (new schema) linked to visit and consultation
             foreach ($tests as $test_id) {
-                $stmt = $this->pdo->prepare("
-                    INSERT INTO lab_test_requests (patient_id, test_id, requested_by, status, notes, created_at)
-                    VALUES (?, ?, ?, 'pending', ?, NOW())
-                ");
-                $stmt->execute([$patient_id, $test_id, $_SESSION['user_id'], $notes]);
+                $stmt = $this->pdo->prepare("INSERT INTO lab_test_orders (visit_id, patient_id, consultation_id, test_id, ordered_by, status, instructions, created_at, updated_at) VALUES (?, ?, ?, ?, ?, 'pending', ?, NOW(), NOW())");
+                $stmt->execute([$visit_id, $patient_id, $consultation_id, $test_id, $_SESSION['user_id'], $notes]);
             }
 
             // Complete the consultation
-            $stmt = $this->pdo->prepare("
-                UPDATE consultations 
-                SET status = 'completed', notes = CONCAT(COALESCE(notes, ''), ' - Sent to lab for tests')
-                WHERE patient_id = ? AND doctor_id = ? AND status = 'in_progress'
-            ");
+            $stmt = $this->pdo->prepare("UPDATE consultations SET status = 'completed', notes = CONCAT(COALESCE(notes, ''), ' - Sent to lab for tests') WHERE patient_id = ? AND doctor_id = ? AND status = 'in_progress'");
             $stmt->execute([$patient_id, $_SESSION['user_id']]);
 
             $this->pdo->commit();
@@ -755,36 +831,42 @@ class DoctorController extends BaseController {
 
             $this->pdo->beginTransaction();
 
-            // Update workflow status
-            $stmt = $this->pdo->prepare("
-                UPDATE workflow_status 
-                SET current_step = 'medicine_dispensing', medicine_prescribed = 1
-                WHERE patient_id = ?
-            ");
-            $stmt->execute([$patient_id]);
+            // Record workflow step for medicine prescribing
+            try {
+                $stmt = $this->pdo->prepare("INSERT INTO patient_workflow_status (patient_id, workflow_step, status, started_at, created_at, updated_at) VALUES (?, 'medicine_dispensing', 'pending', NOW(), NOW(), NOW())");
+                $stmt->execute([$patient_id]);
+            } catch (Exception $e) {
+                error_log('Failed to insert patient_workflow_status: ' . $e->getMessage());
+            }
 
-            // Create medicine prescriptions
+            // Find latest visit and consultation in progress to attach prescriptions
+            $stmt = $this->pdo->prepare("SELECT id FROM patient_visits WHERE patient_id = ? ORDER BY created_at DESC LIMIT 1");
+            $stmt->execute([$patient_id]);
+            $visit_row = $stmt->fetch();
+            $visit_id = $visit_row['id'] ?? null;
+
+            $stmt = $this->pdo->prepare("SELECT id FROM consultations WHERE patient_id = ? AND doctor_id = ? AND status = 'in_progress' ORDER BY created_at DESC LIMIT 1");
+            $stmt->execute([$patient_id, $_SESSION['user_id']]);
+            $consult_row = $stmt->fetch();
+            $consultation_id = $consult_row['id'] ?? null;
+
+            // Create prescriptions linked to consultation and visit
             foreach ($medicines as $medicine) {
-                $stmt = $this->pdo->prepare("
-                    INSERT INTO prescriptions (patient_id, medicine_id, quantity, dosage, prescribed_by, notes, created_at)
-                    VALUES (?, ?, ?, ?, ?, ?, NOW())
-                ");
+                $stmt = $this->pdo->prepare("INSERT INTO prescriptions (consultation_id, visit_id, patient_id, doctor_id, medicine_id, quantity, dosage, instructions, status, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'pending', NOW())");
                 $stmt->execute([
-                    $patient_id, 
-                    $medicine['medicine_id'], 
-                    $medicine['quantity'], 
-                    $medicine['dosage'], 
-                    $_SESSION['user_id'], 
+                    $consultation_id,
+                    $visit_id,
+                    $patient_id,
+                    $_SESSION['user_id'],
+                    $medicine['medicine_id'],
+                    $medicine['quantity'],
+                    $medicine['dosage'],
                     $notes
                 ]);
             }
 
             // Complete the consultation
-            $stmt = $this->pdo->prepare("
-                UPDATE consultations 
-                SET status = 'completed', notes = CONCAT(COALESCE(notes, ''), ' - Prescribed medicines')
-                WHERE patient_id = ? AND doctor_id = ? AND status = 'in_progress'
-            ");
+            $stmt = $this->pdo->prepare("UPDATE consultations SET status = 'completed', notes = CONCAT(COALESCE(notes, ''), ' - Prescribed medicines') WHERE patient_id = ? AND doctor_id = ? AND status = 'in_progress'");
             $stmt->execute([$patient_id, $_SESSION['user_id']]);
 
             $this->pdo->commit();

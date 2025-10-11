@@ -36,7 +36,7 @@
                                         <?php echo htmlspecialchars($result['first_name'] . ' ' . $result['last_name']); ?>
                                     </div>
                                     <div class="text-sm text-gray-500">
-                                        <?php echo date('M j, Y', strtotime($result['appointment_date'])); ?>
+                                        <?php $apt = $result['appointment_date'] ?? $result['visit_date'] ?? $result['created_at']; echo date('M j, Y', strtotime($apt)); ?>
                                     </div>
                                 </div>
                             </div>

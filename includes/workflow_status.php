@@ -12,8 +12,8 @@ function renderWorkflowStatus($workflow) {
     echo '<div class="space-y-3">';
 
     foreach ($steps as $step => $config) {
-        $isCompleted = $workflow[$step . '_paid'];
-        $isCurrent = $workflow['current_step'] === $step;
+        $isCompleted = !empty($workflow[$step . '_paid']);
+        $isCurrent = isset($workflow['current_step']) && $workflow['current_step'] === $step;
 
         $bgColor = $isCompleted ? 'bg-green-100' : ($isCurrent ? 'bg-blue-100' : 'bg-gray-100');
         $iconColor = $isCompleted ? 'text-green-600' : ($isCurrent ? 'text-blue-600' : 'text-gray-400');

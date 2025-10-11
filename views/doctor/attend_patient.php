@@ -44,7 +44,7 @@
         <!-- Main Consultation Form -->
         <div class="bg-white rounded-lg shadow">
             <form id="attendForm" method="POST" action="/KJ/doctor/start_consultation" 
-                  onsubmit="return validateConsultationForm()" class="p-6 space-y-6">
+                  onsubmit="console.log('🚀 FORM SUBMITTING NOW...'); return validateConsultationForm();" class="p-6 space-y-6">
                 
                 <input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars($csrf_token); ?>">
                 <input type="hidden" name="patient_id" value="<?php echo $patient['id']; ?>">
@@ -95,7 +95,7 @@
                     <div class="space-y-4">
                         <div class="flex space-x-4">
                             <label class="flex items-center">
-                                <input type="radio" name="next_step" value="lab_tests" class="mr-2" onchange="toggleSection('lab')">
+                                <input type="radio" name="next_step" value="lab_tests" class="mr-2" onchange="toggleSection('lab_tests')">
                                 <span class="text-sm font-medium">Send to Lab for Tests</span>
                             </label>
                             <label class="flex items-center">
@@ -196,7 +196,11 @@
 
         // Form validation before submission
         function validateConsultationForm() {
+            console.log('=== FORM VALIDATION STARTED ===');
             const nextStep = document.querySelector('input[name="next_step"]:checked');
+            console.log('Next step value:', nextStep ? nextStep.value : 'NONE');
+            console.log('Selected tests:', selectedTests);
+            console.log('Selected medicines:', selectedMedicines);
 
             if (!nextStep) {
                 alert('Please select a next step decision (Lab Tests, Medicine, Both, or Discharge)');
@@ -204,7 +208,7 @@
             }
 
             // Check if tests are selected when lab option is chosen
-            if ((nextStep.value === 'lab' || nextStep.value === 'both') && selectedTests.length === 0) {
+            if ((nextStep.value === 'lab_tests' || nextStep.value === 'both') && selectedTests.length === 0) {
                 alert('Please select at least one lab test');
                 return false;
             }
@@ -214,6 +218,9 @@
                 alert('Please select at least one medicine');
                 return false;
             }
+            
+            console.log('✅✅✅ Validation passed! Form will submit. ✅✅✅');
+            console.log('=== FORM VALIDATION ENDED ===');
 
             // Validate medicine quantities and details
             for (const medicine of selectedMedicines) {
@@ -231,6 +238,7 @@
                 }
             }
 
+            console.log('🚀🚀🚀 RETURNING TRUE - FORM WILL NOW SUBMIT TO SERVER 🚀🚀🚀');
             return true;
         }
 
@@ -265,7 +273,7 @@
             medicineSection.classList.add('hidden');
 
             // Show relevant sections
-            if (section === 'lab' || section === 'both') {
+            if (section === 'lab_tests' || section === 'both') {
                 labSection.classList.remove('hidden');
             }
             if (section === 'medicine' || section === 'both') {
@@ -277,7 +285,9 @@
         let testSearchTimeout;
         let currentTestFocus = -1;
 
-        document.getElementById('testSearch').addEventListener('input', function() {
+        const testSearchElement = document.getElementById('testSearch');
+        if (testSearchElement) {
+            testSearchElement.addEventListener('input', function() {
             clearTimeout(testSearchTimeout);
             const query = this.value.trim();
 
@@ -313,8 +323,10 @@
                         showTestError(error.message);
                     });
             }, 300);
-        }); // Add keyboard navigation for test search
-        document.getElementById('testSearch').addEventListener('keydown', function(e) {
+            }); // End input event listener
+            
+            // Add keyboard navigation for test search
+            testSearchElement.addEventListener('keydown', function(e) {
             const resultsDiv = document.getElementById('testResults');
             const items = resultsDiv.querySelectorAll('.search-result-item');
 
@@ -333,7 +345,8 @@
                 resultsDiv.classList.add('hidden');
                 currentTestFocus = -1;
             }
-        });
+            });
+        } // End testSearchElement check
 
         function showTestLoading() {
             const resultsDiv = document.getElementById('testResults');
@@ -372,7 +385,7 @@
                     div.setAttribute('data-index', index);
                     div.innerHTML = `
                     <div class="font-medium">${test.name}</div>
-                    <div class="text-sm text-gray-600">${test.category} - $${test.price}</div>
+                    <div class="text-sm text-gray-600">${test.category} - Tsh ${parseFloat(test.price).toLocaleString('en-US')}</div>
                     <div class="text-xs text-gray-500">${test.description || ''}</div>
                 `;
 
@@ -388,11 +401,15 @@
         }
 
         function addTest(test) {
+            console.log('Adding test:', test);
             if (!selectedTests.some(selected => selected.id === test.id)) {
                 selectedTests.push(test);
+                console.log('Test added. Total selected tests:', selectedTests.length);
                 updateSelectedTestsList();
                 document.getElementById('testResults').classList.add('hidden');
                 document.getElementById('testSearch').value = '';
+            } else {
+                console.log('Test already selected');
             }
         }
 
@@ -414,7 +431,7 @@
                     div.innerHTML = `
                     <div>
                         <div class="font-medium">${test.name}</div>
-                        <div class="text-sm text-gray-600">${test.category} - $${test.price}</div>
+                        <div class="text-sm text-gray-600">${test.category} - Tsh ${parseFloat(test.price).toLocaleString('en-US')}</div>
                     </div>
                     <button type="button" onclick="removeTest(${test.id})" class="text-red-600 hover:text-red-800">
                         <i class="fas fa-times"></i>
@@ -425,14 +442,18 @@
             }
 
             // Update hidden field
-            document.getElementById('selectedTests').value = JSON.stringify(selectedTests.map(test => test.id));
+            const testIds = selectedTests.map(test => test.id);
+            document.getElementById('selectedTests').value = JSON.stringify(testIds);
+            console.log('Updated selectedTests hidden field:', JSON.stringify(testIds));
         }
 
         // Medicine Search
         let medicineSearchTimeout;
         let currentMedicineFocus = -1;
 
-        document.getElementById('medicineSearch').addEventListener('input', function() {
+        const medicineSearchElement = document.getElementById('medicineSearch');
+        if (medicineSearchElement) {
+            medicineSearchElement.addEventListener('input', function() {
             clearTimeout(medicineSearchTimeout);
             const query = this.value.trim();
 
@@ -468,8 +489,10 @@
                         showMedicineError(error.message);
                     });
             }, 300);
-        }); // Add keyboard navigation for medicine search
-        document.getElementById('medicineSearch').addEventListener('keydown', function(e) {
+            }); // End input event listener
+            
+            // Add keyboard navigation for medicine search
+            medicineSearchElement.addEventListener('keydown', function(e) {
             const resultsDiv = document.getElementById('medicineResults');
             const items = resultsDiv.querySelectorAll('.search-result-item');
 
@@ -488,7 +511,8 @@
                 resultsDiv.classList.add('hidden');
                 currentMedicineFocus = -1;
             }
-        });
+            });
+        } // End medicineSearchElement check
 
         function showMedicineLoading() {
             const resultsDiv = document.getElementById('medicineResults');
@@ -527,7 +551,7 @@
                     div.setAttribute('data-index', index);
                     div.innerHTML = `
                     <div class="font-medium">${medicine.name}</div>
-                    <div class="text-sm text-gray-600">${medicine.generic_name} - $${medicine.unit_price}</div>
+                    <div class="text-sm text-gray-600">${medicine.generic_name} - Tsh ${parseFloat(medicine.unit_price).toLocaleString('en-US')}</div>
                     <div class="text-xs text-gray-500">Stock: ${medicine.stock_quantity}</div>
                 `;
 
@@ -598,7 +622,7 @@
                     <div class="flex justify-between items-start mb-2">
                         <div>
                             <div class="font-medium">${medicine.name}</div>
-                            <div class="text-sm text-gray-600">${medicine.generic_name} - $${medicine.unit_price}</div>
+                            <div class="text-sm text-gray-600">${medicine.generic_name} - Tsh ${parseFloat(medicine.unit_price).toLocaleString('en-US')}</div>
                         </div>
                         <button type="button" onclick="removeMedicine(${medicine.id})" class="text-red-600 hover:text-red-800">
                             <i class="fas fa-times"></i>
@@ -661,11 +685,14 @@
         });
 
         // Close modal when clicking outside
-        document.getElementById('attendModal').addEventListener('click', function(e) {
-            if (e.target === this) {
-                closeAttendModal();
-            }
-        });
+        const attendModalElement = document.getElementById('attendModal');
+        if (attendModalElement) {
+            attendModalElement.addEventListener('click', function(e) {
+                if (e.target === this) {
+                    closeAttendModal();
+                }
+            });
+        }
 
         // Print function for medical record
         function printMedicalRecord() {

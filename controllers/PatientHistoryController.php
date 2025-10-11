@@ -47,7 +47,7 @@ class PatientHistoryController extends BaseController {
             }
 
             if (!empty($filters['last_visit'])) {
-                $filter_conditions[] = "EXISTS (SELECT 1 FROM consultations c WHERE c.patient_id = p.id AND c.appointment_date >= DATE_SUB(NOW(), INTERVAL ? DAY))";
+                $filter_conditions[] = "EXISTS (SELECT 1 FROM consultations c LEFT JOIN patient_visits pv ON c.visit_id = pv.id WHERE c.patient_id = p.id AND DATE(COALESCE(c.follow_up_date, pv.visit_date, c.created_at)) >= DATE_SUB(NOW(), INTERVAL ? DAY))";
                 $params[] = $filters['last_visit'];
             }
 
@@ -57,7 +57,7 @@ class PatientHistoryController extends BaseController {
                 SELECT p.*, 
                        TIMESTAMPDIFF(YEAR, p.date_of_birth, CURDATE()) as age,
                        (SELECT COUNT(*) FROM consultations WHERE patient_id = p.id) as visit_count,
-                       (SELECT MAX(appointment_date) FROM consultations WHERE patient_id = p.id) as last_visit
+                       (SELECT MAX(COALESCE(appointment_date, pv2.visit_date, created_at)) FROM consultations LEFT JOIN patient_visits pv2 ON consultations.visit_id = pv2.id WHERE consultations.patient_id = p.id) as last_visit
                 FROM patients p
                 WHERE {$where_clause}
                 ORDER BY p.first_name, p.last_name
@@ -80,13 +80,14 @@ class PatientHistoryController extends BaseController {
         try {
             // Get vital signs trends
             $stmt = $this->pdo->prepare("
-                SELECT appointment_date, 
+          SELECT COALESCE(c.follow_up_date, pv.visit_date, DATE(c.created_at)) as appointment_date, 
                        CAST(SUBSTRING_INDEX(blood_pressure, '/', 1) AS UNSIGNED) as systolic,
                        CAST(SUBSTRING_INDEX(blood_pressure, '/', -1) AS UNSIGNED) as diastolic,
                        pulse_rate, temperature, weight
-                FROM consultations 
-                WHERE patient_id = ? AND appointment_date >= DATE_SUB(NOW(), INTERVAL 1 YEAR)
-                ORDER BY appointment_date
+                FROM consultations c
+                LEFT JOIN patient_visits pv ON c.visit_id = pv.id
+                WHERE patient_id = ? AND DATE(COALESCE(c.follow_up_date, pv.visit_date, c.created_at)) >= DATE_SUB(NOW(), INTERVAL 1 YEAR)
+                ORDER BY COALESCE(c.follow_up_date, pv.visit_date, c.created_at)
             ");
             $stmt->execute([$patient_id]);
             $vitals_trends = $stmt->fetchAll();
@@ -105,20 +106,22 @@ class PatientHistoryController extends BaseController {
 
             // Get medication history
             $stmt = $this->pdo->prepare("
-                SELECT c.appointment_date, m.name as medicine_name, ma.quantity, ma.dosage, ma.instructions
+                SELECT COALESCE(c.follow_up_date, pv.visit_date, DATE(c.created_at)) as appointment_date, m.name as medicine_name, ma.quantity, ma.dosage, ma.instructions
                 FROM medicine_allocations ma
                 JOIN medicines m ON ma.medicine_id = m.id
                 JOIN consultations c ON ma.consultation_id = c.id
-                WHERE c.patient_id = ? AND c.appointment_date >= DATE_SUB(NOW(), INTERVAL 1 YEAR)
-                ORDER BY c.appointment_date DESC
+                LEFT JOIN patient_visits pv ON c.visit_id = pv.id
+                WHERE c.patient_id = ? AND DATE(COALESCE(c.follow_up_date, pv.visit_date, c.created_at)) >= DATE_SUB(NOW(), INTERVAL 1 YEAR)
+                ORDER BY COALESCE(c.follow_up_date, pv.visit_date, c.created_at) DESC
             ");
             $stmt->execute([$patient_id]);
             $medication_history = $stmt->fetchAll();
 
             // Get diagnosis patterns
             $stmt = $this->pdo->prepare("
-                SELECT final_diagnosis, COUNT(*) as frequency, MAX(appointment_date) as last_occurrence
-                FROM consultations 
+                SELECT final_diagnosis, COUNT(*) as frequency, MAX(COALESCE(appointment_date, pv.visit_date, created_at)) as last_occurrence
+                FROM consultations c
+                LEFT JOIN patient_visits pv ON c.visit_id = pv.id
                 WHERE patient_id = ? AND final_diagnosis IS NOT NULL AND final_diagnosis != ''
                 GROUP BY final_diagnosis
                 ORDER BY frequency DESC, last_occurrence DESC
@@ -144,12 +147,13 @@ class PatientHistoryController extends BaseController {
         try {
             // Check for drug interactions
             $stmt = $this->pdo->prepare("
-                SELECT m.name, ma.dosage, c.appointment_date
+                SELECT m.name, ma.dosage, pv.visit_date
                 FROM medicine_allocations ma
                 JOIN medicines m ON ma.medicine_id = m.id
                 JOIN consultations c ON ma.consultation_id = c.id
-                WHERE c.patient_id = ? AND c.appointment_date >= DATE_SUB(NOW(), INTERVAL 30 DAY)
-                ORDER BY c.appointment_date DESC
+                LEFT JOIN patient_visits pv ON c.visit_id = pv.id
+                WHERE c.patient_id = ? AND pv.visit_date >= DATE_SUB(NOW(), INTERVAL 30 DAY)
+                ORDER BY pv.visit_date DESC
             ");
             $stmt->execute([$patient_id]);
             $recent_medications = $stmt->fetchAll();

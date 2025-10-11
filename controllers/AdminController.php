@@ -218,7 +218,15 @@ class AdminController extends BaseController {
     }
 
     public function medicines() {
-        $medicines = $this->pdo->query("SELECT id, name, generic_name, stock_quantity, unit_price, expiry_date FROM medicines ORDER BY name")->fetchAll();
+        $medicines = $this->pdo->query("
+            SELECT m.id, m.name, m.generic_name, m.unit_price,
+                   COALESCE(SUM(mb.quantity_remaining), 0) as stock_quantity,
+                   MIN(mb.expiry_date) as expiry_date
+            FROM medicines m
+            LEFT JOIN medicine_batches mb ON m.id = mb.medicine_id
+            GROUP BY m.id, m.name, m.generic_name, m.unit_price
+            ORDER BY m.name
+        ")->fetchAll();
 
         $this->render('admin/medicines', [
             'medicines' => $medicines
@@ -227,7 +235,14 @@ class AdminController extends BaseController {
 
     public function tests() {
         // lab_tests table uses `test_name`, `test_code`, `category_id`, `price`
-        $tests = $this->pdo->query("SELECT id, test_name as name, test_code as code, category_id, price FROM lab_tests ORDER BY test_name")->fetchAll();
+        $tests = $this->pdo->query("
+            SELECT lt.id, lt.test_name as name, lt.test_code as code, 
+                   lt.category_id, lt.price, lt.normal_range, lt.unit,
+                   ltc.category_name as category
+            FROM lab_tests lt
+            LEFT JOIN lab_test_categories ltc ON lt.category_id = ltc.id
+            ORDER BY lt.test_name
+        ")->fetchAll();
 
         $this->render('admin/tests', [
             'tests' => $tests
@@ -246,7 +261,7 @@ class AdminController extends BaseController {
         $stats['total_patients'] = $stmt->fetch()['total'];
 
         // Today's consultations
-        $stmt = $this->pdo->prepare("SELECT COUNT(*) as total FROM consultations WHERE DATE(appointment_date) = CURDATE()");
+        $stmt = $this->pdo->prepare("SELECT COUNT(*) as total FROM consultations c LEFT JOIN patient_visits pv ON c.visit_id = pv.id WHERE DATE(COALESCE(c.follow_up_date, pv.visit_date, c.created_at)) = CURDATE()");
         $stmt->execute();
         $stats['today_consultations'] = $stmt->fetch()['total'];
 
@@ -254,13 +269,24 @@ class AdminController extends BaseController {
         $stmt = $this->pdo->query("SELECT COUNT(*) as total FROM medicines");
         $stats['total_medicines'] = $stmt->fetch()['total'];
 
-        // Low stock medicines
-        $stmt = $this->pdo->query("SELECT COUNT(*) as total FROM medicines WHERE stock_quantity < 10");
-        $stats['low_stock'] = $stmt->fetch()['total'];
+        // Low stock medicines (using medicine_batches with reorder level)
+        $stmt = $this->pdo->query("
+            SELECT COUNT(*) as total
+            FROM (
+                SELECT m.id
+                FROM medicines m
+                LEFT JOIN medicine_batches mb ON m.id = mb.medicine_id
+                GROUP BY m.id, m.reorder_level
+                HAVING COALESCE(SUM(mb.quantity_remaining), 0) < COALESCE(m.reorder_level, 20)
+            ) as low_stock_meds
+        ");
+        $result = $stmt->fetch();
+        $stats['low_stock'] = $result ? $result['total'] : 0;
 
         // Pending payments
-        $stmt = $this->pdo->query("SELECT COUNT(*) as total FROM payments WHERE status = 'pending'");
-        $stats['pending_payments'] = $stmt->fetch()['total'];
+        $stmt = $this->pdo->query("SELECT COUNT(*) as total FROM payments WHERE payment_status = 'pending'");
+        $result = $stmt->fetch();
+        $stats['pending_payments'] = $result ? $result['total'] : 0;
 
         return $stats;
     }

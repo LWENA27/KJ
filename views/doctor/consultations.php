@@ -112,7 +112,7 @@
         <!-- Mobile List -->
         <div class="md:hidden divide-y divide-gray-200">
         <?php foreach ($consultations as $consultation): ?>
-        <?php $apt_date = $consultation['appointment_date'] ?? $consultation['visit_date'] ?? $consultation['created_at'];
+    <?php $apt_date = $consultation['appointment_date'] ?? $consultation['visit_date'] ?? $consultation['created_at'];
             $mfirst = trim($consultation['patient_first'] ?? $consultation['first_name'] ?? '');
             $mlast = trim($consultation['patient_last'] ?? $consultation['last_name'] ?? '');
             $mname = trim($mfirst . ' ' . $mlast);

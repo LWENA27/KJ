@@ -14,12 +14,14 @@ class ReceptionistController extends BaseController
     {
         // Get today's appointments
         $stmt = $this->pdo->prepare("
-            SELECT c.*, p.first_name, p.last_name, u.first_name as doctor_first, u.last_name as doctor_last
+            SELECT c.*, p.first_name, p.last_name, u.first_name as doctor_first, u.last_name as doctor_last,
+                   COALESCE(c.follow_up_date, pv.visit_date, DATE(c.created_at)) as appointment_date
             FROM consultations c
             JOIN patients p ON c.patient_id = p.id
             JOIN users u ON c.doctor_id = u.id
-            WHERE DATE(c.appointment_date) = CURDATE()
-            ORDER BY c.appointment_date
+            LEFT JOIN patient_visits pv ON c.visit_id = pv.id
+            WHERE DATE(COALESCE(c.follow_up_date, pv.visit_date, c.created_at)) = CURDATE()
+            ORDER BY COALESCE(c.follow_up_date, pv.visit_date, c.created_at)
         ");
         $stmt->execute();
         $appointments = $stmt->fetchAll();
@@ -71,17 +73,42 @@ class ReceptionistController extends BaseController
 
     public function patients()
     {
-        $patients = $this->pdo->query("
-            SELECT p.*, ws.current_step as workflow_status, ws.current_step, ws.consultation_registration_paid, ws.lab_tests_paid,
-                   ws.results_review_paid, ws.medicine_prescribed, ws.medicine_dispensed, ws.final_payment_collected,
-                   ws.lab_tests_required
+        // Use inline derived table instead of view (compatible with existing DB)
+        $patients = $this->pdo->query("SELECT p.*,
+                lv.visit_id AS latest_visit_id,
+                lv.status AS workflow_status,
+                CASE
+                    -- If no payment, show registration step
+                    WHEN lv.status = 'active' AND (SELECT COUNT(*) FROM payments pay WHERE pay.visit_id = lv.visit_id AND pay.payment_type = 'registration' AND pay.payment_status = 'paid') = 0 THEN 'registration'
+                    -- If payment made but no consultation started, show consultation_registration (waiting for doctor)
+                    WHEN lv.status = 'active' AND (SELECT COUNT(*) FROM consultations con WHERE con.visit_id = lv.visit_id AND con.status IN ('pending','in_progress')) > 0 AND (SELECT COUNT(*) FROM consultations con2 WHERE con2.visit_id = lv.visit_id AND con2.status = 'completed') = 0 THEN 'consultation_registration'
+                    -- If lab tests ordered but not all completed, show lab_tests
+                    WHEN lv.status = 'active' AND (SELECT COUNT(*) FROM lab_test_orders lto WHERE lto.visit_id = lv.visit_id AND lto.status IN ('pending','sample_collected','in_progress')) > 0 THEN 'lab_tests'
+                    -- If prescriptions pending, show medicine_dispensing
+                    WHEN lv.status = 'active' AND (SELECT COUNT(*) FROM prescriptions pr WHERE pr.visit_id = lv.visit_id AND pr.status = 'pending') > 0 THEN 'medicine_dispensing'
+                    -- If visit active but nothing pending, show results_review
+                    WHEN lv.status = 'active' THEN 'results_review'
+                    -- If visit completed, show completed
+                    ELSE 'completed'
+                END AS current_step,
+                (SELECT IF(EXISTS(SELECT 1 FROM payments pay WHERE pay.visit_id = lv.visit_id AND pay.payment_type = 'registration' AND pay.payment_status = 'paid'),1,0)) AS consultation_registration_paid,
+                (SELECT IF(EXISTS(SELECT 1 FROM payments pay WHERE pay.visit_id = lv.visit_id AND pay.payment_type = 'lab_test' AND pay.payment_status = 'paid'),1,0)) AS lab_tests_paid,
+                (SELECT IF(EXISTS(SELECT 1 FROM prescriptions pr WHERE pr.visit_id = lv.visit_id AND pr.status = 'pending'),1,0)) AS medicine_prescribed,
+                (SELECT IF(EXISTS(SELECT 1 FROM prescriptions pr2 WHERE pr2.visit_id = lv.visit_id AND pr2.status = 'dispensed'),1,0)) AS medicine_dispensed,
+                (SELECT IF(EXISTS(SELECT 1 FROM lab_test_orders lto WHERE lto.visit_id = lv.visit_id AND lto.status IN ('pending','sample_collected','in_progress')),1,0)) AS lab_tests_required,
+                0 AS final_payment_collected
             FROM patients p
-            LEFT JOIN workflow_status ws ON p.id = ws.patient_id
+            LEFT JOIN (
+                SELECT pv.patient_id, pv.id AS visit_id, pv.status
+                FROM patient_visits pv
+                JOIN (SELECT patient_id, MAX(created_at) AS latest FROM patient_visits GROUP BY patient_id) latest
+                ON latest.patient_id = pv.patient_id AND latest.latest = pv.created_at
+            ) lv ON lv.patient_id = p.id
             ORDER BY
                 CASE
-                    WHEN ws.current_step = 'completed' THEN 1
-                    WHEN ws.medicine_dispensed = false AND ws.medicine_prescribed = true THEN 2
-                    WHEN ws.final_payment_collected = false AND (ws.medicine_prescribed = true OR ws.lab_tests_required = true) THEN 3
+                    WHEN lv.status = 'completed' THEN 1
+                    WHEN (SELECT IF(EXISTS(SELECT 1 FROM prescriptions prx WHERE prx.visit_id = lv.visit_id AND prx.status = 'dispensed'),1,0)) = 0 AND (SELECT IF(EXISTS(SELECT 1 FROM prescriptions prx2 WHERE prx2.visit_id = lv.visit_id AND prx2.status = 'pending'),1,0)) = 1 THEN 2
+                    WHEN (SELECT IF(EXISTS(SELECT 1 FROM payments payx WHERE payx.visit_id = lv.visit_id AND payx.payment_status = 'paid'),1,0)) = 0 AND ((SELECT IF(EXISTS(SELECT 1 FROM prescriptions prx3 WHERE prx3.visit_id = lv.visit_id AND prx3.status = 'pending'),1,0)) = 1 OR (SELECT IF(EXISTS(SELECT 1 FROM lab_test_orders ltox WHERE ltox.visit_id = lv.visit_id AND ltox.status IN ('pending','sample_collected','in_progress')),1,0)) = 1) THEN 3
                     ELSE 4
                 END,
                 p.created_at DESC
@@ -162,22 +189,19 @@ class ReceptionistController extends BaseController
                     }
                 }
 
-                // Insert patient basic info
+                // Insert patient basic info (only core fields that exist in all schemas)
                 $stmt = $this->pdo->prepare("
                     INSERT INTO patients (
-                        registration_number, first_name, last_name, 
-                        date_of_birth, gender, phone, email, 
-                        address, emergency_contact_name, 
-                        emergency_contact_phone, visit_type,
-                        temperature, blood_pressure, pulse_rate,
-                        body_weight, height,
-                        consultation_registration_paid
-                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                        registration_number, first_name, last_name,
+                        date_of_birth, gender, phone, email,
+                        address, emergency_contact_name,
+                        emergency_contact_phone, created_at
+                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())
                 ");
 
                 $registration_number = $this->generateRegistrationNumber();
 
-                // In your register_patient method, update the vital signs assignment:
+                // Execute patient insert with only core columns
                 $stmt->execute([
                     $registration_number,
                     $this->sanitize($first_name),
@@ -188,54 +212,66 @@ class ReceptionistController extends BaseController
                     $this->sanitize($email),
                     $this->sanitize($address),
                     $this->sanitize($emergency_contact_name),
-                    $this->sanitize($emergency_contact_phone),
-                    $visit_type,
-                    // Update these to record vital signs for all visit types, not just consultation
-                    !empty($temperature) ? $temperature : null,
-                    !empty($blood_pressure) ? $blood_pressure : null,
-                    !empty($pulse_rate) ? $pulse_rate : null,
-                    !empty($body_weight) ? $body_weight : null,
-                    !empty($height) ? $height : null,
-                    $visit_type === 'consultation' ? 1 : 0
+                    $this->sanitize($emergency_contact_phone)
                 ]);
 
                 $patient_id = $this->pdo->lastInsertId();
-                // Only record payment for consultation visits
-                if ($visit_type === 'consultation') {
-                    $stmt = $this->pdo->prepare("
-                        INSERT INTO patient_payments (
-                            patient_id, payment_type, amount,
-                            payment_method, payment_status,
-                            payment_date, collected_by, notes
-                        ) VALUES (?, ?, ?, ?, ?, NOW(), ?, ?)
-                    ");
+
+                // Create a patient_visits row for this registration (visit-centric model)
+                $stmt = $this->pdo->prepare("INSERT INTO patient_visits (patient_id, visit_date, visit_type, registered_by, status, created_at, updated_at) VALUES (?, CURDATE(), ?, ?, 'active', NOW(), NOW())");
+                $stmt->execute([$patient_id, $visit_type, $_SESSION['user_id']]);
+                $visit_id = $this->pdo->lastInsertId();
+
+                // Only record payment for consultation visits (payments table expects visit_id)
+                if ($visit_type === 'consultation' && !empty($consultation_fee) && !empty($payment_method)) {
+                    // Record consultation payment
+                    $stmt = $this->pdo->prepare(
+                        "INSERT INTO payments (visit_id, patient_id, payment_type, amount, payment_method, payment_status, reference_number, collected_by, payment_date, notes) VALUES (?, ?, 'registration', ?, ?, 'paid', NULL, ?, NOW(), ?)"
+                    );
 
                     $stmt->execute([
+                        $visit_id,
                         $patient_id,
-                        'consultation_fee',
                         $consultation_fee,
                         $payment_method,
-                        'paid',
                         $_SESSION['user_id'],
                         'Initial consultation payment'
                     ]);
-                    // Mark consultation registration payment in workflow_status (create or update)
-                    $stmt = $this->pdo->prepare("SELECT id FROM workflow_status WHERE patient_id = ?");
-                    $stmt->execute([$patient_id]);
-                    $ws = $stmt->fetch();
-                    if ($ws) {
-                        $stmt = $this->pdo->prepare("UPDATE workflow_status SET consultation_registration_paid = 1, current_step = 'consultation_registration' WHERE patient_id = ?");
-                        $stmt->execute([$patient_id]);
-                    } else {
-                        $stmt = $this->pdo->prepare("INSERT INTO workflow_status (patient_id, current_step, consultation_registration_paid, created_at, updated_at) VALUES (?, 'consultation_registration', 1, NOW(), NOW())");
-                        $stmt->execute([$patient_id]);
-                    }
 
-                    // Create a consultations row so doctors can immediately see the registered patient
+                    // Create a consultations row referencing visit_id so doctors can immediately see the registered patient
                     // Use default doctor_id = 1 to avoid NULL constraint issues; can be reassigned later
                     $default_doctor_id = 1;
-                    $stmt = $this->pdo->prepare("INSERT INTO consultations (patient_id, doctor_id, appointment_date, status, created_at) VALUES (?, ?, NOW(), 'pending', NOW())");
-                    $stmt->execute([$patient_id, $default_doctor_id]);
+                    $stmt = $this->pdo->prepare("INSERT INTO consultations (visit_id, patient_id, doctor_id, consultation_type, status, created_at) VALUES (?, ?, ?, 'new', 'pending', NOW())");
+                    $stmt->execute([$visit_id, $patient_id, $default_doctor_id]);
+
+                    // Try to record workflow status (non-blocking if table doesn't exist)
+                    try {
+                        $stmt = $this->pdo->prepare("INSERT INTO patient_workflow_status (patient_id, visit_id, workflow_step, status, started_at, notes, created_at, updated_at) VALUES (?, ?, 'consultation', 'pending', NOW(), 'Consultation payment received - waiting for doctor', NOW(), NOW())");
+                        $stmt->execute([$patient_id, $visit_id]);
+                    } catch (Exception $e) {
+                        // Non-fatal: if patient_workflow_status doesn't exist, continue
+                        error_log('Workflow status tracking not available: ' . $e->getMessage());
+                    }
+                }
+
+                // Record vital signs if provided — insert into vital_signs linked to the visit
+                $bp_systolic = null; $bp_diastolic = null;
+                if (!empty($blood_pressure) && is_string($blood_pressure) && strpos($blood_pressure, '/') !== false) {
+                    [$bp_systolic, $bp_diastolic] = array_map('intval', array_map('trim', explode('/', $blood_pressure, 2)));
+                }
+                if (!empty($temperature) || !empty($bp_systolic) || !empty($bp_diastolic) || !empty($pulse_rate) || !empty($body_weight) || !empty($height)) {
+                    $stmt = $this->pdo->prepare("INSERT INTO vital_signs (visit_id, patient_id, temperature, blood_pressure_systolic, blood_pressure_diastolic, pulse_rate, weight, height, recorded_by, recorded_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())");
+                    $stmt->execute([
+                        $visit_id,
+                        $patient_id,
+                        !empty($temperature) ? $temperature : null,
+                        $bp_systolic ?: null,
+                        $bp_diastolic ?: null,
+                        !empty($pulse_rate) ? $pulse_rate : null,
+                        !empty($body_weight) ? $body_weight : null,
+                        !empty($height) ? $height : null,
+                        $_SESSION['user_id']
+                    ]);
                 }
 
                 $this->pdo->commit();
@@ -255,11 +291,18 @@ class ReceptionistController extends BaseController
     public function appointments()
     {
         $stmt = $this->pdo->prepare("
-            SELECT c.*, p.first_name, p.last_name, u.first_name as doctor_first, u.last_name as doctor_last
+            SELECT c.*, 
+                   p.first_name, 
+                   p.last_name, 
+                   u.first_name as doctor_first, 
+                   u.last_name as doctor_last,
+                   pv.visit_date,
+                   COALESCE(c.follow_up_date, pv.visit_date, DATE(c.created_at)) as appointment_date
             FROM consultations c
             JOIN patients p ON c.patient_id = p.id
             JOIN users u ON c.doctor_id = u.id
-            ORDER BY c.appointment_date DESC
+            LEFT JOIN patient_visits pv ON c.visit_id = pv.id
+            ORDER BY COALESCE(c.follow_up_date, pv.visit_date, c.created_at) DESC
         ");
         $stmt->execute();
         $appointments = $stmt->fetchAll();
@@ -272,19 +315,139 @@ class ReceptionistController extends BaseController
 
     public function payments()
     {
+        // Get all payment records (paid and pending)
         $stmt = $this->pdo->prepare("
-            SELECT p.*, pt.first_name, pt.last_name, c.appointment_date
+            SELECT p.*, 
+                   pt.first_name, 
+                   pt.last_name, 
+                   pv.visit_date,
+                   p.payment_status as status,
+                   COALESCE(c.follow_up_date, pv.visit_date, DATE(c.created_at)) as appointment_date
             FROM payments p
             JOIN patients pt ON p.patient_id = pt.id
-            LEFT JOIN consultations c ON p.consultation_id = c.id
-            ORDER BY p.payment_date DESC
+            LEFT JOIN patient_visits pv ON p.visit_id = pv.id
+            LEFT JOIN consultations c ON c.visit_id = pv.id
+            ORDER BY p.payment_status ASC, p.payment_date DESC
         ");
         $stmt->execute();
         $payments = $stmt->fetchAll();
 
+        // Get pending lab test payments (tests ordered but not paid)
+        $stmt = $this->pdo->prepare("
+            SELECT DISTINCT
+                lto.id as order_id,
+                lto.patient_id,
+                pv.id as visit_id,
+                pt.first_name,
+                pt.last_name,
+                pt.registration_number,
+                pv.visit_date,
+                c.id as consultation_id,
+                GROUP_CONCAT(DISTINCT lt.test_name SEPARATOR ', ') as test_names,
+                SUM(lt.price) as total_amount,
+                'lab_test' as payment_type,
+                lto.created_at
+            FROM lab_test_orders lto
+            JOIN patients pt ON lto.patient_id = pt.id
+            JOIN patient_visits pv ON lto.visit_id = pv.id
+            JOIN lab_tests lt ON lto.test_id = lt.id
+            LEFT JOIN consultations c ON lto.consultation_id = c.id
+            LEFT JOIN payments pay ON pay.visit_id = pv.id 
+                AND pay.payment_type = 'lab_test' 
+                AND pay.payment_status = 'paid'
+            WHERE pay.id IS NULL
+            GROUP BY lto.patient_id, pv.id, c.id
+            ORDER BY lto.created_at DESC
+        ");
+        $stmt->execute();
+        $pending_lab_payments = $stmt->fetchAll();
+
+        // Get pending medicine payments (medicines prescribed but not paid)
+        $stmt = $this->pdo->prepare("
+            SELECT DISTINCT
+                pr.id as prescription_id,
+                pr.patient_id,
+                pv.id as visit_id,
+                pt.first_name,
+                pt.last_name,
+                pt.registration_number,
+                pv.visit_date,
+                c.id as consultation_id,
+                GROUP_CONCAT(DISTINCT m.name SEPARATOR ', ') as medicine_names,
+                SUM(m.unit_price * pr.quantity_prescribed) as total_amount,
+                'medicine' as payment_type,
+                pr.created_at
+            FROM prescriptions pr
+            JOIN patients pt ON pr.patient_id = pt.id
+            JOIN consultations c ON pr.consultation_id = c.id
+            JOIN patient_visits pv ON c.visit_id = pv.id
+            JOIN medicines m ON pr.medicine_id = m.id
+            LEFT JOIN payments pay ON pay.visit_id = pv.id 
+                AND pay.payment_type = 'medicine' 
+                AND pay.payment_status = 'paid'
+            WHERE pay.id IS NULL
+            GROUP BY pr.patient_id, pv.id, c.id
+            ORDER BY pr.created_at DESC
+        ");
+        $stmt->execute();
+        $pending_medicine_payments = $stmt->fetchAll();
+
         $this->render('receptionist/payments', [
             'payments' => $payments,
-            'sidebar_data' => $this->getSidebarData()
+            'pending_lab_payments' => $pending_lab_payments,
+            'pending_medicine_payments' => $pending_medicine_payments,
+            'sidebar_data' => $this->getSidebarData(),
+            'csrf_token' => $this->generateCSRF()
+        ]);
+    }
+
+    public function payment_history()
+    {
+        // Build WHERE clause based on filters
+        $where_clauses = ["p.payment_status = 'paid'"];
+        $params = [];
+
+        // Search by patient name
+        if (!empty($_GET['search'])) {
+            $where_clauses[] = "(pt.first_name LIKE ? OR pt.last_name LIKE ?)";
+            $search_term = '%' . $_GET['search'] . '%';
+            $params[] = $search_term;
+            $params[] = $search_term;
+        }
+
+        // Filter by payment type
+        if (!empty($_GET['payment_type'])) {
+            $where_clauses[] = "p.payment_type = ?";
+            $params[] = $_GET['payment_type'];
+        }
+
+        // Filter by payment method
+        if (!empty($_GET['payment_method'])) {
+            $where_clauses[] = "p.payment_method = ?";
+            $params[] = $_GET['payment_method'];
+        }
+
+        // Build final query
+        $where_sql = implode(' AND ', $where_clauses);
+        
+        $stmt = $this->pdo->prepare("
+            SELECT p.*, 
+                   CONCAT(pt.first_name, ' ', pt.last_name) as patient_name,
+                   pv.visit_date
+            FROM payments p
+            JOIN patients pt ON p.patient_id = pt.id
+            LEFT JOIN patient_visits pv ON p.visit_id = pv.id
+            WHERE $where_sql
+            ORDER BY p.payment_date DESC
+        ");
+        
+        $stmt->execute($params);
+        $payments = $stmt->fetchAll();
+
+        $this->render('receptionist/payment_history', [
+            'payments' => $payments,
+            'sidebar_data' => $this->getSidebarData(),
+            'csrf_token' => $this->generateCSRF()
         ]);
     }
 
@@ -308,23 +471,23 @@ class ReceptionistController extends BaseController
         try {
             $this->pdo->beginTransaction();
 
-            // Get workflow status
-            $stmt = $this->pdo->prepare("SELECT * FROM workflow_status WHERE patient_id = ?");
+            // Find latest visit for patient
+            $stmt = $this->pdo->prepare("SELECT id FROM patient_visits WHERE patient_id = ? ORDER BY created_at DESC LIMIT 1");
             $stmt->execute([$patient_id]);
-            $workflow = $stmt->fetch();
-
-            if (!$workflow) {
-                throw new Exception('Patient workflow not found');
+            $visit = $stmt->fetch();
+            if (!$visit) {
+                throw new Exception('Patient visit not found');
             }
+            $visit_id = $visit['id'];
 
-            // Insert payment record
-            $stmt = $this->pdo->prepare("
-                INSERT INTO payments (patient_id, amount, payment_method, status, created_by)
-                VALUES (?, ?, ?, 'completed', ?)
+            // Insert payment record linked to visit
+            $stmt = $this->pdo->prepare("\
+                INSERT INTO payments (visit_id, patient_id, payment_type, amount, payment_method, payment_status, reference_number, collected_by, payment_date, notes)
+                VALUES (?, ?, 'registration', ?, ?, 'paid', NULL, ?, NOW(), ?)
             ");
-            $stmt->execute([$patient_id, $amount, $payment_method, $_SESSION['user_id']]);
+            $stmt->execute([$visit_id, $patient_id, $amount, $payment_method, $_SESSION['user_id'], 'Final payment']);
 
-            // Update workflow status to completed
+            // Update visit status to completed
             $this->updateWorkflowStatus($patient_id, 'completed', ['final_payment_collected' => true]);
 
             $this->pdo->commit();
@@ -337,32 +500,114 @@ class ReceptionistController extends BaseController
         $this->redirect('receptionist/patients');
     }
 
+    public function record_payment()
+    {
+        if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+            $_SESSION['error'] = 'Invalid request method';
+            $this->redirect('receptionist/payments');
+            return;
+        }
+
+        $this->validateCSRF();
+
+        $patient_id = $_POST['patient_id'] ?? null;
+        $visit_id = $_POST['visit_id'] ?? null;
+        $payment_type = $_POST['payment_type'] ?? null;
+        $amount = floatval($_POST['amount'] ?? 0);
+        $payment_method = $_POST['payment_method'] ?? 'cash';
+        $reference_number = $_POST['reference_number'] ?? null;
+
+        if (!$patient_id || !$visit_id || !$payment_type || $amount <= 0) {
+            $_SESSION['error'] = 'Invalid payment details';
+            $this->redirect('receptionist/payments');
+            return;
+        }
+
+        try {
+            $this->pdo->beginTransaction();
+
+            // Check if payment already exists
+            $stmt = $this->pdo->prepare("
+                SELECT id FROM payments 
+                WHERE visit_id = ? AND payment_type = ? AND payment_status = 'paid'
+            ");
+            $stmt->execute([$visit_id, $payment_type]);
+            if ($stmt->fetch()) {
+                throw new Exception('Payment already recorded for this item');
+            }
+
+            // Insert payment record
+            $stmt = $this->pdo->prepare("
+                INSERT INTO payments 
+                (visit_id, patient_id, payment_type, amount, payment_method, payment_status, 
+                 reference_number, collected_by, payment_date)
+                VALUES (?, ?, ?, ?, ?, 'paid', ?, ?, NOW())
+            ");
+            $stmt->execute([
+                $visit_id,
+                $patient_id,
+                $payment_type,
+                $amount,
+                $payment_method,
+                $reference_number,
+                $_SESSION['user_id']
+            ]);
+
+            // Update workflow status based on payment type
+            if ($payment_type === 'lab_test') {
+                $this->updateWorkflowStatus($patient_id, 'lab_testing', ['lab_tests_paid' => true]);
+            } elseif ($payment_type === 'medicine') {
+                $this->updateWorkflowStatus($patient_id, 'medicine_dispensing', ['medicine_prescribed' => true]);
+            }
+
+            $this->pdo->commit();
+            $_SESSION['success'] = 'Payment recorded successfully';
+        } catch (Exception $e) {
+            $this->pdo->rollBack();
+            $_SESSION['error'] = 'Failed to record payment: ' . $e->getMessage();
+        }
+
+        $this->redirect('receptionist/payments');
+    }
+
     public function medicine()
     {
         // Get patients waiting for medicine dispensing (prescribed and paid)
         $stmt = $this->pdo->prepare("
-            SELECT p.id AS patient_id, p.first_name, p.last_name,
-                   mp.id AS prescription_id, mp.total_amount, mp.payment_status, mp.created_at as prescribed_at,
-                   COUNT(DISTINCT ma.id) as medicine_count
+            SELECT DISTINCT p.id AS patient_id, p.first_name, p.last_name,
+                   pv.id as visit_id,
+                   pv.visit_date,
+                   COUNT(DISTINCT pr.id) as prescription_count,
+                   SUM(CASE WHEN pr.status = 'pending' THEN 1 ELSE 0 END) as pending_count,
+                   SUM(CASE WHEN pr.status = 'dispensed' THEN 1 ELSE 0 END) as dispensed_count,
+                   MAX(pr.created_at) as last_prescribed_at
             FROM patients p
-            JOIN medicine_prescriptions mp ON p.id = mp.patient_id
-            LEFT JOIN consultations c ON p.id = c.patient_id
-            LEFT JOIN medicine_allocations ma ON c.id = ma.consultation_id
-            WHERE mp.payment_status = 'paid' AND mp.is_fully_dispensed = 0
-            GROUP BY p.id, mp.id, mp.total_amount, mp.payment_status, mp.created_at
-            ORDER BY mp.created_at DESC
+            JOIN patient_visits pv ON p.id = pv.patient_id
+            JOIN prescriptions pr ON pv.id = pr.visit_id
+            LEFT JOIN payments pay ON pv.id = pay.visit_id AND pay.payment_type = 'medicine' AND pay.item_id = pr.id
+            WHERE pr.status IN ('pending', 'partial')
+                AND (pay.payment_status = 'paid' OR pay.id IS NULL)
+            GROUP BY p.id, p.first_name, p.last_name, pv.id, pv.visit_date
+            HAVING pending_count > 0
+            ORDER BY last_prescribed_at DESC
         ");
         $stmt->execute();
         $pending_patients = $stmt->fetchAll();
 
-        // Get all medicines for inventory management (include expiry)
+        // Get all medicines for inventory management (use medicine_batches for stock)
         $stmt = $this->pdo->prepare("
-            SELECT m.id, m.name, m.generic_name, m.supplier AS category, m.unit_price, m.stock_quantity,
-                   m.expiry_date,
-                   COALESCE(SUM(ma.quantity), 0) as total_prescribed
+            SELECT m.id, m.name, m.generic_name, 
+                   m.unit AS category, 
+                   m.unit_price,
+                   m.strength,
+                   COALESCE(SUM(mb.quantity_remaining), 0) as stock_quantity,
+                   MIN(mb.expiry_date) as expiry_date,
+                   COALESCE(SUM(pr.quantity_prescribed), 0) as total_prescribed,
+                   GROUP_CONCAT(DISTINCT mb.supplier SEPARATOR ', ') as suppliers
             FROM medicines m
-            LEFT JOIN medicine_allocations ma ON m.id = ma.medicine_id
-            GROUP BY m.id, m.name, m.generic_name, m.supplier, m.unit_price, m.stock_quantity, m.expiry_date
+            LEFT JOIN medicine_batches mb ON m.id = mb.medicine_id
+            LEFT JOIN prescriptions pr ON m.id = pr.medicine_id
+            GROUP BY m.id, m.name, m.generic_name, m.unit, m.unit_price, m.strength
             ORDER BY m.name
         ");
         $stmt->execute();
@@ -399,20 +644,24 @@ class ReceptionistController extends BaseController
             }
         }
 
-        // Get medicine categories
-        $categories = $this->pdo->query("SELECT DISTINCT supplier FROM medicines ORDER BY supplier")->fetchAll(PDO::FETCH_COLUMN);
+        // Get medicine categories (using unit types as categories)
+        $categories = $this->pdo->query("SELECT DISTINCT unit FROM medicines WHERE unit IS NOT NULL ORDER BY unit")->fetchAll(PDO::FETCH_COLUMN);
 
-        // Get recent medicine transactions (simplified)
+        // Get recent medicine transactions (recently dispensed prescriptions)
         $stmt = $this->pdo->prepare("
             SELECT p.first_name, p.last_name,
                    CONCAT(p.first_name, ' ', p.last_name) as patient_name,
-                   mp.total_amount as total_cost, mp.dispensed_at,
+                   m.name as medicine_name,
+                   pr.quantity_dispensed,
+                   (pr.quantity_dispensed * m.unit_price) as total_cost,
+                   pr.dispensed_at,
                    u.first_name as dispensed_by
-            FROM medicine_prescriptions mp
-            JOIN patients p ON mp.patient_id = p.id
-            LEFT JOIN users u ON mp.dispensed_by = u.id
-            WHERE mp.is_fully_dispensed = 1 AND mp.dispensed_at IS NOT NULL
-            ORDER BY mp.dispensed_at DESC
+            FROM prescriptions pr
+            JOIN patients p ON pr.patient_id = p.id
+            JOIN medicines m ON pr.medicine_id = m.id
+            LEFT JOIN users u ON pr.dispensed_by = u.id
+            WHERE pr.status = 'dispensed' AND pr.dispensed_at IS NOT NULL
+            ORDER BY pr.dispensed_at DESC
             LIMIT 10
         ");
         $stmt->execute();
@@ -469,12 +718,15 @@ class ReceptionistController extends BaseController
                 return;
             }
 
-            // Get medicine allocations for this consultation
+            // Get medicine allocations for this consultation (with current stock from batches)
             $stmt = $this->pdo->prepare("
-                SELECT ma.*, m.name, m.generic_name, m.stock_quantity
+                SELECT ma.*, m.name, m.generic_name,
+                       COALESCE(SUM(mb.quantity_remaining), 0) as stock_quantity
                 FROM medicine_allocations ma
                 JOIN medicines m ON ma.medicine_id = m.id
+                LEFT JOIN medicine_batches mb ON m.id = mb.medicine_id
                 WHERE ma.consultation_id = ?
+                GROUP BY ma.id, ma.medicine_id, ma.consultation_id, ma.quantity, ma.instructions, ma.created_at, m.name, m.generic_name
             ");
             $stmt->execute([$consultation_id]);
             $allocations = $stmt->fetchAll();
@@ -496,11 +748,29 @@ class ReceptionistController extends BaseController
                         throw new Exception("Insufficient stock for {$allocation['name']}");
                     }
 
-                    // Update medicine stock
-                    $stmt = $this->pdo->prepare("
-                        UPDATE medicines SET stock_quantity = stock_quantity - ? WHERE id = ?
+                    // Update medicine stock using FEFO (First-Expiry-First-Out)
+                    $remaining = $dispensed_quantity;
+                    $batch_stmt = $this->pdo->prepare("
+                        SELECT id, quantity_remaining 
+                        FROM medicine_batches 
+                        WHERE medicine_id = ? AND quantity_remaining > 0
+                        ORDER BY expiry_date ASC, created_at ASC
                     ");
-                    $stmt->execute([$dispensed_quantity, $allocation['medicine_id']]);
+                    $batch_stmt->execute([$allocation['medicine_id']]);
+                    $batches = $batch_stmt->fetchAll();
+
+                    foreach ($batches as $batch) {
+                        if ($remaining <= 0) break;
+                        
+                        $deduct = min($remaining, $batch['quantity_remaining']);
+                        $update_stmt = $this->pdo->prepare("
+                            UPDATE medicine_batches 
+                            SET quantity_remaining = quantity_remaining - ? 
+                            WHERE id = ?
+                        ");
+                        $update_stmt->execute([$deduct, $batch['id']]);
+                        $remaining -= $deduct;
+                    }
                     error_log("Updated stock for medicine ID {$allocation['medicine_id']}");
                 }
             }
@@ -573,12 +843,25 @@ class ReceptionistController extends BaseController
                 throw new Exception('Invalid expiry date format');
             }
 
-            // Schema uses supplier and expiry_date; category is displayed from supplier
+            // Insert medicine record (no stock_quantity column in canonical schema)
             $stmt = $this->pdo->prepare("
-                INSERT INTO medicines (name, generic_name, description, stock_quantity, unit_price, expiry_date, supplier, created_at)
-                VALUES (?, ?, ?, ?, ?, ?, ?, NOW())
+                INSERT INTO medicines (name, generic_name, description, unit_price, supplier, created_at)
+                VALUES (?, ?, ?, ?, ?, NOW())
             ");
-            $stmt->execute([$name, $generic_name, $description, $stock_quantity, $unit_price, ($expiry_date ?: null), ($supplier ?: null)]);
+            $stmt->execute([$name, $generic_name, $description, $unit_price, ($supplier ?: null)]);
+            
+            $medicine_id = $this->pdo->lastInsertId();
+            
+            // Create initial batch if stock_quantity provided
+            if ($stock_quantity > 0) {
+                $batch_number = 'BATCH-' . date('Ymd') . '-' . str_pad($medicine_id, 4, '0', STR_PAD_LEFT);
+                $batch_stmt = $this->pdo->prepare("
+                    INSERT INTO medicine_batches 
+                    (medicine_id, batch_number, quantity_received, quantity_remaining, unit_cost, expiry_date, received_date)
+                    VALUES (?, ?, ?, ?, ?, ?, NOW())
+                ");
+                $batch_stmt->execute([$medicine_id, $batch_number, $stock_quantity, $stock_quantity, $unit_price, ($expiry_date ?: null)]);
+            }
 
             $_SESSION['success'] = 'Medicine added successfully';
         } catch (Exception $e) {
@@ -606,16 +889,53 @@ class ReceptionistController extends BaseController
                 throw new Exception('Invalid medicine ID or quantity');
             }
 
-            if ($action === 'add') {
-                $stmt = $this->pdo->prepare("
-                    UPDATE medicines SET stock_quantity = stock_quantity + ? WHERE id = ?
-                ");
-            } else {
-                $stmt = $this->pdo->prepare("
-                    UPDATE medicines SET stock_quantity = ? WHERE id = ?
-                ");
+            // Get medicine details for batch creation
+            $med_stmt = $this->pdo->prepare("SELECT unit_price FROM medicines WHERE id = ?");
+            $med_stmt->execute([$medicine_id]);
+            $medicine = $med_stmt->fetch();
+            
+            if (!$medicine) {
+                throw new Exception('Medicine not found');
             }
-            $stmt->execute([$new_quantity, $medicine_id]);
+
+            if ($action === 'add') {
+                // Create new batch for added quantity
+                $batch_number = 'BATCH-' . date('Ymd-His') . '-' . str_pad($medicine_id, 4, '0', STR_PAD_LEFT);
+                $batch_stmt = $this->pdo->prepare("
+                    INSERT INTO medicine_batches 
+                    (medicine_id, batch_number, quantity_received, quantity_remaining, unit_cost, received_date)
+                    VALUES (?, ?, ?, ?, ?, NOW())
+                ");
+                $batch_stmt->execute([$medicine_id, $batch_number, $new_quantity, $new_quantity, $medicine['unit_price']]);
+            } else {
+                // 'set' action: adjust most recent batch
+                $batch_stmt = $this->pdo->prepare("
+                    SELECT id FROM medicine_batches 
+                    WHERE medicine_id = ? 
+                    ORDER BY received_date DESC, id DESC 
+                    LIMIT 1
+                ");
+                $batch_stmt->execute([$medicine_id]);
+                $batch = $batch_stmt->fetch();
+                
+                if ($batch) {
+                    $update_stmt = $this->pdo->prepare("
+                        UPDATE medicine_batches 
+                        SET quantity_remaining = ? 
+                        WHERE id = ?
+                    ");
+                    $update_stmt->execute([$new_quantity, $batch['id']]);
+                } else {
+                    // No batches exist, create one
+                    $batch_number = 'BATCH-' . date('Ymd-His') . '-' . str_pad($medicine_id, 4, '0', STR_PAD_LEFT);
+                    $create_stmt = $this->pdo->prepare("
+                        INSERT INTO medicine_batches 
+                        (medicine_id, batch_number, quantity_received, quantity_remaining, unit_cost, received_date)
+                        VALUES (?, ?, ?, ?, ?, NOW())
+                    ");
+                    $create_stmt->execute([$medicine_id, $batch_number, $new_quantity, $new_quantity, $medicine['unit_price']]);
+                }
+            }
 
             $_SESSION['success'] = 'Medicine stock updated successfully';
         } catch (Exception $e) {
@@ -657,13 +977,18 @@ class ReceptionistController extends BaseController
                 throw new Exception('No paid prescription found for this patient');
             }
 
-            // Get prescribed medicines through consultations
+            // Get prescribed medicines through consultations (with stock from batches)
             $stmt = $this->pdo->prepare("
-                SELECT ma.*, m.stock_quantity, m.name as medicine_name, c.id as consultation_id
+                SELECT ma.*, 
+                       COALESCE(SUM(mb.quantity_remaining), 0) as stock_quantity, 
+                       m.name as medicine_name, 
+                       c.id as consultation_id
                 FROM consultations c
                 JOIN medicine_allocations ma ON c.id = ma.consultation_id
                 JOIN medicines m ON ma.medicine_id = m.id
+                LEFT JOIN medicine_batches mb ON m.id = mb.medicine_id
                 WHERE c.patient_id = ?
+                GROUP BY ma.id, ma.medicine_id, ma.consultation_id, ma.quantity, ma.instructions, ma.created_at, m.name, c.id
             ");
             $stmt->execute([$patient_id]);
             $allocations = $stmt->fetchAll();
@@ -672,17 +997,35 @@ class ReceptionistController extends BaseController
                 throw new Exception('No medicine allocations found for this patient');
             }
 
-            // Check stock and dispense
+            // Check stock and dispense (using medicine_batches with FEFO)
             foreach ($allocations as $allocation) {
                 if ($allocation['quantity'] > $allocation['stock_quantity']) {
                     throw new Exception("Insufficient stock for " . $allocation['medicine_name']);
                 }
 
-                // Update stock
-                $stmt = $this->pdo->prepare("
-                    UPDATE medicines SET stock_quantity = stock_quantity - ? WHERE id = ?
+                // Deduct from batches using First-Expiry-First-Out (FEFO)
+                $remaining = $allocation['quantity'];
+                $batch_stmt = $this->pdo->prepare("
+                    SELECT id, quantity_remaining 
+                    FROM medicine_batches 
+                    WHERE medicine_id = ? AND quantity_remaining > 0
+                    ORDER BY expiry_date ASC, created_at ASC
                 ");
-                $stmt->execute([$allocation['quantity'], $allocation['medicine_id']]);
+                $batch_stmt->execute([$allocation['medicine_id']]);
+                $batches = $batch_stmt->fetchAll();
+
+                foreach ($batches as $batch) {
+                    if ($remaining <= 0) break;
+                    
+                    $deduct = min($remaining, $batch['quantity_remaining']);
+                    $update_stmt = $this->pdo->prepare("
+                        UPDATE medicine_batches 
+                        SET quantity_remaining = quantity_remaining - ? 
+                        WHERE id = ?
+                    ");
+                    $update_stmt->execute([$deduct, $batch['id']]);
+                    $remaining -= $deduct;
+                }
             }
 
             // Update prescription as fully dispensed
@@ -696,16 +1039,22 @@ class ReceptionistController extends BaseController
             ");
             $stmt->execute([$_SESSION['user_id'], $prescription['id']]);
 
-            // Update workflow status
-            $stmt = $this->pdo->prepare("
-                UPDATE workflow_status 
-                SET medicine_dispensed = 1, 
-                    medicine_dispensed_by = ?, 
-                    medicine_dispensed_at = NOW(),
-                    current_step = 'completed'
-                WHERE patient_id = ?
-            ");
-            $stmt->execute([$_SESSION['user_id'], $patient_id]);
+            // Update visit status to completed and record workflow step
+            // Find visit id from the prescription (prescription linked to visit_id)
+            $visit_id = $prescription['visit_id'] ?? null;
+            if ($visit_id) {
+                $stmt = $this->pdo->prepare("UPDATE patient_visits SET status = 'completed', updated_at = NOW() WHERE id = ?");
+                $stmt->execute([$visit_id]);
+
+                // Record a patient_workflow_status entry for auditing (non-blocking)
+                try {
+                    $stmt = $this->pdo->prepare("INSERT INTO patient_workflow_status (patient_id, workflow_step, status, started_at, completed_at, assigned_to, notes, created_at, updated_at) VALUES (?, 'medicine_dispensed', 'completed', NOW(), NOW(), ?, 'Medicine dispensed', NOW(), NOW())");
+                    $stmt->execute([$patient_id, $_SESSION['user_id']]);
+                } catch (Exception $e) {
+                    // Non-fatal: if patient_workflow_status doesn't exist or insert fails, continue
+                    error_log('Failed to insert patient_workflow_status: ' . $e->getMessage());
+                }
+            }
 
             $this->pdo->commit();
             $_SESSION['success'] = 'Medicine dispensed successfully';
@@ -719,13 +1068,11 @@ class ReceptionistController extends BaseController
 
     private function getSidebarData()
     {
-        // Get pending patients count (more accurate)
+        // Get pending patients count (patients with active visits)
         $stmt = $this->pdo->prepare("
-            SELECT COUNT(DISTINCT p.id) as pending_patients
-            FROM patients p
-            LEFT JOIN workflow_status ws ON p.id = ws.patient_id
-            WHERE ws.current_step IS NULL 
-               OR (ws.current_step != 'completed' AND ws.current_step != 'cancelled')
+            SELECT COUNT(DISTINCT v.patient_id) as pending_patients
+            FROM patient_visits v
+            WHERE v.status NOT IN ('completed','cancelled')
         ");
         $stmt->execute();
         $pending_patients = $stmt->fetchColumn();
@@ -734,17 +1081,20 @@ class ReceptionistController extends BaseController
         $stmt = $this->pdo->prepare("
             SELECT COUNT(*) as upcoming_appointments
             FROM consultations c
-            WHERE DATE(c.appointment_date) = CURDATE()
+            JOIN patient_visits pv ON c.visit_id = pv.id
+            WHERE pv.visit_date = CURDATE()
         ");
         $stmt->execute();
         $upcoming_appointments = $stmt->fetchColumn();
 
-        // Get low stock medicines count (stock <= 10 or near expiry)
+        // Get low stock medicines count (using medicine_batches for stock tracking)
         $stmt = $this->pdo->prepare("
-            SELECT COUNT(*) as low_stock_medicines
+            SELECT COUNT(DISTINCT m.id) as low_stock_medicines
             FROM medicines m
-            WHERE m.stock_quantity <= 10 
-               OR (m.expiry_date IS NOT NULL AND m.expiry_date <= DATE_ADD(CURDATE(), INTERVAL 30 DAY))
+            LEFT JOIN medicine_batches mb ON mb.medicine_id = m.id
+            GROUP BY m.id
+            HAVING SUM(COALESCE(mb.quantity_remaining, 0)) <= 10 
+               OR MIN(mb.expiry_date) <= DATE_ADD(CURDATE(), INTERVAL 30 DAY)
         ");
         $stmt->execute();
         $low_stock_medicines = $stmt->fetchColumn();
@@ -788,11 +1138,12 @@ class ReceptionistController extends BaseController
         $appointment_stats_stmt = $this->pdo->prepare("
             SELECT 
                 COUNT(*) as total_appointments,
-                COUNT(CASE WHEN DATE(appointment_date) = CURDATE() THEN 1 END) as today,
-                COUNT(CASE WHEN DATE(appointment_date) >= DATE_SUB(CURDATE(), INTERVAL 7 DAY) THEN 1 END) as this_week,
-                COUNT(CASE WHEN status = 'completed' THEN 1 END) as completed,
-                COUNT(CASE WHEN status = 'cancelled' THEN 1 END) as cancelled
-            FROM appointments
+                COUNT(CASE WHEN DATE(COALESCE(c.follow_up_date, pv.visit_date, c.created_at)) = CURDATE() THEN 1 END) as today,
+                COUNT(CASE WHEN DATE(COALESCE(c.follow_up_date, pv.visit_date, c.created_at)) >= DATE_SUB(CURDATE(), INTERVAL 7 DAY) THEN 1 END) as this_week,
+                COUNT(CASE WHEN c.status = 'completed' THEN 1 END) as completed,
+                COUNT(CASE WHEN c.status = 'cancelled' THEN 1 END) as cancelled
+            FROM consultations c
+            LEFT JOIN patient_visits pv ON c.visit_id = pv.id
         ");
         $appointment_stats_stmt->execute();
         $appointment_stats = $appointment_stats_stmt->fetch();
@@ -811,14 +1162,14 @@ class ReceptionistController extends BaseController
         $payment_methods_stmt->execute();
         $payment_methods = $payment_methods_stmt->fetchAll();
 
-        // Top doctors by appointments
+        // Top doctors by consultations
         $top_doctors_stmt = $this->pdo->prepare("
             SELECT 
                 CONCAT(u.first_name, ' ', u.last_name) as doctor_name,
-                COUNT(a.id) as appointment_count,
-                COUNT(CASE WHEN a.status = 'completed' THEN 1 END) as completed_count
+                COUNT(c.id) as appointment_count,
+                COUNT(CASE WHEN c.status = 'completed' THEN 1 END) as completed_count
             FROM users u
-            LEFT JOIN appointments a ON u.id = a.doctor_id
+            LEFT JOIN consultations c ON u.id = c.doctor_id
             WHERE u.role = 'doctor'
             GROUP BY u.id, u.first_name, u.last_name
             ORDER BY appointment_count DESC
@@ -827,14 +1178,21 @@ class ReceptionistController extends BaseController
         $top_doctors_stmt->execute();
         $top_doctors = $top_doctors_stmt->fetchAll();
 
-        // Medicine inventory status
+        // Medicine inventory status (using medicine_batches)
         $medicine_stats_stmt = $this->pdo->prepare("
             SELECT 
-                COUNT(*) as total_medicines,
-                COUNT(CASE WHEN stock_quantity <= 10 THEN 1 END) as low_stock,
-                COUNT(CASE WHEN expiry_date <= DATE_ADD(CURDATE(), INTERVAL 30 DAY) THEN 1 END) as expiring_soon,
-                SUM(stock_quantity * unit_price) as total_inventory_value
-            FROM medicines
+                COUNT(DISTINCT m.id) as total_medicines,
+                COUNT(DISTINCT CASE WHEN total_stock <= 10 THEN m.id END) as low_stock,
+                COUNT(DISTINCT CASE WHEN earliest_expiry <= DATE_ADD(CURDATE(), INTERVAL 30 DAY) THEN m.id END) as expiring_soon,
+                COALESCE(SUM(total_stock * m.unit_price), 0) as total_inventory_value
+            FROM medicines m
+            LEFT JOIN (
+                SELECT medicine_id, 
+                       SUM(quantity_remaining) as total_stock,
+                       MIN(expiry_date) as earliest_expiry
+                FROM medicine_batches
+                GROUP BY medicine_id
+            ) mb ON m.id = mb.medicine_id
         ");
         $medicine_stats_stmt->execute();
         $medicine_stats = $medicine_stats_stmt->fetch();

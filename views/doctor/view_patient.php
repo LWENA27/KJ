@@ -101,35 +101,51 @@
             <div class="text-center">
                 <div class="font-medium mb-1">Temperature</div>
                 <div class="border border-gray-400 h-20 p-2 text-center">
-                    <?php echo htmlspecialchars($patient['temperature'] ?? ''); ?>
-                    <?php if (!empty($patient['temperature'])) echo '°C'; ?>
+                    <?php 
+                    if (!empty($vital_signs['temperature'])) {
+                        echo htmlspecialchars($vital_signs['temperature']) . '°C';
+                    }
+                    ?>
                 </div>
             </div>
             <div class="text-center">
                 <div class="font-medium mb-1">Blood Pressure</div>
                 <div class="border border-gray-400 h-20 p-2 text-center">
-                    <?php echo htmlspecialchars($patient['blood_pressure'] ?? ''); ?>
+                    <?php 
+                    if (!empty($vital_signs['blood_pressure_systolic']) && !empty($vital_signs['blood_pressure_diastolic'])) {
+                        echo htmlspecialchars($vital_signs['blood_pressure_systolic']) . '/' . htmlspecialchars($vital_signs['blood_pressure_diastolic']);
+                    }
+                    ?>
                 </div>
             </div>
             <div class="text-center">
                 <div class="font-medium mb-1">Pulse Rate</div>
                 <div class="border border-gray-400 h-20 p-2 text-center">
-                    <?php echo htmlspecialchars($patient['pulse_rate'] ?? ''); ?>
-                    <?php if (!empty($patient['pulse_rate'])) echo ' bpm'; ?>
+                    <?php 
+                    if (!empty($vital_signs['pulse_rate'])) {
+                        echo htmlspecialchars($vital_signs['pulse_rate']) . ' bpm';
+                    }
+                    ?>
                 </div>
             </div>
             <div class="text-center">
                 <div class="font-medium mb-1">Body Weight</div>
                 <div class="border border-gray-400 h-20 p-2 text-center">
-                    <?php echo htmlspecialchars($patient['body_weight'] ?? ''); ?>
-                    <?php if (!empty($patient['body_weight'])) echo ' kg'; ?>
+                    <?php 
+                    if (!empty($vital_signs['weight'])) {
+                        echo htmlspecialchars($vital_signs['weight']) . ' kg';
+                    }
+                    ?>
                 </div>
             </div>
             <div class="text-center">
                 <div class="font-medium mb-1">Height</div>
                 <div class="border border-gray-400 h-20 p-2 text-center">
-                    <?php echo htmlspecialchars($patient['height'] ?? ''); ?>
-                    <?php if (!empty($patient['height'])) echo ' cm'; ?>
+                    <?php 
+                    if (!empty($vital_signs['height'])) {
+                        echo htmlspecialchars($vital_signs['height']) . ' cm';
+                    }
+                    ?>
                 </div>
             </div>
         </div>
@@ -195,7 +211,7 @@
             <div class="flex items-center">
                 <span class="font-medium mr-2">DATE:</span>
                 <span class="border-b border-gray-400 flex-1 px-2">
-                    <?php echo $latest_consultation ? date('d/m/Y', strtotime($latest_consultation['appointment_date'])) : ''; ?>
+                    <?php $apt = $latest_consultation['appointment_date'] ?? $latest_consultation['visit_date'] ?? $latest_consultation['created_at'] ?? null; echo $apt ? date('d/m/Y', strtotime($apt)) : ''; ?>
                 </span>
             </div>
             <div class="flex items-center">
