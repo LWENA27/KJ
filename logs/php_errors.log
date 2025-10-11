@@ -26,3 +26,95 @@
 [11-Oct-2025 20:14:42 Europe/Berlin] PHP Deprecated:  ucfirst(): Passing null to parameter #1 ($string) of type string is deprecated in C:\xampp\htdocs\HOSPITALI\views\doctor\patient_journey.php on line 238
 =======
 >>>>>>> 559e96a50ed247b0587d3a29815319dbec457c7e
+[11-Oct-2025 22:05:37 Europe/Berlin] POST data received in add_result: Array
+(
+    [csrf_token] => 83fc08f2c6d8e07f0236fb3d2a03f4c66848047fcdd733b2fa9bb9415df9757e
+    [test_order_id] => 1
+    [result_value] => 12
+    [unit] => mg/dL
+    [result_status] => normal
+    [result_notes] => Test completed successfully.
+    [completion_time] => 2025-10-11T20:05
+)
+
+[11-Oct-2025 22:05:37 Europe/Berlin] Parsed values: test_id=1, value=12, unit=mg/dL, status=normal
+[11-Oct-2025 22:05:37 Europe/Berlin] Completion time: 2025-10-11T20:05, technician: 4
+[11-Oct-2025 22:05:37 Europe/Berlin] Order details fetched: Found - Array
+(
+    [patient_id] => 4
+    [test_id] => 4
+    [visit_id] => 4
+)
+
+[11-Oct-2025 22:17:52 Europe/Berlin] POST data received in add_result: Array
+(
+    [csrf_token] => 83fc08f2c6d8e07f0236fb3d2a03f4c66848047fcdd733b2fa9bb9415df9757e
+    [test_order_id] => 1
+    [result_value] => 6
+    [unit] => mg/dL
+    [result_status] => normal
+    [result_notes] => Test completed successfully.
+    [completion_time] => 2025-10-11T20:17
+)
+
+[11-Oct-2025 22:17:52 Europe/Berlin] Parsed values: test_id=1, value=6, unit=mg/dL, status=normal
+[11-Oct-2025 22:17:52 Europe/Berlin] Completion time: 2025-10-11T20:17, technician: 4
+[11-Oct-2025 22:17:52 Europe/Berlin] Order details fetched: Found - Array
+(
+    [patient_id] => 4
+    [test_id] => 4
+    [visit_id] => 4
+)
+
+[11-Oct-2025 22:17:53 Europe/Berlin] SQL parameters for lab_results insert: Array
+(
+    [0] => 1
+    [1] => 4
+    [2] => 4
+    [3] => 4
+    [4] => 6
+    [5] => Test completed successfully.
+    [6] => mg/dL
+    [7] => 1
+    [8] => 2025-10-11T20:17
+)
+
+[11-Oct-2025 22:17:53 Europe/Berlin] SQL execution successful for lab_results insert
+[11-Oct-2025 22:20:38 Europe/Berlin] Workflow status tracking not available: SQLSTATE[42S02]: Base table or view not found: 1146 Table 'hospitali.patient_workflow_status' doesn't exist
+[11-Oct-2025 22:21:22 Europe/Berlin] Consultation submission - Patient ID: 5, Visit ID: 5, Consultation ID: 5
+[11-Oct-2025 22:21:22 Europe/Berlin] Selected tests: [4]
+[11-Oct-2025 22:21:22 Europe/Berlin] Selected medicines: 
+[11-Oct-2025 22:22:38 Europe/Berlin] POST data received in add_result: Array
+(
+    [csrf_token] => 86a95de0a23dd21e5653267533e427b7f6c8f5b8231de44d9e38a6a7b1d24451
+    [test_order_id] => 3
+    [result_value] => 4
+    [unit] => mg/dL
+    [result_status] => normal
+    [result_notes] => Test completed successfully.
+    [completion_time] => 2025-10-11T20:22
+)
+
+[11-Oct-2025 22:22:38 Europe/Berlin] Parsed values: test_id=3, value=4, unit=mg/dL, status=normal
+[11-Oct-2025 22:22:38 Europe/Berlin] Completion time: 2025-10-11T20:22, technician: 4
+[11-Oct-2025 22:22:38 Europe/Berlin] Order details fetched: Found - Array
+(
+    [patient_id] => 5
+    [test_id] => 4
+    [visit_id] => 5
+)
+
+[11-Oct-2025 22:22:38 Europe/Berlin] SQL parameters for lab_results insert: Array
+(
+    [0] => 3
+    [1] => 5
+    [2] => 4
+    [3] => 4
+    [4] => 4
+    [5] => Test completed successfully.
+    [6] => mg/dL
+    [7] => 1
+    [8] => 2025-10-11T20:22
+)
+
+[11-Oct-2025 22:22:38 Europe/Berlin] SQL execution successful for lab_results insert

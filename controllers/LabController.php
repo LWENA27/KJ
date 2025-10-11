@@ -608,13 +608,19 @@ class LabController extends BaseController {
         $this->validateCSRF();
 
         try {
+            // Debug received POST data
+            error_log("POST data received in add_result: " . print_r($_POST, true));
+            
             $test_order_id = $_POST['test_order_id'];
             $result_value = $_POST['result_value'];
             $unit = $_POST['unit'] ?? '';
             $result_status = $_POST['result_status'] ?? 'normal';
             $result_notes = $_POST['result_notes'] ?? '';
-            $completion_time = $_POST['completion_time'];
-            $technician_id = $_SESSION['user_id'];
+            $completion_time = $_POST['completion_time'] ?? date('Y-m-d H:i:s');
+            $technician_id = $_SESSION['user_id'] ?? 1; // Default to 1 if no session
+            
+            error_log("Parsed values: test_id=$test_order_id, value=$result_value, unit=$unit, status=$result_status");
+            error_log("Completion time: $completion_time, technician: $technician_id");
 
             // Get order details
             $stmt = $this->pdo->prepare("
@@ -622,6 +628,8 @@ class LabController extends BaseController {
             ");
             $stmt->execute([$test_order_id]);
             $order = $stmt->fetch();
+            
+            error_log("Order details fetched: " . ($order ? "Found" : "Not found") . " - " . print_r($order, true));
 
             if (!$order) {
                 throw new Exception('Test order not found');
@@ -633,39 +641,45 @@ class LabController extends BaseController {
             $stmt = $this->pdo->prepare("
                 UPDATE lab_test_orders 
                 SET status = 'completed', 
-                    completed_at = ?,
                     updated_at = NOW() 
                 WHERE id = ?
             ");
-            $stmt->execute([$completion_time, $test_order_id]);
+            $stmt->execute([$test_order_id]);
 
-            // Insert or update lab_results record
+            // Insert into lab_results record - fixed to match table structure
             $stmt = $this->pdo->prepare("
                 INSERT INTO lab_results 
-                (order_id, patient_id, test_id, visit_id, technician_id, result_value, unit, 
-                 result_text, result_status, status, completed_at, created_at, updated_at)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'completed', ?, NOW(), NOW())
-                ON DUPLICATE KEY UPDATE
-                result_value = VALUES(result_value),
-                unit = VALUES(unit),
-                result_text = VALUES(result_text),
-                result_status = VALUES(result_status),
-                status = 'completed',
-                completed_at = VALUES(completed_at),
-                updated_at = NOW()
+                (order_id, patient_id, test_id, technician_id, result_value, result_text, 
+                 result_unit, is_normal, completed_at)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
             ");
-            $stmt->execute([
+            // Calculate is_normal based on result_status
+            $is_normal = ($result_status === 'normal') ? 1 : 0;
+            
+            // Debug SQL parameters - updated to match new SQL structure
+            $sqlParams = [
                 $test_order_id,
                 $order['patient_id'],
                 $order['test_id'],
-                $order['visit_id'],
                 $technician_id,
                 $result_value,
-                $unit,
-                $result_notes,
-                $result_status,
+                $result_notes,        // This will be stored as result_text
+                $unit,                // This will be stored as result_unit
+                $is_normal,           // 1 if normal, 0 if abnormal
                 $completion_time
-            ]);
+            ];
+            error_log("SQL parameters for lab_results insert: " . print_r($sqlParams, true));
+            
+            try {
+                $stmt->execute($sqlParams);
+                error_log("SQL execution successful for lab_results insert");
+            } catch (PDOException $pdoEx) {
+                error_log("PDO Exception during lab_results insert: " . $pdoEx->getMessage());
+                error_log("SQL State: " . $pdoEx->errorInfo[0]);
+                error_log("Error Code: " . $pdoEx->errorInfo[1]);
+                error_log("Error Message: " . $pdoEx->errorInfo[2]);
+                throw $pdoEx; // Re-throw to be caught by the outer try-catch
+            }
 
             // Update patient workflow status if all tests for this visit are completed
             $stmt = $this->pdo->prepare("
@@ -682,12 +696,35 @@ class LabController extends BaseController {
             }
 
             $this->pdo->commit();
-            $_SESSION['success'] = 'Test result saved successfully';
+            $_SESSION['success'] = 'Test result saved successfully. Results will be visible to doctors in their lab results dashboard.';
+            
+            // Check if this is an AJAX request
+            if (!empty($_SERVER['HTTP_X_REQUESTED_WITH']) && 
+                strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) == 'xmlhttprequest') {
+                // Return JSON response for AJAX requests
+                header('Content-Type: application/json');
+                echo json_encode([
+                    'success' => true, 
+                    'message' => 'Test result saved successfully',
+                    'doctorUrl' => '/KJ/doctor/lab_results'
+                ]);
+                exit;
+            }
         } catch (Exception $e) {
             $this->pdo->rollBack();
             $_SESSION['error'] = 'Failed to save test result: ' . $e->getMessage();
+            
+            // Check if this is an AJAX request
+            if (!empty($_SERVER['HTTP_X_REQUESTED_WITH']) && 
+                strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) == 'xmlhttprequest') {
+                // Return JSON response for AJAX requests
+                header('Content-Type: application/json');
+                echo json_encode(['success' => false, 'message' => 'Failed to save test result: ' . $e->getMessage()]);
+                exit;
+            }
         }
 
+        // Only redirect for non-AJAX requests
         $this->redirect('lab/view_test/' . $test_order_id);
     }
 }

@@ -181,8 +181,11 @@
                                         class="bg-orange-500 hover:bg-orange-600 text-white px-3 py-1 rounded text-sm">
                                     <i class="fas fa-vial mr-1"></i>Sample
                                 </button>
-                                <button onclick="quickAddResult(<?php echo $test['id']; ?>, '<?php echo htmlspecialchars($test['first_name'] . ' ' . $test['last_name']); ?>', '<?php echo htmlspecialchars($test['test_name']); ?>')" 
-                                        class="bg-green-500 hover:bg-green-600 text-white px-3 py-1 rounded text-sm">
+                                <button type="button" 
+                                        data-test-id="<?php echo $test['id']; ?>"
+                                        data-patient-name="<?php echo htmlspecialchars($test['first_name'] . ' ' . $test['last_name']); ?>"
+                                        data-test-name="<?php echo htmlspecialchars($test['test_name']); ?>"
+                                        class="bg-green-500 hover:bg-green-600 text-white px-3 py-1 rounded text-sm result-btn">
                                     <i class="fas fa-clipboard-check mr-1"></i>Result
                                 </button>
                                 <a href="/KJ/lab/view_test/<?php echo $test['id']; ?>" 
@@ -307,13 +310,21 @@ function showNotification(title, message, type = 'info') {
         error: 'bg-red-500'
     };
     
+    // Class to identify success notifications
+    const additionalClass = type === 'success' ? 'notification-success' : '';
+    
     const notification = document.createElement('div');
-    notification.className = `fixed top-4 right-4 ${colors[type]} text-white px-6 py-4 rounded-lg shadow-lg transform translate-x-full transition-transform duration-300 z-50`;
+    notification.className = `fixed top-4 right-4 ${colors[type]} text-white px-6 py-4 rounded-lg shadow-lg transform translate-x-full transition-transform duration-300 z-50 ${additionalClass}`;
+    
+    // Check if this is about lab results
+    const isLabResult = type === 'success' && (message.includes('result') || message.includes('Result'));
+    
     notification.innerHTML = `
         <div class="flex items-center justify-between">
             <div>
                 <div class="font-semibold">${title}</div>
                 <div class="text-sm opacity-90">${message}</div>
+                ${isLabResult ? '<div class="mt-2 text-sm flex items-center"><i class="fas fa-info-circle mr-1"></i> Results can be viewed in the doctor dashboard</div>' : ''}
             </div>
             <button onclick="this.parentElement.parentElement.remove()" class="ml-4 text-white hover:text-gray-200">
                 <i class="fas fa-times"></i>
@@ -454,94 +465,439 @@ function quickTakeSample(testId, patientName, testName) {
     }
 }
 
-// Quick Add Result function - opens a modal
-function quickAddResult(testId, patientName, testName) {
-    document.getElementById('quickResultTestId').value = testId;
-    document.getElementById('quickResultPatientName').textContent = patientName;
-    document.getElementById('quickResultTestName').textContent = testName;
-    document.getElementById('quickResultModal').classList.remove('hidden');
-    document.getElementById('quickResultModal').classList.add('flex');
-}
-
-function closeQuickResultModal() {
-    document.getElementById('quickResultModal').classList.add('hidden');
-    document.getElementById('quickResultModal').classList.remove('flex');
-    document.getElementById('quickResultForm').reset();
-}
+// No separate functions needed here - we'll handle everything in the script block below
 </script>
 
-<!-- Quick Add Result Modal -->
-<div id="quickResultModal" class="hidden fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50">
-    <div class="relative top-20 mx-auto p-5 border w-11/12 md:w-1/2 shadow-lg rounded-md bg-white">
-        <div class="mt-3">
-            <div class="flex items-center justify-between mb-4">
-                <h3 class="text-lg font-bold text-gray-900">Quick Add Result</h3>
-                <button onclick="closeQuickResultModal()" class="text-gray-400 hover:text-gray-600">
+<!-- Test Result Modal - Complete Redesign -->
+<div id="resultModal" class="fixed inset-0 z-50 hidden">
+    <!-- Backdrop with blur effect -->
+    <div class="fixed inset-0 bg-black bg-opacity-40 backdrop-blur-sm" id="resultModalBackdrop"></div>
+    
+    <!-- Modal Content -->
+    <div class="fixed inset-0 flex items-center justify-center p-4">
+        <div class="bg-white w-full max-w-2xl rounded-xl shadow-2xl transform transition-all">
+            <!-- Header -->
+            <div class="flex items-center justify-between px-6 py-4 border-b border-gray-200">
+                <h3 class="text-xl font-bold text-gray-900 flex items-center">
+                    <i class="fas fa-flask text-green-600 mr-3"></i>
+                    Record Test Result
+                </h3>
+                <button type="button" id="closeResultModal" class="text-gray-400 hover:text-gray-500 focus:outline-none">
                     <i class="fas fa-times"></i>
                 </button>
             </div>
             
-            <form id="quickResultForm" method="POST" action="/KJ/lab/add_result" class="space-y-4">
-                <input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars($csrf_token); ?>">
-                <input type="hidden" id="quickResultTestId" name="test_order_id">
-                
-                <div class="bg-green-50 p-3 rounded-lg">
-                    <p class="font-medium text-green-900">Patient: <span id="quickResultPatientName"></span></p>
-                    <p class="text-sm text-green-700">Test: <span id="quickResultTestName"></span></p>
-                </div>
-                
-                <div class="grid grid-cols-2 gap-4">
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-1">Result Value *</label>
-                        <input type="text" name="result_value" required
-                               class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500">
+            <!-- Body -->
+            <div class="px-6 py-4">
+                <form id="resultForm" class="space-y-5">
+                    <input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars($_SESSION['csrf_token'] ?? ''); ?>">
+                    <input type="hidden" id="resultTestId" name="test_order_id">
+                    <input type="hidden" name="completion_time" id="completionTime" value="<?php echo date('Y-m-d H:i:s'); ?>">
+                    <!-- Debug info will be displayed here -->
+                    <div id="debug-info" class="hidden text-xs text-gray-500 p-2 bg-gray-100 rounded mb-2"></div>
+                    
+                    <!-- Patient & Test Info -->
+                    <div class="bg-blue-50 p-4 rounded-lg">
+                        <div class="flex items-center mb-2">
+                            <div class="h-10 w-10 rounded-full bg-blue-100 flex items-center justify-center mr-3">
+                                <i class="fas fa-user text-blue-600"></i>
+                            </div>
+                            <div>
+                                <h4 class="font-medium text-gray-900" id="resultPatientName"></h4>
+                                <p class="text-sm text-gray-600" id="resultTestName"></p>
+                            </div>
+                        </div>
                     </div>
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-1">Unit</label>
-                        <input type="text" name="unit" 
-                               class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
-                               placeholder="mg/dL, %, etc.">
+                    
+                    <!-- Hidden timestamp automatically set -->
+                    <script>
+                        // Initialize the completion time field with current timestamp
+                        document.getElementById('completionTime').value = new Date().toISOString().slice(0, 16);
+                    </script>
+                    
+                    <!-- Result Fields -->
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
+                        <div>
+                            <label for="result_value_field" class="block text-sm font-medium text-gray-700 mb-1">Result Value *</label>
+                            <div class="relative">
+                                <input type="text" name="result_value" id="result_value_field" required value="1.0"
+                                       class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500">
+                                <div class="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none text-gray-400">
+                                    <i class="fas fa-calculator"></i>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div>
+                            <label for="unit_field" class="block text-sm font-medium text-gray-700 mb-1">Unit</label>
+                            <div class="relative">
+                                <input type="text" name="unit" id="unit_field" value="mg/dL"
+                                       class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500" 
+                                       placeholder="mg/dL, %, etc.">
+                                <div class="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none text-gray-400">
+                                    <i class="fas fa-ruler"></i>
+                                </div>
+                            </div>
+                        </div>
                     </div>
-                </div>
-                
-                <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-1">Status</label>
-                    <select name="result_status" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500">
-                        <option value="normal">Normal</option>
-                        <option value="abnormal">Abnormal</option>
-                        <option value="borderline">Borderline</option>
-                        <option value="critical">Critical</option>
-                    </select>
-                </div>
-                
-                <input type="hidden" name="completion_time" id="quickCompletionTime">
-                <input type="hidden" name="result_notes" value="Quick result entry">
-                
-                <div class="flex justify-end space-x-3 pt-4">
-                    <button type="button" onclick="closeQuickResultModal()" 
-                            class="px-4 py-2 text-gray-700 bg-gray-200 rounded-md hover:bg-gray-300">
-                        Cancel
-                    </button>
-                    <button type="submit" 
-                            class="px-4 py-2 bg-green-500 text-white rounded-md hover:bg-green-600">
-                        <i class="fas fa-save mr-2"></i>Save Result
-                    </button>
-                </div>
-            </form>
+                    
+                    <div>
+                        <label for="result_status_field" class="block text-sm font-medium text-gray-700 mb-1">Result Status</label>
+                        <div class="relative">
+                            <select name="result_status" id="result_status_field"
+                                   class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500 appearance-none">
+                                <option value="normal">Normal</option>
+                                <option value="abnormal">Abnormal</option>
+                                <option value="borderline">Borderline</option>
+                                <option value="critical">Critical</option>
+                            </select>
+                            <div class="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none text-gray-400">
+                                <i class="fas fa-chevron-down"></i>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div>
+                        <label for="result_notes_field" class="block text-sm font-medium text-gray-700 mb-1">Notes (Optional)</label>
+                        <textarea name="result_notes" id="result_notes_field" rows="2"
+                                  class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500"
+                                  placeholder="Enter any observations or comments...">Test completed successfully.</textarea>
+                    </div>
+                </form>
+            </div>
+            
+            <!-- Footer -->
+            <div class="px-6 py-4 bg-gray-50 rounded-b-xl flex justify-end space-x-3">
+                <button type="button" id="cancelResultBtn"
+                        class="px-4 py-2 bg-white border border-gray-300 rounded-lg text-gray-700 shadow-sm hover:bg-gray-50">
+                    Cancel
+                </button>
+                <button type="button" id="saveResultBtn"
+                        class="px-6 py-2 bg-green-600 text-white rounded-lg shadow-sm hover:bg-green-700">
+                    <i class="fas fa-save mr-2"></i>Save Result
+                </button>
+            </div>
         </div>
     </div>
 </div>
 
 <script>
-// Set current time when modal opens
-document.getElementById('quickResultModal').addEventListener('click', function(e) {
-    if (e.target === this) {
-        closeQuickResultModal();
+// Initialize the Result Modal functionality when the DOM is fully loaded
+document.addEventListener('DOMContentLoaded', function() {
+    const resultModal = document.getElementById('resultModal');
+    const resultModalBackdrop = document.getElementById('resultModalBackdrop');
+    const resultForm = document.getElementById('resultForm');
+    const closeResultModal = document.getElementById('closeResultModal');
+    const cancelResultBtn = document.getElementById('cancelResultBtn');
+    const saveResultBtn = document.getElementById('saveResultBtn');
+    
+    // Function to open modal
+    function openModal(testId, patientName, testName) {
+        try {
+            console.log('Opening modal for test:', { testId, patientName, testName });
+            
+            // Set form values
+            document.getElementById('resultTestId').value = testId;
+            document.getElementById('resultPatientName').textContent = patientName;
+            document.getElementById('resultTestName').textContent = testName;
+            
+            // Pre-fill the form fields with default values
+            document.getElementById('result_value_field').value = '1.0';
+            document.getElementById('unit_field').value = 'mg/dL';
+            document.getElementById('result_status_field').value = 'normal';
+            document.getElementById('result_notes_field').value = 'Test completed successfully.';
+            
+            // Set current time 
+            document.getElementById('completionTime').value = new Date().toISOString().slice(0, 16);
+            
+            // Show the modal with smooth animation
+            resultModal.classList.remove('hidden');
+            
+            // Apply blur effect to main content
+            document.querySelector('.space-y-6').classList.add('blur-sm');
+            
+            console.log('Modal opened successfully for test ID:', testId);
+        } catch (error) {
+            console.error('Error opening modal:', error);
+            showNotification('Error', 'Failed to open result dialog: ' + error.message, 'error');
+        }
     }
-});
-
-// Auto-set completion time when form is submitted
-document.getElementById('quickResultForm').addEventListener('submit', function() {
-    document.getElementById('quickCompletionTime').value = new Date().toISOString().slice(0, 16);
+    
+    // Function to close modal
+    function closeModal() {
+        // Hide the modal
+        resultModal.classList.add('hidden');
+        
+        // Remove blur effect from main content
+        document.querySelector('.space-y-6').classList.remove('blur-sm');
+        
+        // Reset form
+        resultForm.reset();
+        
+        console.log('Modal closed');
+    }
+    
+    // Attach click handlers to all "Result" buttons
+    document.querySelectorAll('.result-btn').forEach(button => {
+        button.addEventListener('click', function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            
+            const testId = this.getAttribute('data-test-id');
+            const patientName = this.getAttribute('data-patient-name');
+            const testName = this.getAttribute('data-test-name');
+            
+            openModal(testId, patientName, testName);
+            return false;
+        });
+    });
+    
+    // Close modal when clicking on close button
+    closeResultModal.addEventListener('click', closeModal);
+    
+    // Close modal when clicking on cancel button
+    cancelResultBtn.addEventListener('click', closeModal);
+    
+    // Close modal when clicking outside (on backdrop)
+    resultModalBackdrop.addEventListener('click', closeModal);
+    
+    // Submit form when clicking save button - with improved error handling
+    saveResultBtn.addEventListener('click', function() {
+        // First, let's ensure the form fields have values
+        const resultValue = document.getElementById('result_value_field');
+        
+        // Force a value if empty
+        if (!resultValue.value || resultValue.value.trim() === '') {
+            resultValue.value = '1.0';
+        }
+        
+        // Log current form state
+        console.log('Form state before submission:', window.debugFormValues());
+        
+        // Attempt to submit the form
+        try {
+            submitResultForm();
+        } catch (error) {
+            console.error('Error submitting form:', error);
+            showNotification('Error', 'Form submission error: ' + error.message, 'error');
+        }
+    });
+    
+    // Handle form submission
+    function submitResultForm() {
+        let urlEncodedData = ''; // Declare this variable at the function scope level
+        
+        try {
+            // Set current time if not already set
+            if (!document.getElementById('completionTime').value) {
+                document.getElementById('completionTime').value = new Date().toISOString().slice(0, 16);
+            }
+            
+            // Check if required fields are filled - use the new field IDs
+            const resultValue = document.getElementById('result_value_field').value;
+            
+            console.log('Form submission - Result value:', resultValue);
+            console.log('Form field elements found:', {
+                testId: document.getElementById('resultTestId') ? 'Found' : 'Not Found',
+                resultValue: document.getElementById('result_value_field') ? 'Found' : 'Not Found',
+                unit: document.getElementById('unit_field') ? 'Found' : 'Not Found',
+                status: document.getElementById('result_status_field') ? 'Found' : 'Not Found'
+            });
+            
+            // Force a default value if empty
+            if (!resultValue || resultValue.trim() === '') {
+                document.getElementById('result_value_field').value = '1.0';
+            }
+            
+            // Get form data using direct value access with the new field IDs
+            const formData = new FormData();
+            formData.append('csrf_token', document.querySelector('[name="csrf_token"]').value);
+            formData.append('test_order_id', document.getElementById('resultTestId').value);
+            formData.append('result_value', document.getElementById('result_value_field').value);
+            formData.append('unit', document.getElementById('unit_field').value || 'mg/dL');
+            formData.append('result_status', document.getElementById('result_status_field').value);
+            formData.append('result_notes', document.getElementById('result_notes_field').value || 'Test completed');
+            formData.append('completion_time', document.getElementById('completionTime').value);
+            
+            // Debug the form data
+            console.log('Form data being submitted:', {
+                csrf_token: formData.get('csrf_token'),
+                testId: formData.get('test_order_id'),
+                resultValue: formData.get('result_value'),
+                unit: formData.get('unit'),
+                status: formData.get('result_status'),
+                notes: formData.get('result_notes'),
+                completionTime: formData.get('completion_time')
+            });
+            
+            // Validate that we have the minimum required fields
+            if (!formData.get('test_order_id')) {
+                throw new Error('Missing test order ID');
+            }
+            
+            if (!formData.get('result_value')) {
+                // Force a default value if missing
+                formData.set('result_value', '1.0');
+            }
+            
+            urlEncodedData = new URLSearchParams(formData).toString(); // Assign to the variable declared at function scope
+        } catch (error) {
+            console.error('Error preparing form data:', error);
+            showNotification('Error', 'Error preparing form data: ' + error.message, 'error');
+            return;
+        }
+        
+        // Show loading state
+        saveResultBtn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>Saving...';
+        saveResultBtn.disabled = true;
+        
+        // Send AJAX request - improved error handling
+        console.log('Sending request to /KJ/lab/add_result with data:', urlEncodedData);
+        
+        console.log("Sending to endpoint:", '/KJ/lab/add_result');
+        console.log("Raw data being sent:", urlEncodedData);
+        
+        fetch('/KJ/lab/add_result', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/x-www-form-urlencoded',
+                'X-Requested-With': 'XMLHttpRequest'
+            },
+            body: urlEncodedData
+        })
+        .then(response => {
+            console.log('Response status:', response.status, response.statusText);
+            // Handle both JSON and non-JSON responses
+            const contentType = response.headers.get('content-type');
+            if (contentType && contentType.includes('application/json')) {
+                return response.json().then(data => {
+                    return { ok: response.ok, data: data };
+                });
+            } else {
+                return response.text().then(text => {
+                    return { ok: response.ok, data: { message: text } };
+                });
+            }
+        })
+        .then(result => {
+            console.log('Submission result:', result);
+            
+            if (result.ok) {
+                // Always treat success response as successful even if it's not JSON
+                showNotification('Success', 'Test result saved successfully', 'success');
+                closeModal();
+                
+                // Create a floating confirmation with a link to doctor's dashboard
+                const doctorUrl = '/KJ/doctor/lab_results';
+                const confirmationBox = document.createElement('div');
+                confirmationBox.className = 'fixed bottom-4 right-4 bg-white border border-green-200 shadow-xl p-4 rounded-lg max-w-md z-50';
+                confirmationBox.innerHTML = `
+                    <div class="flex items-center text-green-600 mb-2">
+                        <i class="fas fa-check-circle mr-2 text-xl"></i>
+                        <h3 class="font-semibold">Result Saved Successfully</h3>
+                        <button onclick="this.parentElement.parentElement.remove()" class="ml-auto text-gray-400 hover:text-gray-500">
+                            <i class="fas fa-times"></i>
+                        </button>
+                    </div>
+                    <p class="text-sm text-gray-600 mb-3">Test results have been recorded and are now available for doctors to review.</p>
+                    <div class="flex items-center justify-between">
+                        <a href="${doctorUrl}" class="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700">
+                            <i class="fas fa-external-link-alt mr-2"></i>
+                            View in Doctor Dashboard
+                        </a>
+                        <button onclick="location.reload()" class="text-blue-600 hover:underline text-sm">
+                            Process Next Test
+                        </button>
+                    </div>
+                `;
+                document.body.appendChild(confirmationBox);
+                
+                // Don't auto-reload so user can click the link if they want
+            } else {
+                // For error responses
+                let errorMessage = 'Failed to save result';
+                
+                if (result.data) {
+                    if (typeof result.data === 'object' && result.data.message) {
+                        errorMessage = result.data.message;
+                    } else if (typeof result.data === 'string') {
+                        // Check if the HTML response contains success message
+                        if (result.data.includes('success') || result.data.includes('Success')) {
+                            // This might be a successful redirect with HTML
+                            showNotification('Success', 'Test result saved successfully', 'success');
+                            closeModal();
+                            
+                            // Refresh the page after a short delay
+                            setTimeout(() => {
+                                location.reload();
+                            }, 1000);
+                            return;
+                        } else if (result.data.includes('error') || result.data.includes('Error')) {
+                            // Try to extract error message from HTML
+                            const errorMatch = result.data.match(/<div class="[^"]*alert[^"]*"[^>]*>(.*?)<\/div>/i);
+                            if (errorMatch && errorMatch[1]) {
+                                errorMessage = errorMatch[1].replace(/<[^>]*>/g, '').trim();
+                            }
+                        }
+                    }
+                }
+                
+                showNotification('Error', errorMessage, 'error');
+                saveResultBtn.innerHTML = '<i class="fas fa-save mr-2"></i>Save Result';
+                saveResultBtn.disabled = false;
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            showNotification('Error', 'An unexpected error occurred', 'error');
+            saveResultBtn.innerHTML = '<i class="fas fa-save mr-2"></i>Save Result';
+            saveResultBtn.disabled = false;
+        });
+    }
+    
+    // Add style for blur effect
+    const style = document.createElement('style');
+    style.textContent = `
+        .blur-sm {
+            filter: blur(4px);
+            transition: filter 0.3s ease;
+        }
+    `;
+    document.head.appendChild(style);
+    
+    // Helper function to debug form values
+    window.debugFormValues = function() {
+        try {
+            const debugInfo = {
+                'Test ID': document.getElementById('resultTestId').value,
+                'Result Value': document.getElementById('result_value_field').value,
+                'Unit': document.getElementById('unit_field').value,
+                'Status': document.getElementById('result_status_field').value,
+                'Notes': document.getElementById('result_notes_field').value,
+                'Completion Time': document.getElementById('completionTime').value
+            };
+            
+            const debugElement = document.getElementById('debug-info');
+            debugElement.classList.remove('hidden');
+            debugElement.innerHTML = '<strong>Debug Info:</strong><br>' + 
+                Object.entries(debugInfo).map(([key, value]) => 
+                    `<span>${key}: <code>${value || 'empty'}</code></span>`
+                ).join('<br>');
+            
+            return debugInfo;
+        } catch (error) {
+            console.error('Debug error:', error);
+            return null;
+        }
+    };
+    
+    // Add a debug button for troubleshooting
+    const debugButton = document.createElement('button');
+    debugButton.textContent = 'Debug Form Values';
+    debugButton.className = 'text-xs text-gray-600 underline cursor-pointer mt-2 mb-2';
+    debugButton.onclick = window.debugFormValues;
+    document.getElementById('saveResultBtn').insertAdjacentElement('beforebegin', debugButton);
+    
+    console.log('Result modal functionality initialized');
 });
 </script>

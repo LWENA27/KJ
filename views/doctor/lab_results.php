@@ -76,9 +76,20 @@
                             <?php echo date('M j, Y', strtotime($result['created_at'])); ?>
                         </td>
                         <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                            <a href="#" class="text-blue-600 hover:text-blue-900 mr-3">View Details</a>
+                            <button 
+                                data-test-id="<?php echo $result['id']; ?>"
+                                data-patient-name="<?php echo htmlspecialchars($result['first_name'] . ' ' . $result['last_name']); ?>"
+                                data-test-name="<?php echo htmlspecialchars($result['test_name']); ?>"
+                                data-result-value="<?php echo htmlspecialchars($result['result_value'] ?? ''); ?>"
+                                data-result-text="<?php echo htmlspecialchars($result['result_text'] ?? ''); ?>"
+                                data-result-unit="<?php echo htmlspecialchars($result['result_unit'] ?? ''); ?>"
+                                data-completed-at="<?php echo $result['completed_at'] ? date('M j, Y H:i', strtotime($result['completed_at'])) : ''; ?>"
+                                data-status="<?php echo htmlspecialchars($result['status']); ?>"
+                                class="view-details-btn text-blue-600 hover:text-blue-900 mr-3 focus:outline-none">
+                                <i class="fas fa-eye mr-1"></i> View Details
+                            </button>
                             <?php if ($result['status'] === 'completed'): ?>
-                            <a href="#" class="text-green-600 hover:text-green-900">Review</a>
+                            <a href="#" class="text-green-600 hover:text-green-900"><i class="fas fa-clipboard-check mr-1"></i> Review</a>
                             <?php endif; ?>
                         </td>
                     </tr>
@@ -88,3 +99,228 @@
         </div>
     </div>
 </div>
+
+<!-- Test Details Modal -->
+<div id="testDetailsModal" class="fixed inset-0 z-50 hidden">
+    <!-- Backdrop with blur effect -->
+    <div class="fixed inset-0 bg-black bg-opacity-50 backdrop-blur-sm" id="modalBackdrop"></div>
+    
+    <!-- Modal Content -->
+    <div class="fixed inset-0 flex items-center justify-center p-4">
+        <div class="bg-white w-full max-w-2xl rounded-xl shadow-2xl transform transition-all">
+            <!-- Header -->
+            <div class="flex items-center justify-between px-6 py-4 border-b border-gray-200">
+                <h3 class="text-xl font-bold text-gray-900 flex items-center">
+                    <i class="fas fa-flask text-blue-600 mr-3"></i>
+                    Lab Test Result Details
+                </h3>
+                <button type="button" id="closeModal" class="text-gray-400 hover:text-gray-500 focus:outline-none">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            
+            <!-- Body -->
+            <div class="px-6 py-4">
+                <!-- Patient & Test Info -->
+                <div class="bg-blue-50 p-4 rounded-lg mb-5">
+                    <div class="flex items-center mb-2">
+                        <div class="h-10 w-10 rounded-full bg-blue-100 flex items-center justify-center mr-3">
+                            <i class="fas fa-user text-blue-600"></i>
+                        </div>
+                        <div>
+                            <h4 class="font-medium text-gray-900" id="patientName"></h4>
+                            <p class="text-sm text-gray-600" id="testName"></p>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Result Details -->
+                <div class="space-y-4">
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Result Value</label>
+                            <div class="bg-gray-50 rounded-lg p-3 border border-gray-200">
+                                <div class="text-lg font-medium" id="resultValue"></div>
+                                <div class="text-sm text-gray-500" id="resultUnit"></div>
+                            </div>
+                        </div>
+                        
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Status</label>
+                            <div class="bg-gray-50 rounded-lg p-3 border border-gray-200">
+                                <span id="statusBadge" class="inline-flex px-2 py-1 text-xs font-medium rounded-full"></span>
+                                <div class="text-sm text-gray-500 mt-1" id="completedAt"></div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Notes</label>
+                        <div class="bg-gray-50 rounded-lg p-3 border border-gray-200 min-h-[80px]" id="resultNotes">
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Footer -->
+            <div class="px-6 py-4 bg-gray-50 rounded-b-xl flex justify-end space-x-3">
+                <button type="button" id="closeModalBtn"
+                        class="px-4 py-2 bg-white border border-gray-300 rounded-lg text-gray-700 shadow-sm hover:bg-gray-50">
+                    Close
+                </button>
+                <button type="button" id="printResultBtn"
+                        class="px-6 py-2 bg-blue-600 text-white rounded-lg shadow-sm hover:bg-blue-700">
+                    <i class="fas fa-print mr-2"></i>Print Result
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+// Initialize the Details Modal functionality when the DOM is fully loaded
+document.addEventListener('DOMContentLoaded', function() {
+    const testDetailsModal = document.getElementById('testDetailsModal');
+    const modalBackdrop = document.getElementById('modalBackdrop');
+    const closeModal = document.getElementById('closeModal');
+    const closeModalBtn = document.getElementById('closeModalBtn');
+    const printResultBtn = document.getElementById('printResultBtn');
+    
+    // Get all view details buttons
+    const viewDetailsButtons = document.querySelectorAll('.view-details-btn');
+    
+    // Function to open modal
+    function openModal(testData) {
+        // Populate modal with test data
+        document.getElementById('patientName').textContent = testData.patientName;
+        document.getElementById('testName').textContent = testData.testName;
+        document.getElementById('resultValue').textContent = testData.resultValue || 'N/A';
+        document.getElementById('resultUnit').textContent = testData.resultUnit || '';
+        document.getElementById('resultNotes').textContent = testData.resultText || 'No notes available';
+        document.getElementById('completedAt').textContent = testData.completedAt ? `Completed: ${testData.completedAt}` : '';
+        
+        // Set status badge color
+        const statusBadge = document.getElementById('statusBadge');
+        statusBadge.textContent = testData.status.charAt(0).toUpperCase() + testData.status.slice(1);
+        
+        switch (testData.status) {
+            case 'pending':
+                statusBadge.className = 'inline-flex px-2 py-1 text-xs font-medium rounded-full bg-yellow-100 text-yellow-800';
+                break;
+            case 'completed':
+                statusBadge.className = 'inline-flex px-2 py-1 text-xs font-medium rounded-full bg-green-100 text-green-800';
+                break;
+            case 'reviewed':
+                statusBadge.className = 'inline-flex px-2 py-1 text-xs font-medium rounded-full bg-blue-100 text-blue-800';
+                break;
+            default:
+                statusBadge.className = 'inline-flex px-2 py-1 text-xs font-medium rounded-full bg-gray-100 text-gray-800';
+        }
+        
+        // Show the modal
+        testDetailsModal.classList.remove('hidden');
+        document.body.classList.add('overflow-hidden');
+        
+        // Animate in
+        setTimeout(() => {
+            modalBackdrop.classList.add('opacity-100');
+        }, 50);
+    }
+    
+    // Function to close modal
+    function closeModalHandler() {
+        // Hide the modal
+        testDetailsModal.classList.add('hidden');
+        document.body.classList.remove('overflow-hidden');
+    }
+    
+    // Add click event to all view details buttons
+    viewDetailsButtons.forEach(button => {
+        button.addEventListener('click', function() {
+            const testData = {
+                testId: this.getAttribute('data-test-id'),
+                patientName: this.getAttribute('data-patient-name'),
+                testName: this.getAttribute('data-test-name'),
+                resultValue: this.getAttribute('data-result-value'),
+                resultUnit: this.getAttribute('data-result-unit'),
+                resultText: this.getAttribute('data-result-text'),
+                completedAt: this.getAttribute('data-completed-at'),
+                status: this.getAttribute('data-status')
+            };
+            
+            openModal(testData);
+        });
+    });
+    
+    // Close modal events
+    closeModal.addEventListener('click', closeModalHandler);
+    closeModalBtn.addEventListener('click', closeModalHandler);
+    modalBackdrop.addEventListener('click', closeModalHandler);
+    
+    // Print result
+    printResultBtn.addEventListener('click', function() {
+        // Create a printable version of the test details
+        const printWindow = window.open('', '_blank');
+        printWindow.document.write(`
+            <html>
+            <head>
+                <title>Lab Test Result</title>
+                <style>
+                    body {
+                        font-family: Arial, sans-serif;
+                        line-height: 1.6;
+                        margin: 20px;
+                    }
+                    .header {
+                        text-align: center;
+                        margin-bottom: 20px;
+                    }
+                    .header h1 {
+                        margin-bottom: 5px;
+                    }
+                    .details {
+                        margin-bottom: 20px;
+                    }
+                    .result-box {
+                        border: 1px solid #ddd;
+                        padding: 15px;
+                        margin-bottom: 20px;
+                    }
+                    .footer {
+                        margin-top: 40px;
+                        border-top: 1px solid #ddd;
+                        padding-top: 10px;
+                        font-size: 12px;
+                    }
+                </style>
+            </head>
+            <body>
+                <div class="header">
+                    <h1>Laboratory Test Result</h1>
+                    <p>HOSPITALI Medical Center</p>
+                </div>
+                <div class="details">
+                    <p><strong>Patient Name:</strong> ${document.getElementById('patientName').textContent}</p>
+                    <p><strong>Test Name:</strong> ${document.getElementById('testName').textContent}</p>
+                    <p><strong>Date:</strong> ${document.getElementById('completedAt').textContent.replace('Completed: ', '')}</p>
+                </div>
+                <div class="result-box">
+                    <h3>Test Results</h3>
+                    <p><strong>Result Value:</strong> ${document.getElementById('resultValue').textContent} ${document.getElementById('resultUnit').textContent}</p>
+                    <p><strong>Status:</strong> ${document.getElementById('statusBadge').textContent}</p>
+                    <p><strong>Notes:</strong> ${document.getElementById('resultNotes').textContent}</p>
+                </div>
+                <div class="footer">
+                    <p>This is an automatically generated report. Please consult with your physician to interpret these results.</p>
+                    <p>Printed on: ${new Date().toLocaleString()}</p>
+                </div>
+            </body>
+            </html>
+        `);
+        printWindow.document.close();
+        setTimeout(() => {
+            printWindow.print();
+        }, 500);
+    });
+});
+</script>

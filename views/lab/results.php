@@ -399,25 +399,59 @@ function previewResult(testId) {
     const resultValue = form.querySelector('input[name="result_value"]').value;
     const notes = form.querySelector('textarea[name="result_text"]').value;
     const units = form.querySelector('select[name="units"]').value;
+    const normalRange = form.querySelector(`input[id="normal_range_${testId}"]`).value;
+    const patientName = form.closest('.border-l-4').querySelector('h4').textContent.trim();
+    const testElement = form.closest('.border-l-4').querySelector('p strong');
+    const testName = testElement && testElement.textContent === 'Test:' ? 
+        testElement.parentNode.textContent.replace('Test:', '').trim() : 'Unknown Test';
     
     if (!resultValue) {
         showNotification('Missing Data', 'Please enter a result value before preview', 'warning');
         return;
     }
     
-    const preview = `
-        <div class="bg-white p-6 rounded-lg shadow-lg max-w-md">
-            <h4 class="font-bold text-gray-900 mb-4">Result Preview</h4>
-            <div class="space-y-2">
-                <div><strong>Result:</strong> ${resultValue} ${units}</div>
-                <div><strong>Notes:</strong> ${notes || 'None'}</div>
-                <div><strong>Technician:</strong> ${document.querySelector('meta[name="user"]')?.content || 'Current User'}</div>
-                <div><strong>Date:</strong> ${new Date().toLocaleDateString()}</div>
-            </div>
-        </div>
-    `;
+    // Get validation status
+    let validationStatus = "normal";
+    if (normalRange) {
+        const rangeParts = normalRange.split('-');
+        if (rangeParts.length === 2) {
+            const min = parseFloat(rangeParts[0]);
+            const max = parseFloat(rangeParts[1]);
+            
+            if (parseFloat(resultValue) < min) {
+                validationStatus = "below";
+            } else if (parseFloat(resultValue) > max) {
+                validationStatus = "above";
+            }
+        }
+    }
     
-    showNotification('Result Preview', preview, 'info');
+    // Update the result preview modal content
+    document.getElementById('modal_result_value').textContent = `${resultValue} ${units}`;
+    document.getElementById('modal_normal_range').textContent = normalRange;
+    document.getElementById('modal_result_notes').textContent = notes || 'None';
+    document.getElementById('modal_technician').textContent = document.querySelector('meta[name="user"]')?.content || 'Current User';
+    document.getElementById('modal_test_date').textContent = new Date().toLocaleDateString();
+    document.getElementById('modal_patient_name').textContent = patientName;
+    document.getElementById('modal_test_name').textContent = testName;
+    
+    // Update validation status styling
+    const statusElement = document.getElementById('modal_validation_status');
+    if (validationStatus === "below") {
+        statusElement.innerHTML = '<i class="fas fa-arrow-down mr-2"></i>Below Normal Range';
+        statusElement.className = 'px-3 py-1 bg-red-100 text-red-700 rounded-full text-sm font-semibold';
+    } else if (validationStatus === "above") {
+        statusElement.innerHTML = '<i class="fas fa-arrow-up mr-2"></i>Above Normal Range';
+        statusElement.className = 'px-3 py-1 bg-red-100 text-red-700 rounded-full text-sm font-semibold';
+    } else {
+        statusElement.innerHTML = '<i class="fas fa-check-circle mr-2"></i>Within Normal Range';
+        statusElement.className = 'px-3 py-1 bg-green-100 text-green-700 rounded-full text-sm font-semibold';
+    }
+    
+    // Show the modal
+    const modal = document.getElementById('resultPreviewModal');
+    modal.classList.remove('hidden');
+    modal.classList.add('flex');
 }
 
 function saveAllResults() {
@@ -526,4 +560,81 @@ document.addEventListener('DOMContentLoaded', function() {
         firstInput.focus();
     }
 });
+
+// Close result preview modal
+function closeResultPreviewModal() {
+    const modal = document.getElementById('resultPreviewModal');
+    modal.classList.add('hidden');
+    modal.classList.remove('flex');
+}
 </script>
+
+<!-- Result Preview Modal Dialog -->
+<div id="resultPreviewModal" class="fixed inset-0 bg-black bg-opacity-50 hidden items-center justify-center z-50">
+    <div class="bg-white rounded-xl shadow-2xl max-w-md w-full transform transition-all duration-300 scale-100">
+        <div class="flex items-center justify-between border-b border-gray-200 px-6 py-4">
+            <h3 class="text-xl font-bold text-gray-900">Test Result Preview</h3>
+            <button onclick="closeResultPreviewModal()" class="text-gray-400 hover:text-gray-500 focus:outline-none">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+        
+        <div class="px-6 py-4">
+            <!-- Patient Info -->
+            <div class="mb-4">
+                <label class="block text-sm font-medium text-gray-600 mb-1">Patient</label>
+                <p id="modal_patient_name" class="text-lg font-semibold text-gray-900"></p>
+            </div>
+            
+            <!-- Test Name -->
+            <div class="mb-4">
+                <label class="block text-sm font-medium text-gray-600 mb-1">Test</label>
+                <p id="modal_test_name" class="text-gray-900 font-medium"></p>
+            </div>
+            
+            <!-- Result Value -->
+            <div class="mb-4">
+                <label class="block text-sm font-medium text-gray-600 mb-1">Result Value</label>
+                <div class="flex items-center">
+                    <p id="modal_result_value" class="text-xl font-bold text-blue-600"></p>
+                    <span id="modal_validation_status" class="ml-3 px-3 py-1 bg-green-100 text-green-700 rounded-full text-sm font-semibold"></span>
+                </div>
+            </div>
+            
+            <!-- Normal Range -->
+            <div class="mb-4">
+                <label class="block text-sm font-medium text-gray-600 mb-1">Normal Range</label>
+                <p id="modal_normal_range" class="text-gray-900 font-medium"></p>
+            </div>
+            
+            <!-- Notes -->
+            <div class="mb-4">
+                <label class="block text-sm font-medium text-gray-600 mb-1">Clinical Notes</label>
+                <p id="modal_result_notes" class="text-gray-900 whitespace-pre-wrap p-3 bg-gray-50 rounded-lg"></p>
+            </div>
+            
+            <!-- Test Information -->
+            <div class="grid grid-cols-2 gap-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-600 mb-1">Technician</label>
+                    <p id="modal_technician" class="text-gray-900"></p>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-600 mb-1">Date</label>
+                    <p id="modal_test_date" class="text-gray-900"></p>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Modal Actions -->
+        <div class="bg-gray-50 px-6 py-4 rounded-b-xl flex justify-end space-x-3">
+            <button type="button" onclick="closeResultPreviewModal()"
+                class="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 bg-white hover:bg-gray-50 font-medium">
+                Close
+            </button>
+            <button type="button" class="px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-lg font-medium">
+                <i class="fas fa-print mr-2"></i>Print Result
+            </button>
+        </div>
+    </div>
+</div>
