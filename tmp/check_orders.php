@@ -50,8 +50,9 @@ try {
         JOIN patients p ON lto.patient_id = p.id
         JOIN patient_visits v ON lto.visit_id = v.id
         JOIN lab_tests lt ON lto.test_id = lt.id
-        LEFT JOIN payments pay ON pay.reference_type = 'lab_test' 
-            AND pay.reference_id = lto.id
+        LEFT JOIN payments pay ON pay.payment_type = 'lab_test' 
+            AND pay.item_id = lto.id
+            AND pay.item_type = 'lab_order'
         WHERE pay.id IS NULL
         GROUP BY p.id, v.id
         ORDER BY lto.created_at DESC

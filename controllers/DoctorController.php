@@ -166,9 +166,9 @@ class DoctorController extends BaseController {
                    (SELECT IF(EXISTS(SELECT 1 FROM payments pay WHERE pay.visit_id = (SELECT id FROM patient_visits pv WHERE pv.patient_id = p.id ORDER BY pv.created_at DESC LIMIT 1) AND pay.payment_type = 'registration' AND pay.payment_status = 'paid'),1,0)) as consultation_registration_paid,
                    (SELECT IF(EXISTS(SELECT 1 FROM payments pay2 WHERE pay2.visit_id = (SELECT id FROM patient_visits pv2 WHERE pv2.patient_id = p.id ORDER BY pv2.created_at DESC LIMIT 1) AND pay2.payment_type = 'lab_test' AND pay2.payment_status = 'paid'),1,0)) as lab_tests_paid,
                    (SELECT IF(EXISTS(SELECT 1 FROM payments pay3 WHERE pay3.visit_id = (SELECT id FROM patient_visits pv3 WHERE pv3.patient_id = p.id ORDER BY pv3.created_at DESC LIMIT 1) AND pay3.payment_type = 'lab_test' AND pay3.payment_status = 'paid'),1,0)) as results_review_paid,
-                   COALESCE(c.main_complaint, c.symptoms) as main_complaint,
-                   COALESCE(c.final_diagnosis, c.preliminary_diagnosis, c.diagnosis) as final_diagnosis,
-                   c.preliminary_diagnosis,
+                   c.main_complaint,
+                   c.diagnosis as final_diagnosis,
+                   c.diagnosis as preliminary_diagnosis,
                    COALESCE(c.follow_up_date, pv.visit_date, DATE(c.created_at)) as appointment_date
             FROM consultations c
             JOIN patients p ON c.patient_id = p.id
@@ -322,14 +322,11 @@ class DoctorController extends BaseController {
             error_log("Selected medicines: " . ($_POST['selected_medicines'] ?? 'EMPTY'));
 
             // Update the consultation record with submitted data
-            $stmt = $this->pdo->prepare("UPDATE consultations SET main_complaint = ?, on_examination = ?, preliminary_diagnosis = ?, final_diagnosis = ?, lab_investigation = ?, prescription = ?, treatment_plan = ?, status = 'completed', completed_at = NOW(), updated_at = NOW() WHERE id = ?");
+            $stmt = $this->pdo->prepare("UPDATE consultations SET main_complaint = ?, on_examination = ?, diagnosis = ?, treatment_plan = ?, status = 'completed', completed_at = NOW(), updated_at = NOW() WHERE id = ?");
             $stmt->execute([
                 $_POST['main_complaint'] ?? '',
                 $_POST['on_examination'] ?? '',
-                $_POST['preliminary_diagnosis'] ?? '',
-                $_POST['final_diagnosis'] ?? '',
-                $_POST['lab_investigation'] ?? '',
-                $_POST['prescription'] ?? '',
+                $_POST['diagnosis'] ?? ($_POST['final_diagnosis'] ?? ''),
                 $_POST['treatment_plan'] ?? '',
                 $consultation_id
             ]);
