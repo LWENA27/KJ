@@ -176,10 +176,20 @@
                             <div><?php echo date('M j, Y g:i A', strtotime($test['created_at'])); ?></div>
                         </td>
                         <td class="px-6 py-4 text-right text-sm font-medium">
-                            <a href="/KJ/lab/view_test/<?php echo $test['id']; ?>" 
-                               class="bg-indigo-500 hover:bg-indigo-600 text-white px-4 py-2 rounded-md text-sm inline-flex items-center">
-                                <i class="fas fa-eye mr-2"></i>Process Test
-                            </a>
+                            <div class="flex space-x-2">
+                                <button onclick="quickTakeSample(<?php echo $test['id']; ?>, '<?php echo htmlspecialchars($test['first_name'] . ' ' . $test['last_name']); ?>', '<?php echo htmlspecialchars($test['test_name']); ?>')" 
+                                        class="bg-orange-500 hover:bg-orange-600 text-white px-3 py-1 rounded text-sm">
+                                    <i class="fas fa-vial mr-1"></i>Sample
+                                </button>
+                                <button onclick="quickAddResult(<?php echo $test['id']; ?>, '<?php echo htmlspecialchars($test['first_name'] . ' ' . $test['last_name']); ?>', '<?php echo htmlspecialchars($test['test_name']); ?>')" 
+                                        class="bg-green-500 hover:bg-green-600 text-white px-3 py-1 rounded text-sm">
+                                    <i class="fas fa-clipboard-check mr-1"></i>Result
+                                </button>
+                                <a href="/KJ/lab/view_test/<?php echo $test['id']; ?>" 
+                                   class="bg-indigo-500 hover:bg-indigo-600 text-white px-3 py-1 rounded text-sm">
+                                    <i class="fas fa-eye mr-1"></i>View
+                                </a>
+                            </div>
                         </td>
                     </tr>
                     <?php endforeach; ?>
@@ -406,4 +416,132 @@ function closeCompleteTestModal() {
     document.getElementById('completeTestModal').classList.add('hidden');
     document.getElementById('completeTestForm').reset();
 }
+
+// Quick Take Sample function
+function quickTakeSample(testId, patientName, testName) {
+    if (confirm(`Take sample for ${patientName} - ${testName}?`)) {
+        const form = document.createElement('form');
+        form.method = 'POST';
+        form.action = '/KJ/lab/take_sample';
+        
+        const csrfField = document.createElement('input');
+        csrfField.type = 'hidden';
+        csrfField.name = 'csrf_token';
+        csrfField.value = document.querySelector('[name="csrf_token"]').value;
+        
+        const testField = document.createElement('input');
+        testField.type = 'hidden';
+        testField.name = 'test_order_id';
+        testField.value = testId;
+        
+        const timeField = document.createElement('input');
+        timeField.type = 'hidden';
+        timeField.name = 'collection_time';
+        timeField.value = new Date().toISOString().slice(0, 16);
+        
+        const notesField = document.createElement('input');
+        notesField.type = 'hidden';
+        notesField.name = 'sample_notes';
+        notesField.value = 'Quick sample collection';
+        
+        form.appendChild(csrfField);
+        form.appendChild(testField);
+        form.appendChild(timeField);
+        form.appendChild(notesField);
+        
+        document.body.appendChild(form);
+        form.submit();
+    }
+}
+
+// Quick Add Result function - opens a modal
+function quickAddResult(testId, patientName, testName) {
+    document.getElementById('quickResultTestId').value = testId;
+    document.getElementById('quickResultPatientName').textContent = patientName;
+    document.getElementById('quickResultTestName').textContent = testName;
+    document.getElementById('quickResultModal').classList.remove('hidden');
+    document.getElementById('quickResultModal').classList.add('flex');
+}
+
+function closeQuickResultModal() {
+    document.getElementById('quickResultModal').classList.add('hidden');
+    document.getElementById('quickResultModal').classList.remove('flex');
+    document.getElementById('quickResultForm').reset();
+}
+</script>
+
+<!-- Quick Add Result Modal -->
+<div id="quickResultModal" class="hidden fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50">
+    <div class="relative top-20 mx-auto p-5 border w-11/12 md:w-1/2 shadow-lg rounded-md bg-white">
+        <div class="mt-3">
+            <div class="flex items-center justify-between mb-4">
+                <h3 class="text-lg font-bold text-gray-900">Quick Add Result</h3>
+                <button onclick="closeQuickResultModal()" class="text-gray-400 hover:text-gray-600">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            
+            <form id="quickResultForm" method="POST" action="/KJ/lab/add_result" class="space-y-4">
+                <input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars($csrf_token); ?>">
+                <input type="hidden" id="quickResultTestId" name="test_order_id">
+                
+                <div class="bg-green-50 p-3 rounded-lg">
+                    <p class="font-medium text-green-900">Patient: <span id="quickResultPatientName"></span></p>
+                    <p class="text-sm text-green-700">Test: <span id="quickResultTestName"></span></p>
+                </div>
+                
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Result Value *</label>
+                        <input type="text" name="result_value" required
+                               class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Unit</label>
+                        <input type="text" name="unit" 
+                               class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
+                               placeholder="mg/dL, %, etc.">
+                    </div>
+                </div>
+                
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Status</label>
+                    <select name="result_status" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500">
+                        <option value="normal">Normal</option>
+                        <option value="abnormal">Abnormal</option>
+                        <option value="borderline">Borderline</option>
+                        <option value="critical">Critical</option>
+                    </select>
+                </div>
+                
+                <input type="hidden" name="completion_time" id="quickCompletionTime">
+                <input type="hidden" name="result_notes" value="Quick result entry">
+                
+                <div class="flex justify-end space-x-3 pt-4">
+                    <button type="button" onclick="closeQuickResultModal()" 
+                            class="px-4 py-2 text-gray-700 bg-gray-200 rounded-md hover:bg-gray-300">
+                        Cancel
+                    </button>
+                    <button type="submit" 
+                            class="px-4 py-2 bg-green-500 text-white rounded-md hover:bg-green-600">
+                        <i class="fas fa-save mr-2"></i>Save Result
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+// Set current time when modal opens
+document.getElementById('quickResultModal').addEventListener('click', function(e) {
+    if (e.target === this) {
+        closeQuickResultModal();
+    }
+});
+
+// Auto-set completion time when form is submitted
+document.getElementById('quickResultForm').addEventListener('submit', function() {
+    document.getElementById('quickCompletionTime').value = new Date().toISOString().slice(0, 16);
+});
 </script>

@@ -5,12 +5,17 @@
             <a href="/KJ/lab/tests" class="bg-gray-500 hover:bg-gray-600 text-white px-4 py-2 rounded-md">
                 <i class="fas fa-arrow-left mr-2"></i>Back to Tests
             </a>
-            <?php if ($test['status'] === 'pending'): ?>
-            <button onclick="startTest(<?php echo $test['id']; ?>)"
-                    class="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-md">
-                <i class="fas fa-play mr-2"></i>Start Test
+            
+            <!-- Action Buttons -->
+            <button onclick="openTakeSampleModal()" 
+                    class="bg-orange-500 hover:bg-orange-600 text-white px-4 py-2 rounded-md">
+                <i class="fas fa-vial mr-2"></i>Take Sample
             </button>
-            <?php endif; ?>
+            
+            <button onclick="openAddResultModal()" 
+                    class="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded-md">
+                <i class="fas fa-clipboard-check mr-2"></i>Add Result
+            </button>
         </div>
     </div>
 
@@ -349,4 +354,152 @@ document.getElementById('resultForm').addEventListener('submit', function(e) {
     submitBtn.disabled = true;
     submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>Saving...';
 });
+
+// Take Sample Modal Functions
+function openTakeSampleModal() {
+    document.getElementById('takeSampleModal').classList.remove('hidden');
+    document.getElementById('takeSampleModal').classList.add('flex');
+}
+
+function closeTakeSampleModal() {
+    document.getElementById('takeSampleModal').classList.add('hidden');
+    document.getElementById('takeSampleModal').classList.remove('flex');
+}
+
+// Add Result Modal Functions  
+function openAddResultModal() {
+    document.getElementById('addResultModal').classList.remove('hidden');
+    document.getElementById('addResultModal').classList.add('flex');
+}
+
+function closeAddResultModal() {
+    document.getElementById('addResultModal').classList.add('hidden');
+    document.getElementById('addResultModal').classList.remove('flex');
+}
 </script>
+
+<!-- Take Sample Modal -->
+<div id="takeSampleModal" class="hidden fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50">
+    <div class="relative top-20 mx-auto p-5 border w-11/12 md:w-1/2 shadow-lg rounded-md bg-white">
+        <div class="mt-3">
+            <div class="flex items-center justify-between mb-4">
+                <h3 class="text-lg font-bold text-gray-900">Take Sample</h3>
+                <button onclick="closeTakeSampleModal()" class="text-gray-400 hover:text-gray-600">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            
+            <form method="POST" action="/KJ/lab/take_sample" class="space-y-4">
+                <input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars($csrf_token); ?>">
+                <input type="hidden" name="test_order_id" value="<?php echo $test['id']; ?>">
+                
+                <div class="bg-blue-50 p-4 rounded-lg">
+                    <h4 class="font-medium text-blue-900">Patient Information</h4>
+                    <p class="text-sm text-blue-700"><?php echo htmlspecialchars($test['first_name'] . ' ' . $test['last_name']); ?></p>
+                    <p class="text-sm text-blue-700">Test: <?php echo htmlspecialchars($test['test_name']); ?></p>
+                </div>
+                
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Sample Collection Notes</label>
+                    <textarea name="sample_notes" rows="3" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500"
+                              placeholder="Enter any notes about sample collection (optional)"></textarea>
+                </div>
+                
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Collection Date & Time</label>
+                    <input type="datetime-local" name="collection_time" value="<?php echo date('Y-m-d\TH:i'); ?>" 
+                           class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500" required>
+                </div>
+                
+                <div class="flex justify-end space-x-3 pt-4">
+                    <button type="button" onclick="closeTakeSampleModal()" 
+                            class="px-4 py-2 text-gray-700 bg-gray-200 rounded-md hover:bg-gray-300">
+                        Cancel
+                    </button>
+                    <button type="submit" 
+                            class="px-4 py-2 bg-orange-500 text-white rounded-md hover:bg-orange-600">
+                        <i class="fas fa-vial mr-2"></i>Mark Sample Taken
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Add Result Modal -->
+<div id="addResultModal" class="hidden fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50">
+    <div class="relative top-20 mx-auto p-5 border w-11/12 md:w-2/3 shadow-lg rounded-md bg-white">
+        <div class="mt-3">
+            <div class="flex items-center justify-between mb-4">
+                <h3 class="text-lg font-bold text-gray-900">Add Test Result</h3>
+                <button onclick="closeAddResultModal()" class="text-gray-400 hover:text-gray-600">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            
+            <form method="POST" action="/KJ/lab/add_result" class="space-y-4">
+                <input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars($csrf_token); ?>">
+                <input type="hidden" name="test_order_id" value="<?php echo $test['id']; ?>">
+                
+                <div class="bg-green-50 p-4 rounded-lg">
+                    <h4 class="font-medium text-green-900">Patient & Test Information</h4>
+                    <p class="text-sm text-green-700"><?php echo htmlspecialchars($test['first_name'] . ' ' . $test['last_name']); ?></p>
+                    <p class="text-sm text-green-700">Test: <?php echo htmlspecialchars($test['test_name']); ?></p>
+                    <?php if (isset($test['normal_range'])): ?>
+                    <p class="text-xs text-green-600">Normal Range: <?php echo htmlspecialchars($test['normal_range']); ?></p>
+                    <?php endif; ?>
+                </div>
+                
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Result Value *</label>
+                        <input type="text" name="result_value" required
+                               class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
+                               placeholder="Enter test result value">
+                    </div>
+                    
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Unit</label>
+                        <input type="text" name="unit" value="<?php echo htmlspecialchars($test['unit'] ?? ''); ?>"
+                               class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
+                               placeholder="e.g., mg/dL, %">
+                    </div>
+                </div>
+                
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Result Status</label>
+                    <select name="result_status" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500">
+                        <option value="normal">Normal</option>
+                        <option value="abnormal">Abnormal</option>
+                        <option value="borderline">Borderline</option>
+                        <option value="critical">Critical</option>
+                    </select>
+                </div>
+                
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Additional Notes</label>
+                    <textarea name="result_notes" rows="3" 
+                              class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
+                              placeholder="Any additional observations or notes"></textarea>
+                </div>
+                
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Completion Date & Time</label>
+                    <input type="datetime-local" name="completion_time" value="<?php echo date('Y-m-d\TH:i'); ?>" 
+                           class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500" required>
+                </div>
+                
+                <div class="flex justify-end space-x-3 pt-4">
+                    <button type="button" onclick="closeAddResultModal()" 
+                            class="px-4 py-2 text-gray-700 bg-gray-200 rounded-md hover:bg-gray-300">
+                        Cancel
+                    </button>
+                    <button type="submit" 
+                            class="px-4 py-2 bg-green-500 text-white rounded-md hover:bg-green-600">
+                        <i class="fas fa-clipboard-check mr-2"></i>Save Result
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>

@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 [11-Oct-2025 13:12:44 Europe/Berlin] Workflow status tracking not available: SQLSTATE[42S02]: Base table or view not found: 1146 Table 'zahanati.patient_workflow_status' doesn't exist
 [11-Oct-2025 14:10:56 Europe/Berlin] Error in controller: SQLSTATE[42S22]: Column not found: 1054 Unknown column 'c.symptoms' in 'field list'
 [11-Oct-2025 17:31:59 Europe/Berlin] Workflow status tracking not available: SQLSTATE[42S02]: Base table or view not found: 1146 Table 'zahanati.patient_workflow_status' doesn't exist
@@ -23,3 +24,5 @@
 [11-Oct-2025 20:14:20 Europe/Berlin] Selected medicines: 
 [11-Oct-2025 20:14:42 Europe/Berlin] PHP Warning:  Undefined array key "status" in C:\xampp\htdocs\HOSPITALI\views\doctor\patient_journey.php on line 238
 [11-Oct-2025 20:14:42 Europe/Berlin] PHP Deprecated:  ucfirst(): Passing null to parameter #1 ($string) of type string is deprecated in C:\xampp\htdocs\HOSPITALI\views\doctor\patient_journey.php on line 238
+=======
+>>>>>>> 559e96a50ed247b0587d3a29815319dbec457c7e
