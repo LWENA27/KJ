@@ -52,7 +52,7 @@
             </div>
             <div class="flex items-center">
                 <span class="font-medium mr-2">REG NO:</span>
-                <span class="border-b border-gray-400 flex-1 px-2"><?php echo str_pad($patient['id'], 6, '0', STR_PAD_LEFT); ?></span>
+                <span class="border-b border-gray-400 flex-1 px-2"><?php echo ($patient['registration_number']) ?></span>
             </div>
         </div>
 
