@@ -481,43 +481,49 @@ class DoctorController extends BaseController {
     }
 
     public function search_medicines() {
-        // Check authentication
-        if (!isset($_SESSION['user_id']) || !isset($_SESSION['user_role']) || $_SESSION['user_role'] !== 'doctor') {
-            http_response_code(401);
-            echo json_encode(['error' => 'Unauthorized']);
-            exit;
-        }
-
-        $query = $_GET['q'] ?? '';
-
-        if (strlen($query) < 2) {
-            echo json_encode([]);
-            exit;
-        }
-
+        // Return JSON list of active medicines with current stock (from batches).
+        $q = trim($_GET['q'] ?? '');
         try {
-            $stmt = $this->pdo->prepare("
-                SELECT m.id, m.name, m.generic_name, m.unit_price, m.description, 
-                       COALESCE(SUM(mb.quantity_remaining), 0) as stock_quantity
-                FROM medicines m
-                LEFT JOIN medicine_batches mb ON m.id = mb.medicine_id
-                WHERE (m.name LIKE ? OR m.generic_name LIKE ? OR m.description LIKE ?)
-                GROUP BY m.id, m.name, m.generic_name, m.unit_price, m.description
-                HAVING stock_quantity > 0
-                ORDER BY m.name
-                LIMIT 20
-            ");
-            $search = "%{$query}%";
-            $stmt->execute([$search, $search, $search]);
-            $medicines = $stmt->fetchAll();
+            if ($q === '') {
+                // return top 50 active medicines if no query
+                $stmt = $this->pdo->prepare("
+                    SELECT m.id, m.name, m.generic_name, m.strength, m.unit, m.unit_price,
+                           COALESCE(SUM(mb.quantity_remaining), 0) AS stock_quantity
+                    FROM medicines m
+                    LEFT JOIN medicine_batches mb ON mb.medicine_id = m.id AND mb.status = 'active'
+                    WHERE m.is_active = 1
+                    GROUP BY m.id
+                    ORDER BY m.name
+                    LIMIT 50
+                ");
+                $stmt->execute();
+            } else {
+                $term = '%' . str_replace('%','\\%',$q) . '%';
+                $stmt = $this->pdo->prepare("
+                    SELECT m.id, m.name, m.generic_name, m.strength, m.unit, m.unit_price,
+                           COALESCE(SUM(mb.quantity_remaining), 0) AS stock_quantity
+                    FROM medicines m
+                    LEFT JOIN medicine_batches mb ON mb.medicine_id = m.id AND mb.status = 'active'
+                    WHERE m.is_active = 1
+                      AND (m.name LIKE ? OR m.generic_name LIKE ?)
+                    GROUP BY m.id
+                    ORDER BY m.name
+                    LIMIT 50
+                ");
+                $stmt->execute([$term, $term]);
+            }
 
-            header('Content-Type: application/json');
+            $medicines = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+            header('Content-Type: application/json; charset=utf-8');
             echo json_encode($medicines);
+            exit;
         } catch (Exception $e) {
-            http_response_code(500);
-            echo json_encode(['error' => 'Database error']);
+            header('Content-Type: application/json; charset=utf-8', true, 500);
+            echo json_encode(['error' => 'Failed to search medicines']);
+            error_log('search_medicines error: ' . $e->getMessage());
+            exit;
         }
-        exit;
     }
 
     public function view_lab_results($patient_id = null) {
@@ -912,6 +918,71 @@ class DoctorController extends BaseController {
             'patient' => $patient,
             'csrf_token' => $this->generateCSRF()
         ]);
+    }
+
+    public function prescribe_medicine() {
+        if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+            $this->redirect('doctor/lab_results');
+            return;
+        }
+
+        $this->validateCSRF();
+        
+        $patient_id = filter_input(INPUT_POST, 'patient_id', FILTER_VALIDATE_INT);
+        $medicines = $_POST['medicines'] ?? [];
+        $notes = trim($_POST['notes'] ?? '');
+
+        if (!$patient_id || empty($medicines)) {
+            $_SESSION['error'] = 'Invalid request - missing required fields';
+            $this->redirect('doctor/lab_results');
+            return;
+        }
+
+        try {
+            $this->pdo->beginTransaction();
+
+            // Get latest visit and consultation
+            $stmt = $this->pdo->prepare("SELECT id FROM patient_visits WHERE patient_id = ? ORDER BY created_at DESC LIMIT 1");
+            $stmt->execute([$patient_id]);
+            $visit = $stmt->fetch();
+            
+            if (!$visit) {
+                throw new Exception('No active visit found for patient');
+            }
+
+            $visit_id = $visit['id'];
+
+            // Create prescriptions for each medicine
+            $stmt = $this->pdo->prepare("
+                INSERT INTO prescriptions 
+                (visit_id, patient_id, doctor_id, medicine_id, quantity_prescribed, dosage, notes, status, created_at)
+                VALUES (?, ?, ?, ?, ?, ?, ?, 'pending', NOW())
+            ");
+
+            foreach ($medicines as $medicine_id => $data) {
+                $stmt->execute([
+                    $visit_id,
+                    $patient_id, 
+                    $_SESSION['user_id'],
+                    $medicine_id,
+                    $data['quantity'],
+                    $data['dosage'],
+                    $notes
+                ]);
+            }
+
+            // Update workflow status
+            $this->updateWorkflowStatus($patient_id, 'medicine_dispensing');
+
+            $this->pdo->commit();
+            $_SESSION['success'] = 'Prescription created successfully';
+
+        } catch (Exception $e) {
+            $this->pdo->rollBack();
+            $_SESSION['error'] = 'Failed to create prescription: ' . $e->getMessage();
+        }
+
+        $this->redirect('doctor/lab_results');
     }
 }
 ?>

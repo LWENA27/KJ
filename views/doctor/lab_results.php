@@ -89,7 +89,11 @@
                                 <i class="fas fa-eye mr-1"></i> View Details
                             </button>
                             <?php if ($result['status'] === 'completed'): ?>
-                            <a href="#" class="text-green-600 hover:text-green-900"><i class="fas fa-clipboard-check mr-1"></i> Review</a>
+                            <button 
+                                data-patient-id="<?php echo $result['patient_id']; ?>"
+                                class="prescribe-btn text-green-600 hover:text-green-900 focus:outline-none">
+                                <i class="fas fa-prescription mr-1"></i> Prescribe Medicine
+                            </button>
                             <?php endif; ?>
                         </td>
                     </tr>
@@ -173,6 +177,81 @@
                     <i class="fas fa-print mr-2"></i>Print Result
                 </button>
             </div>
+        </div>
+    </div>
+</div>
+
+<!-- Prescription Modal -->
+<div id="prescriptionModal" class="fixed inset-0 z-50 hidden">
+    <div class="fixed inset-0 bg-black bg-opacity-50 backdrop-blur-sm"></div>
+    
+    <div class="fixed inset-0 flex items-center justify-center p-4">
+        <!--
+            Centered modal box with reduced width and 100px left margin.
+        -->
+        <div class="bg-white rounded-xl shadow-2xl transform transition-all w-full mx-4
+                    md:min-w-[720px] lg:min-w-[880px] max-w-4xl min-h-[560px] overflow-y-auto"
+             style="margin-left:100px;">
+            <!-- Header -->
+            <div class="flex items-center justify-between px-6 py-4 border-b border-gray-200">
+                <h3 class="text-xl font-bold text-gray-900 flex items-center">
+                    <i class="fas fa-prescription text-green-600 mr-3"></i>
+                    Prescribe Medicine
+                </h3>
+                <button type="button" id="closePrescriptionModal" class="text-gray-400 hover:text-gray-500">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            
+            <!-- Body -->
+            <form id="prescriptionForm" method="POST" action="<?= $BASE_PATH ?>/doctor/prescribe_medicine">
+                <input type="hidden" name="csrf_token" value="<?= $csrf_token ?>">
+                <input type="hidden" name="patient_id" id="prescriptionPatientId">
+                
+                <div class="px-6 py-4">
+                    <div class="space-y-4">
+                        <!-- Medicine Search -->
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Search Medicine</label>
+                            <div class="relative">
+                                <input type="text" id="medicineSearch" 
+                                    class="w-full rounded-lg border border-gray-300 px-4 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                                    placeholder="Type to search medicines...">
+                                <div id="medicineSearchResults" class="absolute z-10 w-full mt-1 bg-white shadow-lg rounded-lg border border-gray-200 hidden">
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Selected Medicines -->
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Selected Medicines</label>
+                            <div id="selectedMedicines" class="space-y-2">
+                                <!-- Selected medicines will be added here dynamically -->
+                            </div>
+                        </div>
+
+                        <!-- Notes -->
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Prescription Notes</label>
+                            <textarea name="notes" rows="3" 
+                                class="w-full rounded-lg border border-gray-300 px-4 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                                placeholder="Enter prescription notes..."></textarea>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Footer -->
+                <div class="px-6 py-4 bg-gray-50 rounded-b-xl flex justify-end space-x-3">
+                    <button type="button" id="cancelPrescription"
+                            class="px-4 py-2 bg-white border border-gray-300 rounded-lg text-gray-700 shadow-sm hover:bg-gray-50">
+                        Cancel
+                    </button>
+                    <button type="submit"
+                            class="px-6 py-2 bg-green-600 text-white rounded-lg shadow-sm hover:bg-green-700">
+                        <i class="fas fa-check mr-2"></i>Submit Prescription
+                    </button>
+                </div>
+            </form>
         </div>
     </div>
 </div>
@@ -321,6 +400,117 @@ document.addEventListener('DOMContentLoaded', function() {
         setTimeout(() => {
             printWindow.print();
         }, 500);
+    });
+});
+
+document.addEventListener('DOMContentLoaded', function() {
+    const prescriptionModal = document.getElementById('prescriptionModal');
+    const prescribeButtons = document.querySelectorAll('.prescribe-btn');
+    const closePrescriptionModal = document.getElementById('closePrescriptionModal');
+    const cancelPrescription = document.getElementById('cancelPrescription');
+    const medicineSearch = document.getElementById('medicineSearch');
+    const medicineSearchResults = document.getElementById('medicineSearchResults');
+    const selectedMedicines = document.getElementById('selectedMedicines');
+    const prescriptionForm = document.getElementById('prescriptionForm');
+    
+    let searchTimeout;
+    
+    // Open prescription modal
+    prescribeButtons.forEach(button => {
+        button.addEventListener('click', function() {
+            const patientId = this.getAttribute('data-patient-id');
+            document.getElementById('prescriptionPatientId').value = patientId;
+            prescriptionModal.classList.remove('hidden');
+            document.body.classList.add('overflow-hidden');
+        });
+    });
+    
+    // Close modal handlers
+    [closePrescriptionModal, cancelPrescription].forEach(button => {
+        button.addEventListener('click', () => {
+            prescriptionModal.classList.add('hidden');
+            document.body.classList.remove('overflow-hidden');
+        });
+    });
+    
+    // Medicine search handler
+    medicineSearch.addEventListener('input', function() {
+        clearTimeout(searchTimeout);
+        const query = this.value.trim();
+        
+        if (query.length < 2) {
+            medicineSearchResults.classList.add('hidden');
+            return;
+        }
+        
+        searchTimeout = setTimeout(() => {
+            fetch(`${BASE_PATH}/doctor/search_medicines?q=${encodeURIComponent(query)}`)
+                .then(response => response.json())
+                .then(medicines => {
+                    medicineSearchResults.innerHTML = '';
+                    
+                    medicines.forEach(medicine => {
+                        const div = document.createElement('div');
+                        div.className = 'p-2 hover:bg-gray-100 cursor-pointer';
+                        div.innerHTML = `
+                            <div class="font-medium">${medicine.name}</div>
+                            <div class="text-sm text-gray-600">Stock: ${medicine.stock_quantity}</div>
+                        `;
+                        div.addEventListener('click', () => selectMedicine(medicine));
+                        medicineSearchResults.appendChild(div);
+                    });
+                    
+                    medicineSearchResults.classList.remove('hidden');
+                });
+        }, 300);
+    });
+    
+    function selectMedicine(medicine) {
+        const medicineId = `medicine-${medicine.id}`;
+        
+        if (!document.getElementById(medicineId)) {
+            const div = document.createElement('div');
+            div.id = medicineId;
+            div.className = 'bg-gray-50 rounded-lg p-3 border border-gray-200';
+            div.innerHTML = `
+                <div class="flex items-center justify-between">
+                    <div>
+                        <div class="font-medium">${medicine.name}</div>
+                        <div class="text-sm text-gray-600">Available: ${medicine.stock_quantity}</div>
+                    </div>
+                    <button type="button" class="text-red-600 hover:text-red-800">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+                <div class="mt-2 grid grid-cols-2 gap-2">
+                    <input type="number" name="medicines[${medicine.id}][quantity]" 
+                           class="rounded border-gray-300" placeholder="Quantity" min="1" max="${medicine.stock_quantity}">
+                    <input type="text" name="medicines[${medicine.id}][dosage]" 
+                           class="rounded border-gray-300" placeholder="Dosage">
+                </div>
+            `;
+            
+            div.querySelector('button').addEventListener('click', () => div.remove());
+            selectedMedicines.appendChild(div);
+        }
+        
+        medicineSearch.value = '';
+        medicineSearchResults.classList.add('hidden');
+    }
+    
+    // Form submission handler
+    prescriptionForm.addEventListener('submit', function(e) {
+        e.preventDefault();
+        
+        // Validate form
+        const selectedMeds = document.querySelectorAll('[name^="medicines["]');
+        if (selectedMeds.length === 0) {
+            alert('Please select at least one medicine');
+            return;
+        }
+        
+        // Submit form
+        this.submit();
     });
 });
 </script>
