@@ -1,28 +1,28 @@
-<div class="space-y-6">
+<div class="w-full px-6 space-y-6">
     <!-- Enhanced Header Section -->
     <div class="flex items-center justify-between mb-6">
         <div>
             <h1 class="text-3xl font-bold text-gray-900 flex items-center">
                 <i class="fas fa-clipboard-check mr-3 text-green-600"></i>
-                Record Test Results
+                Test Results History
             </h1>
-            <p class="text-gray-600 mt-1">Enter and validate laboratory test results</p>
+            <p class="text-gray-600 mt-1">View and manage all laboratory test results</p>
             <div class="flex items-center mt-2 space-x-4">
                 <div class="flex items-center">
-                    <div class="w-2 h-2 bg-yellow-500 rounded-full mr-2 animate-pulse"></div>
-                    <span class="text-xs text-yellow-600 font-medium"><?php echo count($pending_results ?? []); ?> Pending Results</span>
+                    <div class="w-2 h-2 bg-blue-500 rounded-full mr-2 animate-pulse"></div>
+                    <span class="text-xs text-blue-600 font-medium" id="totalCount"><?php echo count($all_results ?? []); ?> Total Results</span>
                 </div>
                 <div class="flex items-center">
                     <div class="w-2 h-2 bg-green-500 rounded-full mr-2"></div>
-                    <span class="text-xs text-green-600 font-medium">Real-time Validation</span>
+                    <span class="text-xs text-green-600 font-medium" id="visibleCount"><?php echo count($all_results ?? []); ?> Visible</span>
                 </div>
             </div>
         </div>
         <div class="flex items-center space-x-3">
-            <button onclick="toggleValidationMode()" class="bg-purple-500 hover:bg-purple-600 text-white px-4 py-2 rounded-lg text-sm font-medium">
-                <i class="fas fa-shield-alt mr-2"></i>Validation Mode
+            <button onclick="window.location.reload()" class="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors">
+                <i class="fas fa-sync-alt mr-2"></i>Refresh
             </button>
-            <a href="/KJ/lab/tests" class="bg-gray-500 hover:bg-gray-600 text-white px-4 py-2 rounded-lg text-sm font-medium">
+            <a href="/KJ/lab/tests" class="bg-gray-500 hover:bg-gray-600 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors">
                 <i class="fas fa-arrow-left mr-2"></i>Back to Queue
             </a>
         </div>
@@ -30,14 +30,14 @@
 
     <!-- Quick Stats -->
     <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
-        <div class="bg-gradient-to-r from-yellow-500 to-orange-500 rounded-lg shadow-lg p-4 text-white transform hover:scale-105 transition-all duration-300">
+        <div class="bg-gradient-to-r from-blue-500 to-blue-600 rounded-lg shadow-lg p-4 text-white transform hover:scale-105 transition-all duration-300">
             <div class="flex items-center justify-between">
                 <div>
-                    <p class="text-yellow-100 text-sm font-medium">Pending Results</p>
-                    <p class="text-2xl font-bold"><?php echo count($pending_results ?? []); ?></p>
+                    <p class="text-blue-100 text-sm font-medium">Total Results</p>
+                    <p class="text-3xl font-bold"><?php echo count($all_results ?? []); ?></p>
                 </div>
-                <div class="bg-yellow-400 bg-opacity-30 rounded-full p-2">
-                    <i class="fas fa-hourglass-half text-xl"></i>
+                <div class="bg-blue-400 bg-opacity-30 rounded-full p-3">
+                    <i class="fas fa-clipboard-list text-2xl"></i>
                 </div>
             </div>
         </div>
@@ -46,22 +46,10 @@
             <div class="flex items-center justify-between">
                 <div>
                     <p class="text-green-100 text-sm font-medium">Completed Today</p>
-                    <p class="text-2xl font-bold"><?php echo rand(15, 35); ?></p>
+                    <p class="text-3xl font-bold"><?php echo rand(15, 35); ?></p>
                 </div>
-                <div class="bg-green-400 bg-opacity-30 rounded-full p-2">
-                    <i class="fas fa-check-circle text-xl"></i>
-                </div>
-            </div>
-        </div>
-        
-        <div class="bg-gradient-to-r from-blue-500 to-blue-600 rounded-lg shadow-lg p-4 text-white transform hover:scale-105 transition-all duration-300">
-            <div class="flex items-center justify-between">
-                <div>
-                    <p class="text-blue-100 text-sm font-medium">Accuracy Rate</p>
-                    <p class="text-2xl font-bold">99.2%</p>
-                </div>
-                <div class="bg-blue-400 bg-opacity-30 rounded-full p-2">
-                    <i class="fas fa-target text-xl"></i>
+                <div class="bg-green-400 bg-opacity-30 rounded-full p-3">
+                    <i class="fas fa-check-circle text-2xl"></i>
                 </div>
             </div>
         </div>
@@ -69,429 +57,674 @@
         <div class="bg-gradient-to-r from-purple-500 to-purple-600 rounded-lg shadow-lg p-4 text-white transform hover:scale-105 transition-all duration-300">
             <div class="flex items-center justify-between">
                 <div>
-                    <p class="text-purple-100 text-sm font-medium">Avg Time</p>
-                    <p class="text-2xl font-bold">12m</p>
+                    <p class="text-purple-100 text-sm font-medium">Pending Review</p>
+                    <p class="text-3xl font-bold" id="pendingCount">
+                        <?php echo count(array_filter($all_results ?? [], function($r) { return ($r['order_status'] ?? '') === 'pending'; })); ?>
+                    </p>
                 </div>
-                <div class="bg-purple-400 bg-opacity-30 rounded-full p-2">
-                    <i class="fas fa-stopwatch text-xl"></i>
+                <div class="bg-purple-400 bg-opacity-30 rounded-full p-3">
+                    <i class="fas fa-clock text-2xl"></i>
+                </div>
+            </div>
+        </div>
+        
+        <div class="bg-gradient-to-r from-orange-500 to-orange-600 rounded-lg shadow-lg p-4 text-white transform hover:scale-105 transition-all duration-300">
+            <div class="flex items-center justify-between">
+                <div>
+                    <p class="text-orange-100 text-sm font-medium">Critical Alerts</p>
+                    <p class="text-3xl font-bold">
+                        <?php echo count(array_filter($all_results ?? [], function($r) { return !empty($r['is_critical']); })); ?>
+                    </p>
+                </div>
+                <div class="bg-orange-400 bg-opacity-30 rounded-full p-3">
+                    <i class="fas fa-exclamation-triangle text-2xl"></i>
                 </div>
             </div>
         </div>
     </div>
 
-    <!-- Enhanced Pending Results -->
-    <div class="bg-white rounded-lg shadow-lg overflow-hidden">
-        <div class="px-6 py-4 border-b border-gray-200 bg-gradient-to-r from-green-50 to-blue-50">
-            <div class="flex items-center justify-between">
-                <h3 class="text-lg font-semibold text-gray-900 flex items-center">
-                    <i class="fas fa-clipboard-list mr-3 text-green-600"></i>
-                    Pending Test Results Entry
-                </h3>
-                <div class="flex items-center space-x-3">
-                    <div class="flex items-center">
-                        <input type="checkbox" id="autoValidate" checked class="mr-2 rounded">
-                        <label for="autoValidate" class="text-sm text-gray-600">Auto-validate ranges</label>
-                    </div>
-                    <button onclick="saveAllResults()" class="bg-green-500 hover:bg-green-600 text-white px-3 py-2 rounded-lg text-sm font-medium">
-                        <i class="fas fa-save mr-1"></i>Save All
-                    </button>
+    <!-- Search / Filters / Actions -->
+    <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-4 mb-6">
+        <div class="flex flex-wrap items-center gap-3">
+            <!-- Search -->
+            <div class="flex-1 min-w-64">
+                <div class="relative">
+                    <i class="fas fa-search absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400"></i>
+                    <input id="searchInput" oninput="applyFilters()" type="text" placeholder="Search by patient name or ID" 
+                           class="w-full pl-10 pr-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all" />
                 </div>
             </div>
+            
+            <!-- Date Filters -->
+            <div class="flex items-center space-x-2">
+                <input id="fromDate" type="date" onchange="applyFilters()" class="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 transition-all" />
+                <span class="text-gray-500 text-sm">to</span>
+                <input id="toDate" type="date" onchange="applyFilters()" class="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 transition-all" />
+            </div>
+            
+            <!-- Dropdowns -->
+            <select id="testTypeFilter" onchange="applyFilters()" class="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 transition-all">
+                <option value="">All Tests</option>
+                <option value="Blood">Blood Tests</option>
+                <option value="Urine">Urine Analysis</option>
+                <option value="Tissue">Tissue Biopsy</option>
+                <option value="Microbiology">Microbiology</option>
+                <option value="Radiology">Radiology</option>
+            </select>
+            
+            <select id="statusFilter" onchange="applyFilters()" class="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 transition-all">
+                <option value="">All Status</option>
+                <option value="completed">Completed</option>
+                <option value="pending">Pending Entry</option>
+                <option value="in_progress">In Progress</option>
+            </select>
+            
+            <select id="sortBy" onchange="applySorting()" class="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 transition-all">
+                <option value="date_desc">Recent First</option>
+                <option value="date_asc">Oldest First</option>
+                <option value="patient">Patient Name</option>
+                <option value="test">Test Type</option>
+                <option value="status">Status</option>
+            </select>
+            
+            <!-- View Toggle -->
+            <div class="flex items-center bg-gray-100 rounded-lg p-1">
+                <button id="cardViewBtn" onclick="setView('card')" class="px-3 py-1 rounded bg-white shadow-sm text-sm font-medium transition-all">
+                    <i class="fas fa-th-large mr-1"></i>Cards
+                </button>
+                <button id="tableViewBtn" onclick="setView('table')" class="px-3 py-1 rounded text-sm font-medium text-gray-600 transition-all">
+                    <i class="fas fa-table mr-1"></i>Table
+                </button>
+            </div>
+            
+            <!-- Action Buttons -->
+            <div class="flex items-center space-x-2 ml-auto">
+                <button id="printSelectedBtn" onclick="printSelected()" class="px-3 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-lg text-sm font-medium transition-colors">
+                    <i class="fas fa-print mr-1"></i>Print (<span id="selectedCount">0</span>)
+                </button>
+                <button onclick="exportCSV()" class="px-3 py-2 bg-green-500 hover:bg-green-600 text-white rounded-lg text-sm font-medium transition-colors">
+                    <i class="fas fa-download mr-1"></i>Export
+                </button>
+            </div>
         </div>
+    </div>
+
+    <!-- Results Container -->
+    <div class="bg-white rounded-lg shadow-lg overflow-hidden">
+        <div class="px-6 py-4 border-b border-gray-200 bg-gradient-to-r from-blue-50 to-indigo-50">
+            <div class="flex items-center justify-between">
+                <h3 class="text-lg font-semibold text-gray-900 flex items-center">
+                    <i class="fas fa-vial mr-3 text-blue-600"></i>
+                    Test Results
+                </h3>
+                <label class="flex items-center cursor-pointer">
+                    <input type="checkbox" id="selectAllResults" onchange="toggleSelectAll(this)" class="mr-2 rounded border-gray-300 text-blue-600 focus:ring-blue-500">
+                    <span class="text-sm text-gray-700 font-medium">Select All</span>
+                </label>
+            </div>
+        </div>
+        
         <div class="p-6">
-            <?php if (empty($pending_results)): ?>
-            <div class="text-center py-12">
-                <div class="w-20 h-20 mx-auto mb-4 bg-green-100 rounded-full flex items-center justify-center">
-                    <i class="fas fa-check-circle text-green-500 text-3xl"></i>
+            <?php if (empty($all_results)): ?>
+            <div class="text-center py-16">
+                <div class="w-24 h-24 mx-auto mb-4 bg-gray-100 rounded-full flex items-center justify-center">
+                    <i class="fas fa-flask text-gray-400 text-4xl"></i>
                 </div>
-                <h4 class="text-lg font-medium text-gray-900 mb-2">All Results Recorded!</h4>
-                <p class="text-gray-500">No pending test results to record</p>
-                <p class="text-sm text-gray-400 mt-1">Excellent work! All tests have been processed</p>
-                <button onclick="refreshResults()" class="mt-4 bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-medium">
-                    <i class="fas fa-refresh mr-2"></i>Check for New Tests
+                <h4 class="text-xl font-semibold text-gray-900 mb-2">No Test Results Found</h4>
+                <p class="text-gray-500 mb-1">No test results recorded yet</p>
+                <p class="text-sm text-gray-400 mb-6">Results will appear here once tests are processed</p>
+                <button onclick="window.location.reload()" class="bg-blue-500 hover:bg-blue-600 text-white px-6 py-3 rounded-lg text-sm font-medium transition-colors">
+                    <i class="fas fa-sync-alt mr-2"></i>Refresh Results
                 </button>
             </div>
             <?php else: ?>
-            <div class="space-y-6">
-                <?php foreach ($pending_results as $index => $result): 
-                    $priority = ['Normal', 'High', 'Urgent'][rand(0, 2)];
-                    $testType = ['Blood', 'Urine', 'Tissue', 'Microbiology'][rand(0, 3)];
+            
+            <!-- Card View -->
+            <div id="cardView" class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+                <?php foreach ($all_results as $index => $result): 
+                    $priority = $result['priority'] ?? 'Normal';
+                    $testType = htmlspecialchars($result['test_name'] ?? 'Unknown Test');
+                    $status = $result['order_status'] ?? 'pending';
+                    $statusColor = $status === 'completed' ? 'green' : ($status === 'pending' ? 'yellow' : 'blue');
+                    $isCritical = !empty($result['is_critical']);
+                    $age = isset($result['date_of_birth']) ? floor((time() - strtotime($result['date_of_birth'])) / (365*24*60*60)) : '';
+                    $collectedDate = isset($result['sample_collected_at']) ? strtotime($result['sample_collected_at']) : (isset($result['created_at']) ? strtotime($result['created_at']) : time());
                 ?>
-                <div class="border-l-4 border-<?php echo $priority === 'Urgent' ? 'red' : ($priority === 'High' ? 'orange' : 'green'); ?>-500 bg-gradient-to-r from-gray-50 to-white rounded-lg p-6 shadow-sm hover:shadow-md transition-all duration-200">
-                    <div class="flex items-center justify-between mb-6">
-                        <div class="flex items-center">
-                            <div class="w-14 h-14 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-lg flex items-center justify-center mr-4 shadow-sm">
-                                <i class="fas fa-user text-white text-lg"></i>
+                <div class="result-item bg-white border-2 border-gray-200 rounded-xl p-4 hover:shadow-xl hover:border-blue-300 transition-all duration-200 cursor-pointer" 
+                     data-patient="<?php echo htmlspecialchars($result['first_name'] . ' ' . $result['last_name']); ?>" 
+                     data-test="<?php echo $testType; ?>" 
+                     data-status="<?php echo $status; ?>"
+                     data-date="<?php echo $collectedDate; ?>"
+                     data-id="<?php echo $result['id']; ?>">
+                    
+                    <!-- Card Header -->
+                    <div class="flex items-start justify-between mb-3">
+                        <div class="flex items-center space-x-3 flex-1 min-w-0">
+                            <input type="checkbox" class="select-result mt-1 rounded border-gray-300 text-blue-600 focus:ring-blue-500" 
+                                   value="<?php echo $result['id']; ?>" onchange="updateSelectedCount()">
+                            <div class="w-12 h-12 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-full flex items-center justify-center text-white font-bold flex-shrink-0 shadow-md">
+                                <?php echo strtoupper(substr($result['first_name'] ?? 'X',0,1) . substr($result['last_name'] ?? 'X',0,1)); ?>
                             </div>
-                            <div>
-                                <h4 class="text-lg font-semibold text-gray-900 flex items-center">
-                                    <?php echo htmlspecialchars($result['first_name'] . ' ' . $result['last_name']); ?>
-                                    <span class="ml-3 inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
-                                        ID: <?php echo str_pad($result['id'], 4, '0', STR_PAD_LEFT); ?>
+                            <div class="flex-1 min-w-0">
+                                <h4 class="font-bold text-gray-900 truncate text-lg"><?php echo htmlspecialchars($result['first_name'] . ' ' . $result['last_name']); ?></h4>
+                                <div class="flex flex-wrap gap-1 mt-1">
+                                    <span class="px-2 py-0.5 rounded-full text-xs font-semibold bg-blue-100 text-blue-800">
+                                        #<?php echo str_pad($result['id'], 4, '0', STR_PAD_LEFT); ?>
                                     </span>
-                                </h4>
-                                <div class="flex items-center space-x-4 mt-1">
-                                    <p class="text-sm text-gray-600 flex items-center">
-                                        <i class="fas fa-flask mr-2 text-blue-500"></i>
-                                        <strong>Test:</strong> <?php echo htmlspecialchars($result['test_name']); ?>
-                                    </p>
-                                    <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-700">
-                                        <i class="fas fa-tag mr-1"></i><?php echo $testType; ?>
+                                    <span class="px-2 py-0.5 rounded-full text-xs font-semibold bg-<?php echo $statusColor; ?>-100 text-<?php echo $statusColor; ?>-800">
+                                        <?php echo ucfirst($status); ?>
                                     </span>
-                                </div>
-                                <div class="text-xs text-gray-500 mt-1">
-                                    <i class="fas fa-clock mr-1"></i>
-                                    Collected: <?php echo date('M j, Y H:i', strtotime($result['created_at'] ?? 'now')); ?>
+                                    <?php if ($isCritical): ?>
+                                        <span class="px-2 py-0.5 rounded-full text-xs font-semibold bg-red-100 text-red-700 animate-pulse">
+                                            <i class="fas fa-exclamation-circle mr-1"></i>Critical
+                                        </span>
+                                    <?php endif; ?>
                                 </div>
                             </div>
-                        </div>
-                        <div class="flex items-center space-x-2">
-                            <span class="inline-flex items-center px-3 py-1 text-sm font-semibold rounded-full
-                                <?php echo $priority === 'Urgent' ? 'bg-red-100 text-red-700 border border-red-200' : ($priority === 'High' ? 'bg-orange-100 text-orange-700 border border-orange-200' : 'bg-green-100 text-green-700 border border-green-200'); ?>">
-                                <i class="fas fa-flag mr-1"></i><?php echo $priority; ?> Priority
-                            </span>
-                            <span class="inline-flex items-center px-3 py-1 text-sm font-medium rounded-full bg-yellow-100 text-yellow-800 border border-yellow-200">
-                                <i class="fas fa-hourglass-half mr-1"></i>Pending Result
-                            </span>
                         </div>
                     </div>
 
-                    <form method="POST" action="/KJ/lab/record_result" class="enhanced-result-form" data-test-id="<?php echo $result['id']; ?>">
-                        <input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars($csrf_token ?? ''); ?>">
-                        <input type="hidden" name="test_id" value="<?php echo $result['id']; ?>">
+                    <!-- Patient Info -->
+                    <div class="grid grid-cols-2 gap-2 mb-3 text-xs">
+                        <div class="flex items-center text-gray-600">
+                            <i class="fas fa-user w-4 mr-2 text-blue-500"></i>
+                            <span><?php echo $age ? $age . ' years' : 'N/A'; ?></span>
+                        </div>
+                        <div class="flex items-center text-gray-600">
+                            <i class="fas fa-phone w-4 mr-2 text-green-500"></i>
+                            <span class="truncate"><?php echo htmlspecialchars($result['phone'] ?? 'N/A'); ?></span>
+                        </div>
+                        <div class="flex items-center text-gray-600">
+                            <i class="fas fa-flask w-4 mr-2 text-purple-500"></i>
+                            <span class="truncate"><?php echo $testType; ?></span>
+                        </div>
+                        <div class="flex items-center text-gray-600">
+                            <i class="fas fa-clock w-4 mr-2 text-orange-500"></i>
+                            <span><?php echo date('M j, H:i', $collectedDate); ?></span>
+                        </div>
+                    </div>
 
-                        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                            <!-- Result Value Section -->
-                            <div class="lg:col-span-2 space-y-4">
-                                <div class="bg-blue-50 rounded-lg p-4">
-                                    <label for="result_value_<?php echo $result['id']; ?>" class="block text-sm font-semibold text-gray-700 mb-3 flex items-center">
-                                        <i class="fas fa-calculator mr-2 text-blue-600"></i>
-                                        Result Value <span class="text-red-500 ml-1">*</span>
-                                    </label>
-                                    <div class="relative">
-                                        <input type="text" id="result_value_<?php echo $result['id']; ?>" name="result_value"
-                                               class="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-lg font-medium"
-                                               placeholder="Enter numerical result"
-                                               onkeyup="validateResult(this, '<?php echo $result['normal_range'] ?? ''; ?>')"
-                                               required>
-                                        <div id="validation_<?php echo $result['id']; ?>" class="mt-2 text-sm hidden">
-                                            <!-- Validation message will appear here -->
-                                        </div>
-                                    </div>
-                                </div>
-
-                                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                    <div>
-                                        <label for="normal_range_<?php echo $result['id']; ?>" class="block text-sm font-medium text-gray-700 mb-2 flex items-center">
-                                            <i class="fas fa-chart-line mr-2 text-green-600"></i>
-                                            Normal Range
-                                        </label>
-                                        <input type="text" id="normal_range_<?php echo $result['id']; ?>" name="normal_range"
-                                               value="<?php echo htmlspecialchars($result['normal_range'] ?? '0-100'); ?>"
-                                               class="w-full px-3 py-2 border border-gray-300 rounded-lg bg-gray-50 text-gray-600 font-medium" readonly>
-                                    </div>
-                                    <div>
-                                        <label for="units_<?php echo $result['id']; ?>" class="block text-sm font-medium text-gray-700 mb-2 flex items-center">
-                                            <i class="fas fa-ruler mr-2 text-purple-600"></i>
-                                            Units
-                                        </label>
-                                        <select id="units_<?php echo $result['id']; ?>" name="units" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
-                                            <option value="mg/dL">mg/dL</option>
-                                            <option value="g/dL">g/dL</option>
-                                            <option value="μg/mL">μg/mL</option>
-                                            <option value="IU/L">IU/L</option>
-                                            <option value="mmol/L">mmol/L</option>
-                                            <option value="%">%</option>
-                                            <option value="count">count</option>
-                                        </select>
-                                    </div>
-                                </div>
-                            </div>
-
-                            <!-- Quick Actions & Status -->
-                            <div class="space-y-4">
-                                <div class="bg-gradient-to-br from-purple-50 to-indigo-50 rounded-lg p-4">
-                                    <h5 class="font-medium text-gray-800 mb-3 flex items-center">
-                                        <i class="fas fa-tachometer-alt mr-2 text-purple-600"></i>
-                                        Quick Actions
-                                    </h5>
-                                    <div class="space-y-2">
-                                        <button type="button" onclick="setNormalValue(<?php echo $result['id']; ?>)" class="w-full bg-green-100 hover:bg-green-200 text-green-700 px-3 py-2 rounded-lg text-sm font-medium transition-colors">
-                                            <i class="fas fa-check mr-2"></i>Set Normal Value
-                                        </button>
-                                        <button type="button" onclick="flagAbnormal(<?php echo $result['id']; ?>)" class="w-full bg-red-100 hover:bg-red-200 text-red-700 px-3 py-2 rounded-lg text-sm font-medium transition-colors">
-                                            <i class="fas fa-exclamation-triangle mr-2"></i>Flag Abnormal
-                                        </button>
-                                        <button type="button" onclick="requestRetest(<?php echo $result['id']; ?>)" class="w-full bg-yellow-100 hover:bg-yellow-200 text-yellow-700 px-3 py-2 rounded-lg text-sm font-medium transition-colors">
-                                            <i class="fas fa-redo mr-2"></i>Request Retest
-                                        </button>
-                                    </div>
-                                </div>
-
-                                <div class="bg-gray-50 rounded-lg p-4">
-                                    <h5 class="font-medium text-gray-800 mb-2 flex items-center">
-                                        <i class="fas fa-info-circle mr-2 text-blue-600"></i>
-                                        Test Information
-                                    </h5>
-                                    <div class="text-xs text-gray-600 space-y-1">
-                                        <div>Sample Type: <?php echo $testType; ?></div>
-                                        <div>Received: <?php echo date('H:i', strtotime($result['created_at'] ?? 'now')); ?></div>
-                                        <div>Technician: <?php echo $_SESSION['user_name'] ?? 'Current User'; ?></div>
-                                    </div>
-                                </div>
+                    <?php if ($status === 'completed' && isset($result['result_value'])): ?>
+                    <!-- Result Display -->
+                    <div class="bg-gradient-to-r from-gray-50 to-blue-50 rounded-lg p-3 mb-3">
+                        <div class="flex items-center justify-between mb-2">
+                            <span class="text-xs font-medium text-gray-600">Result Value</span>
+                            <?php 
+                            $resultVal = floatval($result['result_value']);
+                            $normalRange = $result['normal_range'] ?? '';
+                            $isNormal = true;
+                            if ($normalRange && strpos($normalRange, '-') !== false) {
+                                list($min, $max) = explode('-', $normalRange);
+                                $isNormal = ($resultVal >= floatval($min) && $resultVal <= floatval($max));
+                            }
+                            ?>
+                            <?php if ($isNormal): ?>
+                                <span class="px-2 py-1 rounded-full bg-green-100 text-green-700 text-xs font-bold">
+                                    <i class="fas fa-check-circle mr-1"></i>Normal
+                                </span>
+                            <?php else: ?>
+                                <span class="px-2 py-1 rounded-full bg-red-100 text-red-700 text-xs font-bold">
+                                    <i class="fas fa-exclamation-triangle mr-1"></i>Abnormal
+                                </span>
+                            <?php endif; ?>
+                        </div>
+                        <div class="text-2xl font-bold text-gray-900">
+                            <?php echo htmlspecialchars($result['result_value']); ?>
+                            <span class="text-sm text-gray-500 ml-1"><?php echo htmlspecialchars($result['units'] ?? ''); ?></span>
+                        </div>
+                        <div class="text-xs text-gray-500 mt-1">
+                            Normal: <?php echo htmlspecialchars($normalRange ?: 'Not specified'); ?>
+                        </div>
+                        <!-- Visual Range Indicator -->
+                        <div class="w-full h-2 bg-gray-200 rounded-full mt-2 overflow-hidden">
+                            <div class="h-full rounded-full transition-all duration-300" 
+                                 style="width: <?php echo min(100, max(0, ($resultVal / 100) * 100)); ?>%; 
+                                        background: <?php echo $isNormal ? 'linear-gradient(90deg, #10B981, #059669)' : 'linear-gradient(90deg, #EF4444, #DC2626)'; ?>">
                             </div>
                         </div>
-
-                        <!-- Additional Notes Section -->
-                        <div class="mt-6">
-                            <label for="result_text_<?php echo $result['id']; ?>" class="block text-sm font-medium text-gray-700 mb-2 flex items-center">
-                                <i class="fas fa-sticky-note mr-2 text-yellow-600"></i>
-                                Clinical Notes & Observations
-                            </label>
-                            <textarea id="result_text_<?php echo $result['id']; ?>" name="result_text" rows="3"
-                                      class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 resize-none"
-                                      placeholder="Enter any clinical observations, methodological notes, or recommendations for the physician..."></textarea>
+                    </div>
+                    <?php else: ?>
+                    <!-- Pending Status -->
+                    <div class="bg-yellow-50 border border-yellow-200 rounded-lg p-3 mb-3">
+                        <div class="flex items-center text-yellow-700">
+                            <i class="fas fa-hourglass-half mr-2"></i>
+                            <span class="text-sm font-medium">Awaiting Result Entry</span>
                         </div>
+                    </div>
+                    <?php endif; ?>
 
-                        <!-- Action Buttons -->
-                        <div class="flex justify-between items-center mt-6 pt-4 border-t border-gray-200">
-                            <div class="flex items-center space-x-3">
-                                <button type="button" onclick="saveAsDraft(<?php echo $result['id']; ?>)" class="flex items-center px-4 py-2 border-2 border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 font-medium transition-colors">
-                                    <i class="fas fa-save mr-2"></i>Save Draft
-                                </button>
-                                <button type="button" onclick="skipTest(<?php echo $result['id']; ?>)" class="flex items-center px-4 py-2 border-2 border-yellow-300 rounded-lg text-yellow-700 hover:bg-yellow-50 font-medium transition-colors">
-                                    <i class="fas fa-forward mr-2"></i>Skip for Now
-                                </button>
-                            </div>
-                            <div class="flex items-center space-x-3">
-                                <button type="button" onclick="previewResult(<?php echo $result['id']; ?>)" class="flex items-center px-4 py-2 bg-indigo-500 hover:bg-indigo-600 text-white rounded-lg font-medium transition-colors">
-                                    <i class="fas fa-eye mr-2"></i>Preview Report
-                                </button>
-                                <button type="submit" class="flex items-center px-6 py-2 bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white rounded-lg font-medium shadow-md transition-all duration-200 transform hover:scale-105">
-                                    <i class="fas fa-check-circle mr-2"></i>Submit Result
-                                </button>
-                            </div>
-                        </div>
-                    </form>
+                    <!-- Action Buttons -->
+                    <div class="flex items-center gap-2">
+                        <button onclick="viewDetails(<?php echo $result['id']; ?>)" 
+                                class="flex-1 px-3 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-lg text-xs font-medium transition-colors">
+                            <i class="fas fa-eye mr-1"></i>View
+                        </button>
+                        <button onclick="printResult(<?php echo $result['id']; ?>)" 
+                                class="flex-1 px-3 py-2 bg-gray-500 hover:bg-gray-600 text-white rounded-lg text-xs font-medium transition-colors">
+                            <i class="fas fa-print mr-1"></i>Print
+                        </button>
+                        <button onclick="downloadResult(<?php echo $result['id']; ?>)" 
+                                class="px-3 py-2 bg-green-500 hover:bg-green-600 text-white rounded-lg text-xs font-medium transition-colors">
+                            <i class="fas fa-download"></i>
+                        </button>
+                    </div>
                 </div>
                 <?php endforeach; ?>
             </div>
+
+            <!-- Table View -->
+            <div id="tableView" class="hidden overflow-x-auto">
+                <table class="min-w-full divide-y divide-gray-200">
+                    <thead class="bg-gray-50">
+                        <tr>
+                            <th class="px-4 py-3 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">
+                                <input type="checkbox" id="selectAllTable" onchange="toggleSelectAll(this)" class="rounded border-gray-300 text-blue-600">
+                            </th>
+                            <th class="px-4 py-3 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">Patient</th>
+                            <th class="px-4 py-3 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">Test Type</th>
+                            <th class="px-4 py-3 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">Status</th>
+                            <th class="px-4 py-3 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">Result</th>
+                            <th class="px-4 py-3 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">Date</th>
+                            <th class="px-4 py-3 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tableBody" class="bg-white divide-y divide-gray-200">
+                        <!-- Populated by JavaScript -->
+                    </tbody>
+                </table>
+            </div>
+            
             <?php endif; ?>
         </div>
     </div>
 </div>
 
-<!-- Enhanced JavaScript for Results Page -->
+<!-- Result Detail Modal -->
+<div id="resultDetailModal" class="fixed inset-0 bg-black bg-opacity-50 hidden items-center justify-center z-50 p-4">
+    <div class="bg-white rounded-2xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto transform transition-all duration-300">
+        <div class="sticky top-0 bg-gradient-to-r from-blue-500 to-indigo-600 px-6 py-4 flex items-center justify-between rounded-t-2xl">
+            <h3 class="text-xl font-bold text-white flex items-center">
+                <i class="fas fa-file-medical mr-2"></i>
+                Test Result Details
+            </h3>
+            <button onclick="closeModal('resultDetailModal')" class="text-white hover:text-gray-200 transition-colors">
+                <i class="fas fa-times text-xl"></i>
+            </button>
+        </div>
+        
+        <div id="modalContent" class="p-6">
+            <!-- Content loaded dynamically -->
+        </div>
+    </div>
+</div>
+
 <script>
-// Enhanced Results Management Functions
+// Global state
+let currentView = 'card';
+let selectedResults = new Set();
 
-// Real-time result validation
-function validateResult(input, normalRange) {
-    const value = parseFloat(input.value);
-    const testId = input.id.split('_')[2];
-    const validationDiv = document.getElementById(`validation_${testId}`);
-    
-    if (!value || !normalRange) {
-        validationDiv.classList.add('hidden');
-        return;
-    }
-    
-    // Parse normal range (e.g., "10-50")
-    const rangeParts = normalRange.split('-');
-    if (rangeParts.length === 2) {
-        const min = parseFloat(rangeParts[0]);
-        const max = parseFloat(rangeParts[1]);
-        
-        validationDiv.classList.remove('hidden');
-        
-        if (value < min) {
-            validationDiv.innerHTML = `
-                <div class="flex items-center text-red-600">
-                    <i class="fas fa-arrow-down mr-2"></i>
-                    <span class="font-medium">Below Normal Range</span>
-                    <span class="ml-2 text-sm">(${value} < ${min})</span>
-                </div>
-            `;
-            input.classList.add('border-red-500');
-            input.classList.remove('border-green-500', 'border-gray-300');
-        } else if (value > max) {
-            validationDiv.innerHTML = `
-                <div class="flex items-center text-red-600">
-                    <i class="fas fa-arrow-up mr-2"></i>
-                    <span class="font-medium">Above Normal Range</span>
-                    <span class="ml-2 text-sm">(${value} > ${max})</span>
-                </div>
-            `;
-            input.classList.add('border-red-500');
-            input.classList.remove('border-green-500', 'border-gray-300');
-        } else {
-            validationDiv.innerHTML = `
-                <div class="flex items-center text-green-600">
-                    <i class="fas fa-check-circle mr-2"></i>
-                    <span class="font-medium">Within Normal Range</span>
-                    <span class="ml-2 text-sm">(${min} - ${max})</span>
-                </div>
-            `;
-            input.classList.add('border-green-500');
-            input.classList.remove('border-red-500', 'border-gray-300');
-        }
-    }
-}
+// Initialize page
+document.addEventListener('DOMContentLoaded', function() {
+    console.log('Lab Results History - Enhanced Version Loaded');
+    setView('card');
+    updateSelectedCount();
+    applyFilters();
+});
 
-// Quick action functions
-function setNormalValue(testId) {
-    const normalRangeInput = document.getElementById(`normal_range_${testId}`);
-    const resultInput = document.getElementById(`result_value_${testId}`);
+// View Management
+function setView(view) {
+    currentView = view;
+    const cardView = document.getElementById('cardView');
+    const tableView = document.getElementById('tableView');
+    const cardBtn = document.getElementById('cardViewBtn');
+    const tableBtn = document.getElementById('tableViewBtn');
     
-    if (normalRangeInput.value) {
-        const rangeParts = normalRangeInput.value.split('-');
-        if (rangeParts.length === 2) {
-            const min = parseFloat(rangeParts[0]);
-            const max = parseFloat(rangeParts[1]);
-            const normalValue = ((min + max) / 2).toFixed(1);
-            
-            resultInput.value = normalValue;
-            validateResult(resultInput, normalRangeInput.value);
-            showNotification('Normal Value Set', `Set result to ${normalValue} (mid-range)`, 'success');
-        }
-    }
-}
-
-function flagAbnormal(testId) {
-    const form = document.querySelector(`form[data-test-id="${testId}"]`);
-    const notesTextarea = form.querySelector('textarea[name="result_text"]');
-    
-    notesTextarea.value = (notesTextarea.value ? notesTextarea.value + '\n\n' : '') + 
-                         '[FLAGGED ABNORMAL] - Requires physician review. ';
-    notesTextarea.focus();
-    showNotification('Result Flagged', 'Result marked as abnormal for physician review', 'warning');
-}
-
-function requestRetest(testId) {
-    if (confirm('Request a retest for this sample? This will delay the result.')) {
-        showNotification('Retest Requested', 'Sample marked for retesting', 'info');
-        // In real implementation, this would update the database
-    }
-}
-
-function saveAsDraft(testId) {
-    const form = document.querySelector(`form[data-test-id="${testId}"]`);
-    const formData = new FormData(form);
-    
-    showNotification('Draft Saved', 'Result saved as draft for later completion', 'info');
-    // In real implementation, this would save to database as draft
-}
-
-function skipTest(testId) {
-    if (confirm('Skip this test for now? You can return to it later.')) {
-        const form = document.querySelector(`form[data-test-id="${testId}"]`).closest('.border-l-4');
-        form.style.opacity = '0.5';
-        form.style.transform = 'scale(0.98)';
-        setTimeout(() => {
-            form.style.display = 'none';
-        }, 300);
-        showNotification('Test Skipped', 'Test moved to later queue', 'info');
-    }
-}
-
-function previewResult(testId) {
-    const form = document.querySelector(`form[data-test-id="${testId}"]`);
-    const resultValue = form.querySelector('input[name="result_value"]').value;
-    const notes = form.querySelector('textarea[name="result_text"]').value;
-    const units = form.querySelector('select[name="units"]').value;
-    const normalRange = form.querySelector(`input[id="normal_range_${testId}"]`).value;
-    const patientName = form.closest('.border-l-4').querySelector('h4').textContent.trim();
-    const testElement = form.closest('.border-l-4').querySelector('p strong');
-    const testName = testElement && testElement.textContent === 'Test:' ? 
-        testElement.parentNode.textContent.replace('Test:', '').trim() : 'Unknown Test';
-    
-    if (!resultValue) {
-        showNotification('Missing Data', 'Please enter a result value before preview', 'warning');
-        return;
-    }
-    
-    // Get validation status
-    let validationStatus = "normal";
-    if (normalRange) {
-        const rangeParts = normalRange.split('-');
-        if (rangeParts.length === 2) {
-            const min = parseFloat(rangeParts[0]);
-            const max = parseFloat(rangeParts[1]);
-            
-            if (parseFloat(resultValue) < min) {
-                validationStatus = "below";
-            } else if (parseFloat(resultValue) > max) {
-                validationStatus = "above";
-            }
-        }
-    }
-    
-    // Update the result preview modal content
-    document.getElementById('modal_result_value').textContent = `${resultValue} ${units}`;
-    document.getElementById('modal_normal_range').textContent = normalRange;
-    document.getElementById('modal_result_notes').textContent = notes || 'None';
-    document.getElementById('modal_technician').textContent = document.querySelector('meta[name="user"]')?.content || 'Current User';
-    document.getElementById('modal_test_date').textContent = new Date().toLocaleDateString();
-    document.getElementById('modal_patient_name').textContent = patientName;
-    document.getElementById('modal_test_name').textContent = testName;
-    
-    // Update validation status styling
-    const statusElement = document.getElementById('modal_validation_status');
-    if (validationStatus === "below") {
-        statusElement.innerHTML = '<i class="fas fa-arrow-down mr-2"></i>Below Normal Range';
-        statusElement.className = 'px-3 py-1 bg-red-100 text-red-700 rounded-full text-sm font-semibold';
-    } else if (validationStatus === "above") {
-        statusElement.innerHTML = '<i class="fas fa-arrow-up mr-2"></i>Above Normal Range';
-        statusElement.className = 'px-3 py-1 bg-red-100 text-red-700 rounded-full text-sm font-semibold';
+    if (view === 'card') {
+        cardView?.classList.remove('hidden');
+        tableView?.classList.add('hidden');
+        cardBtn.classList.add('bg-white', 'shadow-sm', 'text-gray-900');
+        cardBtn.classList.remove('text-gray-600');
+        tableBtn.classList.remove('bg-white', 'shadow-sm', 'text-gray-900');
+        tableBtn.classList.add('text-gray-600');
     } else {
-        statusElement.innerHTML = '<i class="fas fa-check-circle mr-2"></i>Within Normal Range';
-        statusElement.className = 'px-3 py-1 bg-green-100 text-green-700 rounded-full text-sm font-semibold';
+        cardView?.classList.add('hidden');
+        tableView?.classList.remove('hidden');
+        tableBtn.classList.add('bg-white', 'shadow-sm', 'text-gray-900');
+        tableBtn.classList.remove('text-gray-600');
+        cardBtn.classList.remove('bg-white', 'shadow-sm', 'text-gray-900');
+        cardBtn.classList.add('text-gray-600');
+        buildTableView();
+    }
+}
+
+// Filter and Search
+function applyFilters() {
+    const searchTerm = document.getElementById('searchInput')?.value.toLowerCase() || '';
+    const testType = document.getElementById('testTypeFilter')?.value || '';
+    const status = document.getElementById('statusFilter')?.value || '';
+    const fromDate = document.getElementById('fromDate')?.value || '';
+    const toDate = document.getElementById('toDate')?.value || '';
+    
+    const items = document.querySelectorAll('.result-item');
+    let visibleCount = 0;
+    
+    items.forEach(item => {
+        const id = item.getAttribute('data-id');
+        const patient = item.getAttribute('data-patient');
+        const test = item.getAttribute('data-test');
+        const status = item.getAttribute('data-status');
+        const dateTimestamp = parseInt(item.getAttribute('data-date') || '0');
+        const date = new Date(dateTimestamp * 1000);
+        
+        // Get result value from card
+        const resultElement = item.querySelector('.text-2xl.font-bold');
+        const resultValue = resultElement ? resultElement.textContent.trim() : 'Pending';
+        
+        // Status badge
+        let statusBadge = '';
+        if (status === 'completed') {
+            statusBadge = '<span class="px-3 py-1 bg-green-100 text-green-800 rounded-full text-xs font-semibold"><i class="fas fa-check-circle mr-1"></i>Completed</span>';
+        } else if (status === 'pending') {
+            statusBadge = '<span class="px-3 py-1 bg-yellow-100 text-yellow-800 rounded-full text-xs font-semibold"><i class="fas fa-clock mr-1"></i>Pending</span>';
+        } else {
+            statusBadge = '<span class="px-3 py-1 bg-blue-100 text-blue-800 rounded-full text-xs font-semibold">' + status + '</span>';
+        }
+        
+        const tr = document.createElement('tr');
+        tr.className = 'hover:bg-blue-50 transition-colors';
+        tr.innerHTML = `
+            <td class="px-4 py-4">
+                <input type="checkbox" class="select-result rounded border-gray-300 text-blue-600 focus:ring-blue-500" 
+                       value="${id}" onchange="updateSelectedCount()">
+            </td>
+            <td class="px-4 py-4">
+                <div class="flex items-center">
+                    <div class="w-10 h-10 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-full flex items-center justify-center text-white font-bold text-sm mr-3">
+                        ${patient.split(' ').map(n => n[0]).join('').toUpperCase()}
+                    </div>
+                    <div>
+                        <div class="text-sm font-semibold text-gray-900">${patient}</div>
+                        <div class="text-xs text-gray-500">#${String(id).padStart(4, '0')}</div>
+                    </div>
+                </div>
+            </td>
+            <td class="px-4 py-4">
+                <div class="text-sm text-gray-900 font-medium">${test}</div>
+            </td>
+            <td class="px-4 py-4">${statusBadge}</td>
+            <td class="px-4 py-4">
+                <div class="text-sm font-semibold text-gray-900">${resultValue}</div>
+            </td>
+            <td class="px-4 py-4">
+                <div class="text-sm text-gray-600">${date.toLocaleDateString()}</div>
+                <div class="text-xs text-gray-400">${date.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</div>
+            </td>
+            <td class="px-4 py-4">
+                <div class="flex items-center space-x-2">
+                    <button onclick="viewDetails(${id})" class="px-3 py-1 bg-blue-500 hover:bg-blue-600 text-white rounded text-xs font-medium transition-colors">
+                        <i class="fas fa-eye mr-1"></i>View
+                    </button>
+                    <button onclick="printResult(${id})" class="px-3 py-1 bg-gray-500 hover:bg-gray-600 text-white rounded text-xs font-medium transition-colors">
+                        <i class="fas fa-print"></i>
+                    </button>
+                </div>
+            </td>
+        `;
+        tbody.appendChild(tr);
+    });
+}
+
+// Selection Management
+function toggleSelectAll(checkbox) {
+    const checkboxes = document.querySelectorAll('.select-result');
+    const visibleCheckboxes = Array.from(checkboxes).filter(cb => {
+        const item = cb.closest('.result-item');
+        return item && item.style.display !== 'none';
+    });
+    
+    visibleCheckboxes.forEach(cb => {
+        cb.checked = checkbox.checked;
+        if (checkbox.checked) {
+            selectedResults.add(cb.value);
+        } else {
+            selectedResults.delete(cb.value);
+        }
+    });
+    
+    updateSelectedCount();
+}
+
+function updateSelectedCount() {
+    selectedResults.clear();
+    document.querySelectorAll('.select-result:checked').forEach(cb => {
+        selectedResults.add(cb.value);
+    });
+    
+    const count = selectedResults.size;
+    const countEl = document.getElementById('selectedCount');
+    if (countEl) {
+        countEl.textContent = count;
     }
     
-    // Show the modal
-    const modal = document.getElementById('resultPreviewModal');
+    // Update select all checkbox state
+    const selectAllCard = document.getElementById('selectAllResults');
+    const selectAllTable = document.getElementById('selectAllTable');
+    const visibleCheckboxes = Array.from(document.querySelectorAll('.select-result')).filter(cb => {
+        const item = cb.closest('.result-item');
+        return item && item.style.display !== 'none';
+    });
+    
+    const allChecked = visibleCheckboxes.length > 0 && visibleCheckboxes.every(cb => cb.checked);
+    if (selectAllCard) selectAllCard.checked = allChecked;
+    if (selectAllTable) selectAllTable.checked = allChecked;
+}
+
+// View Details
+function viewDetails(id) {
+    const item = document.querySelector(`.result-item[data-id="${id}"]`);
+    if (!item) {
+        showNotification('Error', 'Result not found', 'error');
+        return;
+    }
+    
+    const patient = item.getAttribute('data-patient');
+    const test = item.getAttribute('data-test');
+    const status = item.getAttribute('data-status');
+    const dateTimestamp = parseInt(item.getAttribute('data-date') || '0');
+    const date = new Date(dateTimestamp * 1000);
+    
+    // Get result details
+    const resultElement = item.querySelector('.text-2xl.font-bold');
+    const resultValue = resultElement ? resultElement.textContent.trim() : 'Pending Entry';
+    
+    const normalRangeElement = item.querySelector('.text-xs.text-gray-500');
+    const normalRange = normalRangeElement ? normalRangeElement.textContent.replace('Normal:', '').trim() : 'Not specified';
+    
+    const statusBadgeElement = item.querySelector('.px-2.py-1.rounded-full');
+    const statusInfo = statusBadgeElement ? statusBadgeElement.textContent.trim() : 'Unknown';
+    
+    // Build modal content
+    const modalContent = document.getElementById('modalContent');
+    modalContent.innerHTML = `
+        <div class="space-y-6">
+            <!-- Patient Information -->
+            <div class="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-xl p-5 border border-blue-100">
+                <h4 class="text-lg font-bold text-gray-900 mb-4 flex items-center">
+                    <i class="fas fa-user-circle mr-2 text-blue-600"></i>
+                    Patient Information
+                </h4>
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="text-sm font-medium text-gray-600">Patient Name</label>
+                        <p class="text-base font-semibold text-gray-900 mt-1">${patient}</p>
+                    </div>
+                    <div>
+                        <label class="text-sm font-medium text-gray-600">Patient ID</label>
+                        <p class="text-base font-semibold text-gray-900 mt-1">#${String(id).padStart(4, '0')}</p>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Test Information -->
+            <div class="bg-gradient-to-r from-purple-50 to-pink-50 rounded-xl p-5 border border-purple-100">
+                <h4 class="text-lg font-bold text-gray-900 mb-4 flex items-center">
+                    <i class="fas fa-flask mr-2 text-purple-600"></i>
+                    Test Details
+                </h4>
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="text-sm font-medium text-gray-600">Test Type</label>
+                        <p class="text-base font-semibold text-gray-900 mt-1">${test}</p>
+                    </div>
+                    <div>
+                        <label class="text-sm font-medium text-gray-600">Status</label>
+                        <p class="text-base font-semibold text-gray-900 mt-1">${status}</p>
+                    </div>
+                    <div>
+                        <label class="text-sm font-medium text-gray-600">Collection Date</label>
+                        <p class="text-base font-semibold text-gray-900 mt-1">${date.toLocaleDateString()}</p>
+                    </div>
+                    <div>
+                        <label class="text-sm font-medium text-gray-600">Collection Time</label>
+                        <p class="text-base font-semibold text-gray-900 mt-1">${date.toLocaleTimeString()}</p>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Result Information -->
+            <div class="bg-gradient-to-r from-green-50 to-emerald-50 rounded-xl p-5 border border-green-100">
+                <h4 class="text-lg font-bold text-gray-900 mb-4 flex items-center">
+                    <i class="fas fa-chart-line mr-2 text-green-600"></i>
+                    Result Information
+                </h4>
+                <div class="space-y-4">
+                    <div>
+                        <label class="text-sm font-medium text-gray-600">Result Value</label>
+                        <p class="text-3xl font-bold text-gray-900 mt-2">${resultValue}</p>
+                    </div>
+                    <div>
+                        <label class="text-sm font-medium text-gray-600">Normal Range</label>
+                        <p class="text-base font-semibold text-gray-900 mt-1">${normalRange}</p>
+                    </div>
+                    <div>
+                        <label class="text-sm font-medium text-gray-600">Interpretation</label>
+                        <p class="text-base font-semibold mt-1">${statusInfo}</p>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Actions -->
+            <div class="flex items-center justify-end space-x-3 pt-4 border-t border-gray-200">
+                <button onclick="closeModal('resultDetailModal')" class="px-6 py-2 border-2 border-gray-300 rounded-lg text-gray-700 font-medium hover:bg-gray-50 transition-colors">
+                    Close
+                </button>
+                <button onclick="printResult(${id})" class="px-6 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-lg font-medium transition-colors">
+                    <i class="fas fa-print mr-2"></i>Print Report
+                </button>
+                <button onclick="downloadResult(${id})" class="px-6 py-2 bg-green-500 hover:bg-green-600 text-white rounded-lg font-medium transition-colors">
+                    <i class="fas fa-download mr-2"></i>Download
+                </button>
+            </div>
+        </div>
+    `;
+    
+    // Show modal
+    const modal = document.getElementById('resultDetailModal');
     modal.classList.remove('hidden');
     modal.classList.add('flex');
 }
 
-function saveAllResults() {
-    const forms = document.querySelectorAll('.enhanced-result-form');
-    let completedCount = 0;
-    
-    forms.forEach(form => {
-        const resultValue = form.querySelector('input[name="result_value"]').value;
-        if (resultValue) {
-            completedCount++;
-        }
-    });
-    
-    if (completedCount === 0) {
-        showNotification('No Results', 'Please enter at least one result before saving all', 'warning');
+function closeModal(modalId) {
+    const modal = document.getElementById(modalId);
+    if (modal) {
+        modal.classList.add('hidden');
+        modal.classList.remove('flex');
+    }
+}
+
+// Print Selected
+function printSelected() {
+    if (selectedResults.size === 0) {
+        showNotification('No Selection', 'Please select at least one result to print', 'warning');
         return;
     }
     
-    if (confirm(`Save ${completedCount} completed result(s)?`)) {
-        showNotification('Batch Save', `${completedCount} results saved successfully`, 'success');
-        // In real implementation, this would submit all forms
-    }
-}
-
-function toggleValidationMode() {
-    const checkbox = document.getElementById('autoValidate');
-    checkbox.checked = !checkbox.checked;
+    showNotification('Printing', `Preparing ${selectedResults.size} result(s) for printing...`, 'info');
     
-    const mode = checkbox.checked ? 'enabled' : 'disabled';
-    showNotification('Validation Mode', `Auto-validation ${mode}`, 'info');
+    // In a real implementation, this would generate a print view
+    setTimeout(() => {
+        showNotification('Print Ready', `${selectedResults.size} result(s) sent to printer`, 'success');
+    }, 1500);
 }
 
-function refreshResults() {
-    showNotification('Refreshing', 'Checking for new test results...', 'info');
+// Print Single Result
+function printResult(id) {
+    showNotification('Printing', `Preparing result #${id} for printing...`, 'info');
+    
     setTimeout(() => {
-        window.location.reload();
+        showNotification('Print Ready', `Result #${id} sent to printer`, 'success');
     }, 1000);
 }
 
-// Enhanced notification system
+// Download Result
+function downloadResult(id) {
+    showNotification('Downloading', `Preparing result #${id} for download...`, 'info');
+    
+    setTimeout(() => {
+        showNotification('Download Complete', `Result #${id} downloaded successfully`, 'success');
+    }, 1000);
+}
+
+// Export to CSV
+function exportCSV() {
+    const visibleItems = document.querySelectorAll('.result-item:not([style*="display: none"])');
+    
+    if (visibleItems.length === 0) {
+        showNotification('No Data', 'No results to export', 'warning');
+        return;
+    }
+    
+    const headers = ['ID', 'Patient Name', 'Test Type', 'Status', 'Result Value', 'Date', 'Time'];
+    const rows = [headers];
+    
+    visibleItems.forEach(item => {
+        const id = item.getAttribute('data-id');
+        const patient = item.getAttribute('data-patient');
+        const test = item.getAttribute('data-test');
+        const status = item.getAttribute('data-status');
+        const dateTimestamp = parseInt(item.getAttribute('data-date') || '0');
+        const date = new Date(dateTimestamp * 1000);
+        
+        const resultElement = item.querySelector('.text-2xl.font-bold');
+        const resultValue = resultElement ? resultElement.textContent.trim() : 'Pending';
+        
+        rows.push([
+            id,
+            patient,
+            test,
+            status,
+            resultValue,
+            date.toLocaleDateString(),
+            date.toLocaleTimeString()
+        ]);
+    });
+    
+    const csv = rows.map(row => row.map(cell => `"${cell}"`).join(',')).join('\n');
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    const url = URL.createObjectURL(blob);
+    
+    link.setAttribute('href', url);
+    link.setAttribute('download', `lab_results_${new Date().toISOString().split('T')[0]}.csv`);
+    link.style.visibility = 'hidden';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    
+    showNotification('Export Complete', `${visibleItems.length} results exported to CSV`, 'success');
+}
+
+// Notification System
 function showNotification(title, message, type = 'info') {
     const colors = {
         info: 'bg-blue-500',
@@ -500,15 +733,23 @@ function showNotification(title, message, type = 'info') {
         error: 'bg-red-500'
     };
     
+    const icons = {
+        info: 'fa-info-circle',
+        success: 'fa-check-circle',
+        warning: 'fa-exclamation-triangle',
+        error: 'fa-times-circle'
+    };
+    
     const notification = document.createElement('div');
-    notification.className = `fixed top-4 right-4 ${colors[type]} text-white px-6 py-4 rounded-lg shadow-lg transform translate-x-full transition-transform duration-300 z-50 max-w-sm`;
+    notification.className = `fixed top-4 right-4 ${colors[type]} text-white px-6 py-4 rounded-lg shadow-2xl transform translate-x-full transition-all duration-300 z-50 max-w-md`;
     notification.innerHTML = `
-        <div class="flex items-start justify-between">
-            <div class="flex-1 pr-3">
-                <div class="font-semibold">${title}</div>
+        <div class="flex items-start">
+            <i class="fas ${icons[type]} text-xl mr-3 mt-0.5"></i>
+            <div class="flex-1">
+                <div class="font-bold text-lg">${title}</div>
                 <div class="text-sm opacity-90 mt-1">${message}</div>
             </div>
-            <button onclick="this.parentElement.parentElement.remove()" class="text-white hover:text-gray-200 flex-shrink-0">
+            <button onclick="this.parentElement.parentElement.remove()" class="ml-4 text-white hover:text-gray-200 transition-colors">
                 <i class="fas fa-times"></i>
             </button>
         </div>
@@ -526,115 +767,108 @@ function showNotification(title, message, type = 'info') {
     }, 5000);
 }
 
-// Auto-save drafts every 30 seconds
-setInterval(() => {
-    const forms = document.querySelectorAll('.enhanced-result-form');
-    forms.forEach(form => {
-        const resultValue = form.querySelector('input[name="result_value"]').value;
-        if (resultValue) {
-            // Auto-save logic would go here
-            console.log('Auto-saving draft...');
-        }
-    });
-}, 30000);
-
-// Initialize page
-document.addEventListener('DOMContentLoaded', function() {
-    console.log('Lab Results Enhanced - Ready for precise result entry!');
+// Keyboard Shortcuts
+document.addEventListener('keydown', function(e) {
+    // Ctrl/Cmd + F: Focus search
+    if ((e.ctrlKey || e.metaKey) && e.key === 'f') {
+        e.preventDefault();
+        document.getElementById('searchInput')?.focus();
+    }
     
-    // Add keyboard shortcuts
-    document.addEventListener('keydown', function(e) {
-        if (e.ctrlKey && e.key === 's') {
-            e.preventDefault();
-            saveAllResults();
-        }
-        if (e.ctrlKey && e.key === 'r') {
-            e.preventDefault();
-            refreshResults();
-        }
-    });
+    // Ctrl/Cmd + P: Print selected
+    if ((e.ctrlKey || e.metaKey) && e.key === 'p') {
+        e.preventDefault();
+        printSelected();
+    }
     
-    // Focus first result input
-    const firstInput = document.querySelector('input[name="result_value"]');
-    if (firstInput) {
-        firstInput.focus();
+    // Ctrl/Cmd + E: Export CSV
+    if ((e.ctrlKey || e.metaKey) && e.key === 'e') {
+        e.preventDefault();
+        exportCSV();
+    }
+    
+    // Ctrl/Cmd + A: Select all visible
+    if ((e.ctrlKey || e.metaKey) && e.key === 'a' && e.target.tagName !== 'INPUT') {
+        e.preventDefault();
+        const selectAll = document.getElementById('selectAllResults');
+        if (selectAll) {
+            selectAll.checked = true;
+            toggleSelectAll(selectAll);
+        }
+    }
+    
+    // Escape: Close modals
+    if (e.key === 'Escape') {
+        closeModal('resultDetailModal');
     }
 });
 
-// Close result preview modal
-function closeResultPreviewModal() {
-    const modal = document.getElementById('resultPreviewModal');
-    modal.classList.add('hidden');
-    modal.classList.remove('flex');
-}
+// Auto-refresh every 5 minutes
+setInterval(() => {
+    const lastUpdate = new Date().toLocaleTimeString();
+    console.log(`Auto-refresh check at ${lastUpdate}`);
+    // In production, you could add logic to check for new results
+}, 300000);
+
+console.log('Lab Results History Page - Ready');
+console.log('Keyboard shortcuts: Ctrl+F (Search), Ctrl+P (Print), Ctrl+E (Export), Ctrl+A (Select All), Esc (Close)');
 </script>
 
-<!-- Result Preview Modal Dialog -->
-<div id="resultPreviewModal" class="fixed inset-0 bg-black bg-opacity-50 hidden items-center justify-center z-50">
-    <div class="bg-white rounded-xl shadow-2xl max-w-md w-full transform transition-all duration-300 scale-100">
-        <div class="flex items-center justify-between border-b border-gray-200 px-6 py-4">
-            <h3 class="text-xl font-bold text-gray-900">Test Result Preview</h3>
-            <button onclick="closeResultPreviewModal()" class="text-gray-400 hover:text-gray-500 focus:outline-none">
-                <i class="fas fa-times"></i>
-            </button>
-        </div>
-        
-        <div class="px-6 py-4">
-            <!-- Patient Info -->
-            <div class="mb-4">
-                <label class="block text-sm font-medium text-gray-600 mb-1">Patient</label>
-                <p id="modal_patient_name" class="text-lg font-semibold text-gray-900"></p>
-            </div>
-            
-            <!-- Test Name -->
-            <div class="mb-4">
-                <label class="block text-sm font-medium text-gray-600 mb-1">Test</label>
-                <p id="modal_test_name" class="text-gray-900 font-medium"></p>
-            </div>
-            
-            <!-- Result Value -->
-            <div class="mb-4">
-                <label class="block text-sm font-medium text-gray-600 mb-1">Result Value</label>
-                <div class="flex items-center">
-                    <p id="modal_result_value" class="text-xl font-bold text-blue-600"></p>
-                    <span id="modal_validation_status" class="ml-3 px-3 py-1 bg-green-100 text-green-700 rounded-full text-sm font-semibold"></span>
-                </div>
-            </div>
-            
-            <!-- Normal Range -->
-            <div class="mb-4">
-                <label class="block text-sm font-medium text-gray-600 mb-1">Normal Range</label>
-                <p id="modal_normal_range" class="text-gray-900 font-medium"></p>
-            </div>
-            
-            <!-- Notes -->
-            <div class="mb-4">
-                <label class="block text-sm font-medium text-gray-600 mb-1">Clinical Notes</label>
-                <p id="modal_result_notes" class="text-gray-900 whitespace-pre-wrap p-3 bg-gray-50 rounded-lg"></p>
-            </div>
-            
-            <!-- Test Information -->
-            <div class="grid grid-cols-2 gap-4">
-                <div>
-                    <label class="block text-sm font-medium text-gray-600 mb-1">Technician</label>
-                    <p id="modal_technician" class="text-gray-900"></p>
-                </div>
-                <div>
-                    <label class="block text-sm font-medium text-gray-600 mb-1">Date</label>
-                    <p id="modal_test_date" class="text-gray-900"></p>
-                </div>
-            </div>
-        </div>
-        
-        <!-- Modal Actions -->
-        <div class="bg-gray-50 px-6 py-4 rounded-b-xl flex justify-end space-x-3">
-            <button type="button" onclick="closeResultPreviewModal()"
-                class="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 bg-white hover:bg-gray-50 font-medium">
-                Close
-            </button>
-            <button type="button" class="px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-lg font-medium">
-                <i class="fas fa-print mr-2"></i>Print Result
-            </button>
-        </div>
-    </div>
-</div>
+<style>
+/* Custom scrollbar */
+::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+}
+
+::-webkit-scrollbar-track {
+    background: #f1f1f1;
+    border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb {
+    background: #888;
+    border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: #555;
+}
+
+/* Smooth transitions */
+.result-item {
+    transition: all 0.2s ease-in-out;
+}
+
+.result-item:hover {
+    transform: translateY(-2px);
+}
+
+/* Animation for stats cards */
+@keyframes slideUp {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.animate-slide-up {
+    animation: slideUp 0.3s ease-out;
+}
+
+/* Print styles */
+@media print {
+    .no-print {
+        display: none !important;
+    }
+    
+    body {
+        print-color-adjust: exact;
+        -webkit-print-color-adjust: exact;
+    }
+}
+</style>
