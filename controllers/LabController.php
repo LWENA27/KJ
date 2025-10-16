@@ -89,7 +89,8 @@ class LabController extends BaseController {
             AND pay.payment_type = 'lab_test'
             AND pay.item_type = 'lab_order'
             AND pay.item_id = lto.id
-        WHERE pay.payment_status = 'paid'
+        WHERE pay.payment_status = 'paid' 
+            AND lto.status != 'completed'
         ORDER BY 
             CASE 
                 WHEN lto.priority = 'urgent' THEN 1
@@ -184,14 +185,14 @@ class LabController extends BaseController {
             JOIN lab_tests lt ON lr.test_id = lt.id
             JOIN consultations c ON lto.consultation_id = c.id
             JOIN patients p ON c.patient_id = p.id
-            WHERE lr.technician_id = ? AND lto.status = 'pending'
-            ORDER BY lr.completed_at ASC
+            WHERE lr.technician_id = ?
+            ORDER BY COALESCE(lr.completed_at, lto.created_at) DESC
         ");
         $stmt->execute([$technician_id]);
-        $pending_results = $stmt->fetchAll();
+        $all_results = $stmt->fetchAll();
 
         $this->render('lab/results', [
-            'pending_results' => $pending_results,
+            'all_results' => $all_results,
             'csrf_token' => $this->generateCSRF()
         ]);
     }
