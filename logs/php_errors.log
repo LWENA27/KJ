@@ -118,3 +118,43 @@
 )
 
 [11-Oct-2025 22:22:38 Europe/Berlin] SQL execution successful for lab_results insert
+[13-Oct-2025 08:08:11 Europe/Berlin] Workflow status tracking not available: SQLSTATE[42S02]: Base table or view not found: 1146 Table 'hospitali.patient_workflow_status' doesn't exist
+[13-Oct-2025 08:09:06 Europe/Berlin] Consultation submission - Patient ID: 4, Visit ID: 4, Consultation ID: 4
+[13-Oct-2025 08:09:06 Europe/Berlin] Selected tests: [5]
+[13-Oct-2025 08:09:06 Europe/Berlin] Selected medicines: 
+[13-Oct-2025 08:11:13 Europe/Berlin] POST data received in add_result: Array
+(
+    [csrf_token] => cd923ea956c6aa64eb7cf3c9f47521206fc85d2b4e5e294ea0411d0a616d32da
+    [test_order_id] => 1
+    [result_value] => 34/43
+    [unit] => mg/dL
+    [result_status] => borderline
+    [result_notes] => Test completed successfully.
+    [completion_time] => 2025-10-13T06:10
+)
+
+[13-Oct-2025 08:11:13 Europe/Berlin] Parsed values: test_id=1, value=34/43, unit=mg/dL, status=borderline
+[13-Oct-2025 08:11:13 Europe/Berlin] Completion time: 2025-10-13T06:10, technician: 4
+[13-Oct-2025 08:11:13 Europe/Berlin] Order details fetched: Found - Array
+(
+    [patient_id] => 4
+    [test_id] => 5
+    [visit_id] => 4
+)
+
+[13-Oct-2025 08:11:13 Europe/Berlin] SQL parameters for lab_results insert: Array
+(
+    [0] => 1
+    [1] => 4
+    [2] => 5
+    [3] => 4
+    [4] => 34/43
+    [5] => Test completed successfully.
+    [6] => mg/dL
+    [7] => 0
+    [8] => 2025-10-13T06:10
+)
+
+[13-Oct-2025 08:11:13 Europe/Berlin] SQL execution successful for lab_results insert
+[13-Oct-2025 09:54:14 Europe/Berlin] PHP Warning:  Undefined variable $consultation in C:\xampp\htdocs\KJ\views\doctor\attend_patient.php on line 201
+[13-Oct-2025 09:54:14 Europe/Berlin] PHP Warning:  Trying to access array offset on value of type null in C:\xampp\htdocs\KJ\views\doctor\attend_patient.php on line 201
