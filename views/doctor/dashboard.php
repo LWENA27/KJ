@@ -66,9 +66,9 @@
                                 <p class="text-sm text-neutral-600">
                                     Tests: <?php echo htmlspecialchars($patient['test_names'] ?? 'Lab results available'); ?>
                                 </p>
-                                <?php if (!empty($patient['result_date']) && strtotime($patient['result_date']) !== false): ?>
+                                <?php if (!empty($patient['result_date'])): ?>
                                 <span class="text-xs text-neutral-500">
-                                    Results received: <?php echo htmlspecialchars(date('M j, Y H:i', strtotime($patient['result_date']))); ?>
+                                    Results received: <?php echo htmlspecialchars(safe_date('M j, Y H:i', $patient['result_date'])); ?>
                                 </span>
                                 <?php endif; ?>
                             </div>
@@ -103,7 +103,7 @@
                                     <?php echo htmlspecialchars($consultation['first_name'] . ' ' . $consultation['last_name']); ?>
                                 </span>
                                     <span class="text-sm text-neutral-600 ml-2">
-                                    - Completed at <?php echo (!empty($consultation['created_at']) && strtotime($consultation['created_at']) !== false) ? htmlspecialchars(date('H:i', strtotime($consultation['created_at']))) : 'N/A'; ?>
+                                    - Completed at <?php echo htmlspecialchars(safe_date('H:i', $consultation['created_at'], 'N/A')); ?>
                                 </span>
                             </div>
                         </div>
@@ -169,7 +169,7 @@
                                 </td>
                                 <td class="px-6 py-4 whitespace-nowrap">
                                     <div class="text-sm text-gray-900">
-                                        <?php echo (!empty($patient['created_at']) && strtotime($patient['created_at']) !== false) ? htmlspecialchars(date('h:i A', strtotime($patient['created_at']))) : 'N/A'; ?>
+                                        <?php echo htmlspecialchars(safe_date('h:i A', $patient['created_at'], 'N/A')); ?>
                                     </div>
                                 </td>
                                 <td class="px-6 py-4 whitespace-nowrap">
@@ -239,8 +239,8 @@
                             ?>">
                             <?php echo ucfirst($result['status']); ?>
                         </span>
-                        <p class="text-xs text-gray-400 mt-1">
-                            <?php echo (!empty($result['created_at']) && strtotime($result['created_at']) !== false) ? htmlspecialchars(date('M j, H:i', strtotime($result['created_at']))) : 'N/A'; ?>
+                            <p class="text-xs text-gray-400 mt-1">
+                            <?php echo htmlspecialchars(safe_date('M j, H:i', $result['created_at'], 'N/A')); ?>
                         </p>
                     </div>
                 </div>
