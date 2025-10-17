@@ -187,8 +187,18 @@
                     $status = $result['order_status'] ?? 'pending';
                     $statusColor = $status === 'completed' ? 'green' : ($status === 'pending' ? 'yellow' : 'blue');
                     $isCritical = !empty($result['is_critical']);
-                    $age = isset($result['date_of_birth']) ? floor((time() - strtotime($result['date_of_birth'])) / (365*24*60*60)) : '';
-                    $collectedDate = isset($result['sample_collected_at']) ? strtotime($result['sample_collected_at']) : (isset($result['created_at']) ? strtotime($result['created_at']) : time());
+                    $age = '';
+                    if (!empty($result['date_of_birth']) && strtotime($result['date_of_birth']) !== false) {
+                        $age = floor((time() - strtotime($result['date_of_birth'])) / (365*24*60*60));
+                    }
+
+                    if (!empty($result['sample_collected_at']) && strtotime($result['sample_collected_at']) !== false) {
+                        $collectedDate = strtotime($result['sample_collected_at']);
+                    } elseif (!empty($result['created_at']) && strtotime($result['created_at']) !== false) {
+                        $collectedDate = strtotime($result['created_at']);
+                    } else {
+                        $collectedDate = time();
+                    }
                 ?>
                 <div class="result-item bg-white border-2 border-gray-200 rounded-xl p-4 hover:shadow-xl hover:border-blue-300 transition-all duration-200 cursor-pointer" 
                      data-patient="<?php echo htmlspecialchars($result['first_name'] . ' ' . $result['last_name']); ?>" 
@@ -401,7 +411,7 @@ function setView(view) {
 function applyFilters() {
     const searchTerm = document.getElementById('searchInput')?.value.toLowerCase() || '';
     const testType = document.getElementById('testTypeFilter')?.value || '';
-    const status = document.getElementById('statusFilter')?.value || '';
+    const statusFilter = document.getElementById('statusFilter')?.value || '';
     const fromDate = document.getElementById('fromDate')?.value || '';
     const toDate = document.getElementById('toDate')?.value || '';
     
@@ -411,8 +421,8 @@ function applyFilters() {
     items.forEach(item => {
         const id = item.getAttribute('data-id');
         const patient = item.getAttribute('data-patient');
-        const test = item.getAttribute('data-test');
-        const status = item.getAttribute('data-status');
+    const test = item.getAttribute('data-test');
+    const itemStatus = item.getAttribute('data-status');
         const dateTimestamp = parseInt(item.getAttribute('data-date') || '0');
         const date = new Date(dateTimestamp * 1000);
         
@@ -420,27 +430,108 @@ function applyFilters() {
         const resultElement = item.querySelector('.text-2xl.font-bold');
         const resultValue = resultElement ? resultElement.textContent.trim() : 'Pending';
         
-        // Status badge
+    // Determine visibility based on filters
         let statusBadge = '';
-        if (status === 'completed') {
+        if (itemStatus === 'completed') {
             statusBadge = '<span class="px-3 py-1 bg-green-100 text-green-800 rounded-full text-xs font-semibold"><i class="fas fa-check-circle mr-1"></i>Completed</span>';
-        } else if (status === 'pending') {
+        } else if (itemStatus === 'pending') {
             statusBadge = '<span class="px-3 py-1 bg-yellow-100 text-yellow-800 rounded-full text-xs font-semibold"><i class="fas fa-clock mr-1"></i>Pending</span>';
         } else {
             statusBadge = '<span class="px-3 py-1 bg-blue-100 text-blue-800 rounded-full text-xs font-semibold">' + status + '</span>';
         }
         
+        // Visibility logic
+        let visible = true;
+        const itemId = String(id || '').toLowerCase();
+        const patientLower = String(patient || '').toLowerCase();
+        const testLower = String(test || '').toLowerCase();
+
+        if (searchTerm && !patientLower.includes(searchTerm) && !itemId.includes(searchTerm)) {
+            visible = false;
+        }
+
+        if (testType && !testLower.includes(testType.toLowerCase())) {
+            visible = false;
+        }
+
+        if (statusFilter && itemStatus !== statusFilter) {
+            visible = false;
+        }
+
+        if (fromDate) {
+            const fromTimestamp = new Date(fromDate).getTime() / 1000;
+            if (dateTimestamp < fromTimestamp) visible = false;
+        }
+        if (toDate) {
+            const toTimestamp = new Date(toDate).getTime() / 1000 + 86400; // end of day
+            if (dateTimestamp > toTimestamp) visible = false;
+        }
+
+        item.style.display = visible ? '' : 'none';
+        if (visible) visibleCount++;
+    });
+    
+    // Update visible count
+    const visibleCountEl = document.getElementById('visibleCount');
+    if (visibleCountEl) {
+        visibleCountEl.textContent = `${visibleCount} Visible`;
+    }
+    
+    // Rebuild table if in table view
+    if (currentView === 'table') {
+        buildTableView();
+    }
+}
+
+// Build Table View - populate #tableBody from visible .result-item cards
+function buildTableView() {
+    const tbody = document.getElementById('tableBody');
+    if (!tbody) return;
+
+    tbody.innerHTML = '';
+    const items = document.querySelectorAll('.result-item:not([style*="display: none"])');
+
+    if (items.length === 0) {
+        tbody.innerHTML = `
+            <tr>
+                <td colspan="7" class="px-4 py-12 text-center">
+                    <div class="flex flex-col items-center justify-center text-gray-400">
+                        <i class="fas fa-search text-4xl mb-3"></i>
+                        <p class="text-lg font-medium">No results match your filters</p>
+                        <p class="text-sm mt-1">Try adjusting your search criteria</p>
+                    </div>
+                </td>
+            </tr>
+        `;
+        return;
+    }
+
+    items.forEach(item => {
+        const id = item.getAttribute('data-id');
+        const patient = item.getAttribute('data-patient') || '';
+        const test = item.getAttribute('data-test') || '';
+        const status = item.getAttribute('data-status') || '';
+        const dateTimestamp = parseInt(item.getAttribute('data-date') || '0');
+        const date = new Date(dateTimestamp * 1000);
+
+        const resultElement = item.querySelector('.text-2xl.font-bold');
+        const resultValue = resultElement ? resultElement.textContent.trim() : 'Pending';
+
+        let statusBadge = '';
+        if (status === 'completed') statusBadge = '<span class="px-3 py-1 bg-green-100 text-green-800 rounded-full text-xs font-semibold"><i class="fas fa-check-circle mr-1"></i>Completed</span>';
+        else if (status === 'pending') statusBadge = '<span class="px-3 py-1 bg-yellow-100 text-yellow-800 rounded-full text-xs font-semibold"><i class="fas fa-clock mr-1"></i>Pending</span>';
+        else statusBadge = `<span class="px-3 py-1 bg-blue-100 text-blue-800 rounded-full text-xs font-semibold">${status}</span>`;
+
         const tr = document.createElement('tr');
         tr.className = 'hover:bg-blue-50 transition-colors';
         tr.innerHTML = `
             <td class="px-4 py-4">
-                <input type="checkbox" class="select-result rounded border-gray-300 text-blue-600 focus:ring-blue-500" 
-                       value="${id}" onchange="updateSelectedCount()">
+                <input type="checkbox" class="select-result rounded border-gray-300 text-blue-600 focus:ring-blue-500" value="${id}" onchange="updateSelectedCount()">
             </td>
             <td class="px-4 py-4">
                 <div class="flex items-center">
                     <div class="w-10 h-10 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-full flex items-center justify-center text-white font-bold text-sm mr-3">
-                        ${patient.split(' ').map(n => n[0]).join('').toUpperCase()}
+                        ${patient.split(' ').map(n => n[0] || '').join('').toUpperCase()}
                     </div>
                     <div>
                         <div class="text-sm font-semibold text-gray-900">${patient}</div>

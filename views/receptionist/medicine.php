@@ -161,8 +161,8 @@ $recentTransactions = $recent_transactions ?? [];
                                                 <div class="text-sm text-gray-900">
                                                     <?= htmlspecialchars($patient['medicine_count'] ?? 0) ?> medicine(s)
                                                 </div>
-                                                <button onclick="viewPrescriptionDetails(<?= $patient['id'] ?>)" 
-                                                        class="text-blue-600 hover:text-blue-800 text-sm">
+                        <button onclick="viewPrescriptionDetails(<?= (int)($patient['id'] ?? 0) ?>)" 
+                            class="text-blue-600 hover:text-blue-800 text-sm">
                                                     View details →
                                                 </button>
                                             </td>
@@ -179,14 +179,18 @@ $recentTransactions = $recent_transactions ?? [];
                                             </td>
                                             <td class="table-cell">
                                                 <span class="text-sm text-gray-600">
-                                                    <?= date('M j, Y', strtotime($patient['prescribed_at'])) ?>
+                                                    <?php if (!empty($patient['prescribed_at'])): ?>
+                                                        <?= htmlspecialchars(date('M j, Y', strtotime($patient['prescribed_at']))) ?>
+                                                    <?php else: ?>
+                                                        N/A
+                                                    <?php endif; ?>
                                                 </span>
                                             </td>
                                             <td class="table-cell">
                                                 <form method="POST" action="medicine" class="inline">
                                                     <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($_SESSION['csrf_token']) ?>">
                                                     <input type="hidden" name="action" value="dispense_patient_medicine">
-                                                    <input type="hidden" name="patient_id" value="<?= $patient['id'] ?>">
+                                                    <input type="hidden" name="patient_id" value="<?= htmlspecialchars($patient['id'] ?? '') ?>">
                                                     <button type="submit" 
                                                             class="btn btn-success btn-sm"
                                                             onclick="return confirm('Confirm dispensing all prescribed medicines to this patient?')">
@@ -324,7 +328,11 @@ $recentTransactions = $recent_transactions ?? [];
                                     <?php foreach ($recentTransactions as $transaction): ?>
                                         <tr class="hover:bg-gray-50">
                                             <td class="table-cell">
-                                                <?= date('M j, Y g:i A', strtotime($transaction['dispensed_at'])) ?>
+                                                <?php if (!empty($transaction['dispensed_at'])): ?>
+                                                    <?= htmlspecialchars(date('M j, Y g:i A', strtotime($transaction['dispensed_at']))) ?>
+                                                <?php else: ?>
+                                                    N/A
+                                                <?php endif; ?>
                                             </td>
                                             <td class="table-cell">
                                                 <?= htmlspecialchars($transaction['patient_name'] ?? '') ?>

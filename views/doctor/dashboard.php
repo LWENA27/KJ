@@ -66,9 +66,9 @@
                                 <p class="text-sm text-neutral-600">
                                     Tests: <?php echo htmlspecialchars($patient['test_names'] ?? 'Lab results available'); ?>
                                 </p>
-                                <?php if (isset($patient['result_date'])): ?>
+                                <?php if (!empty($patient['result_date']) && strtotime($patient['result_date']) !== false): ?>
                                 <span class="text-xs text-neutral-500">
-                                    Results received: <?php echo date('M j, Y H:i', strtotime($patient['result_date'])); ?>
+                                    Results received: <?php echo htmlspecialchars(date('M j, Y H:i', strtotime($patient['result_date']))); ?>
                                 </span>
                                 <?php endif; ?>
                             </div>
@@ -102,8 +102,8 @@
                                 <span class="font-medium text-neutral-900">
                                     <?php echo htmlspecialchars($consultation['first_name'] . ' ' . $consultation['last_name']); ?>
                                 </span>
-                                <span class="text-sm text-neutral-600 ml-2">
-                                    - Completed at <?php echo date('H:i', strtotime($consultation['created_at'])); ?>
+                                    <span class="text-sm text-neutral-600 ml-2">
+                                    - Completed at <?php echo (!empty($consultation['created_at']) && strtotime($consultation['created_at']) !== false) ? htmlspecialchars(date('H:i', strtotime($consultation['created_at']))) : 'N/A'; ?>
                                 </span>
                             </div>
                         </div>
@@ -169,7 +169,7 @@
                                 </td>
                                 <td class="px-6 py-4 whitespace-nowrap">
                                     <div class="text-sm text-gray-900">
-                                        <?php echo date('h:i A', strtotime($patient['created_at'])); ?>
+                                        <?php echo (!empty($patient['created_at']) && strtotime($patient['created_at']) !== false) ? htmlspecialchars(date('h:i A', strtotime($patient['created_at']))) : 'N/A'; ?>
                                     </div>
                                 </td>
                                 <td class="px-6 py-4 whitespace-nowrap">
@@ -240,7 +240,7 @@
                             <?php echo ucfirst($result['status']); ?>
                         </span>
                         <p class="text-xs text-gray-400 mt-1">
-                            <?php echo date('M j, H:i', strtotime($result['created_at'])); ?>
+                            <?php echo (!empty($result['created_at']) && strtotime($result['created_at']) !== false) ? htmlspecialchars(date('M j, H:i', strtotime($result['created_at']))) : 'N/A'; ?>
                         </p>
                     </div>
                 </div>
