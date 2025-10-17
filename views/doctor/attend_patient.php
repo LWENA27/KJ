@@ -232,8 +232,15 @@
                     alert(`Please specify instructions for ${medicine.name}`);
                     return false;
                 }
-                if (medicine.quantity > medicine.stock_quantity) {
-                    alert(`Cannot prescribe ${medicine.quantity} units of ${medicine.name}. Only ${medicine.stock_quantity} available in stock.`);
+                // Ensure numeric comparison (quantities may be strings after being edited)
+                const qty = Number(medicine.quantity);
+                const stock = Number(medicine.stock_quantity);
+                if (isNaN(qty) || qty < 1) {
+                    alert(`Please enter a valid quantity for ${medicine.name}`);
+                    return false;
+                }
+                if (qty > stock) {
+                    alert(`Cannot prescribe ${qty} units of ${medicine.name}. Only ${stock} available in stock.`);
                     return false;
                 }
             }
@@ -585,27 +592,33 @@
             updateSelectedMedicinesList();
         }
 
-        function updateMedicineDetails(medicineId, field, value) {
+        function updateMedicineDetails(medicineId, field, elementOrValue) {
             const medicine = selectedMedicines.find(m => m.id === medicineId);
-            if (medicine) {
-                if (field === 'quantity') {
-                    const quantity = parseInt(value);
-                    if (quantity > medicine.stock_quantity) {
-                        alert(`Cannot prescribe more than available stock (${medicine.stock_quantity})`);
-                        // Reset to maximum available
-                        value = medicine.stock_quantity;
-                        // Update the input field
-                        event.target.value = value;
-                    } else if (quantity < 1) {
-                        value = 1;
-                        event.target.value = value;
-                    }
-                }
+            if (!medicine) return;
 
+            // Accept either the input element (this) or the raw value
+            let value = (typeof elementOrValue === 'object') ? elementOrValue.value : elementOrValue;
+
+            if (field === 'quantity') {
+                // Parse integer and clamp
+                let quantity = parseInt(value, 10);
+                const stock = Number(medicine.stock_quantity);
+                if (isNaN(quantity) || quantity < 1) {
+                    quantity = 1;
+                    if (typeof elementOrValue === 'object') elementOrValue.value = quantity;
+                }
+                if (quantity > stock) {
+                    alert(`Cannot prescribe more than available stock (${stock})`);
+                    quantity = stock;
+                    if (typeof elementOrValue === 'object') elementOrValue.value = quantity;
+                }
+                medicine[field] = quantity;
+            } else {
                 medicine[field] = value;
-                // Update hidden field
-                document.getElementById('selectedMedicines').value = JSON.stringify(selectedMedicines);
             }
+
+            // Update hidden field
+            document.getElementById('selectedMedicines').value = JSON.stringify(selectedMedicines);
         }
 
         function updateSelectedMedicinesList() {
@@ -631,20 +644,20 @@
                     <div class="grid grid-cols-1 md:grid-cols-3 gap-2">
                         <div>
                             <label class="block text-xs text-gray-600">Quantity</label>
-                            <input type="number" min="1" value="${medicine.quantity}" 
-                                   onchange="updateMedicineDetails(${medicine.id}, 'quantity', this.value)"
+                <input type="number" min="1" value="${medicine.quantity}" 
+                    onchange="updateMedicineDetails(${medicine.id}, 'quantity', this)"
                                    class="w-full px-2 py-1 border border-gray-300 rounded text-sm">
                         </div>
                         <div>
                             <label class="block text-xs text-gray-600">Dosage</label>
-                            <input type="text" placeholder="e.g., 500mg" value="${medicine.dosage}"
-                                   onchange="updateMedicineDetails(${medicine.id}, 'dosage', this.value)"
+                <input type="text" placeholder="e.g., 500mg" value="${medicine.dosage}"
+                    onchange="updateMedicineDetails(${medicine.id}, 'dosage', this.value)"
                                    class="w-full px-2 py-1 border border-gray-300 rounded text-sm">
                         </div>
                         <div>
                             <label class="block text-xs text-gray-600">Instructions</label>
-                            <input type="text" placeholder="e.g., 2x daily" value="${medicine.instructions}"
-                                   onchange="updateMedicineDetails(${medicine.id}, 'instructions', this.value)"
+                <input type="text" placeholder="e.g., 2x daily" value="${medicine.instructions}"
+                    onchange="updateMedicineDetails(${medicine.id}, 'instructions', this.value)"
                                    class="w-full px-2 py-1 border border-gray-300 rounded text-sm">
                         </div>
                     </div>
