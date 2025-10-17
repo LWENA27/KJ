@@ -46,7 +46,7 @@
                         <div class="flex items-center space-x-2">
                             <a href="/KJ/doctor/view_patient/<?php echo $c['patient_id']; ?>" class="text-blue-600 hover:text-blue-900 text-sm"><i class="fas fa-eye mr-1"></i>View</a>
                             <?php if (($c['status'] ?? 'pending') !== 'completed'): ?>
-                            <button type="button" onclick="attendPatient(<?php echo $c['patient_id']; ?>)" class="text-green-600 hover:text-green-900 text-sm bg-transparent border-none p-0"><i class="fas fa-user-md mr-1"></i>Attend</button>
+                            <a href="/KJ/doctor/view_patient/<?php echo $c['patient_id']; ?>" class="text-green-600 hover:text-green-900 text-sm"><i class="fas fa-user-md mr-1"></i>Attend</a>
                             <?php endif; ?>
                         </div>
                     </li>
@@ -99,7 +99,7 @@
                             <div class="flex items-center space-x-2">
                                 <a href="/KJ/doctor/view_patient/<?php echo $consultation['patient_id']; ?>" class="text-blue-600 hover:text-blue-900 transition duration-150"><i class="fas fa-eye mr-1"></i>View</a>
                                 <?php if ($status !== 'completed'): ?>
-                                <button type="button" onclick="attendPatient(<?php echo $consultation['patient_id']; ?>)" class="text-green-600 hover:text-green-900 transition duration-150 bg-transparent border-none p-0"><i class="fas fa-user-md mr-1"></i>Attend</button>
+                                <a href="/KJ/doctor/view_patient/<?php echo $consultation['patient_id']; ?>" class="text-green-600 hover:text-green-900 transition duration-150"><i class="fas fa-user-md mr-1"></i>Attend</a>
                                 <?php endif; ?>
                             </div>
                         </td>
@@ -129,7 +129,7 @@
                 <div class="flex space-x-2 mt-3">
                     <a href="/KJ/doctor/view_patient/<?php echo $consultation['patient_id']; ?>" class="flex-1 bg-blue-500 hover:bg-blue-600 text-white text-center px-3 py-2 rounded-lg font-medium transition duration-150"><i class="fas fa-eye mr-1"></i>View</a>
                     <?php if (($consultation['status'] ?? 'pending') !== 'completed'): ?>
-                    <button type="button" onclick="attendPatient(<?php echo $consultation['patient_id']; ?>)" class="flex-1 bg-green-500 hover:bg-green-600 text-white text-center px-3 py-2 rounded-lg font-medium transition duration-150"><i class="fas fa-user-md mr-1"></i>Attend</button>
+                    <a href="/KJ/doctor/view_patient/<?php echo $consultation['patient_id']; ?>" class="flex-1 bg-green-500 hover:bg-green-600 text-white text-center px-3 py-2 rounded-lg font-medium transition duration-150"><i class="fas fa-user-md mr-1"></i>Attend</a>
                     <?php endif; ?>
                 </div>
             </div>
