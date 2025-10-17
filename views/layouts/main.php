@@ -22,6 +22,13 @@
     <meta name="apple-mobile-web-app-title" content="KJ Healthcare">
     <!-- <link rel="apple-touch-icon" href="/assets/icons/icon-192x192.png"> -->
 
+    <!-- Expose BASE_PATH to client-side scripts -->
+    <script type="text/javascript">
+        // BASE_PATH is computed in BaseController->render and injected into views
+        // Ensure a safe default if not provided
+        window.BASE_PATH = typeof BASE_PATH !== 'undefined' ? BASE_PATH : '<?php echo isset($BASE_PATH) ? addslashes($BASE_PATH) : ''; ?>';
+    </script>
+
     <!-- Service Worker Registration - Optional -->
     <!--
     <script>
