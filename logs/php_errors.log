@@ -3,3 +3,7 @@
 [18-Oct-2025 07:14:25 Europe/Berlin] Selected tests: [4]
 [18-Oct-2025 07:14:25 Europe/Berlin] Selected medicines: [{"id":1,"name":"Paracetamol","generic_name":"Acetaminophen","strength":"500mg","unit":"tablets","unit_price":"50.00","stock_quantity":"1000","quantity":10,"dosage":"200g","instructions":"4"}]
 [18-Oct-2025 07:58:46 Europe/Berlin] Workflow status tracking not available: SQLSTATE[42S02]: Base table or view not found: 1146 Table 'zahanati.patient_workflow_status' doesn't exist
+[18-Oct-2025 16:28:45 Europe/Berlin] Workflow status tracking not available: SQLSTATE[42S02]: Base table or view not found: 1146 Table 'zahanati.patient_workflow_status' doesn't exist
+[18-Oct-2025 16:33:44 Europe/Berlin] Consultation submission - Patient ID: 7, Visit ID: 7, Consultation ID: 7
+[18-Oct-2025 16:33:44 Europe/Berlin] Selected tests: 
+[18-Oct-2025 16:33:44 Europe/Berlin] Selected medicines: [{"id":1,"name":"Paracetamol","generic_name":"Acetaminophen","strength":"500mg","unit":"tablets","unit_price":"50.00","stock_quantity":"1000","quantity":10,"dosage":"200g","instructions":"2 daily"},{"id":7,"name":"Chloroquine","generic_name":"Chloroquine","strength":"250mg","unit":"tablets","unit_price":"100.00","stock_quantity":"1000","quantity":10,"dosage":"500g","instructions":"3 daily"}]
