@@ -191,12 +191,17 @@
 
     <!-- Keep your existing JavaScript -->
     <script>
+        // Use layout-provided BASE_PATH when available to keep fetch URLs correct
+        const BASE_PATH = (typeof window !== 'undefined' && window.BASE_PATH) ? window.BASE_PATH : '/KJ';
+
         let selectedTests = [];
         let selectedMedicines = [];
 
         // Form validation before submission
         function validateConsultationForm() {
             console.log('=== FORM VALIDATION STARTED ===');
+            // sync any UI-edited medicine inputs into the selectedMedicines array
+            syncSelectedMedicinesFromDOM();
             const nextStep = document.querySelector('input[name="next_step"]:checked');
             console.log('Next step value:', nextStep ? nextStep.value : 'NONE');
             console.log('Selected tests:', selectedTests);
@@ -249,6 +254,38 @@
             return true;
         }
 
+        // Ensure selectedMedicines contains the latest values from the DOM inputs
+        function syncSelectedMedicinesFromDOM() {
+            try {
+                const listDiv = document.getElementById('selectedMedicinesList');
+                if (!listDiv) return;
+
+                // For each medicine in selectedMedicines, try to find its DOM inputs and copy values back
+                selectedMedicines = selectedMedicines.map(m => {
+                    const div = Array.from(listDiv.querySelectorAll('div')).find(d => {
+                        const title = d.querySelector('.font-medium');
+                        return title && title.textContent.trim() === m.name;
+                    });
+                    if (!div) return m;
+
+                    const qtyInput = div.querySelector('input[type="number"]');
+                    const dosageInput = div.querySelector('input[placeholder^="e.g."]');
+                    const instrInput = Array.from(div.querySelectorAll('input')).find(i => i.placeholder && i.placeholder.toLowerCase().includes('daily')) || null;
+
+                    return {
+                        ...m,
+                        quantity: qtyInput ? Number(qtyInput.value) : m.quantity,
+                        dosage: dosageInput ? dosageInput.value : m.dosage,
+                        instructions: instrInput ? instrInput.value : m.instructions
+                    };
+                });
+
+                document.getElementById('selectedMedicines').value = JSON.stringify(selectedMedicines);
+            } catch (e) {
+                console.warn('syncSelectedMedicinesFromDOM failed', e);
+            }
+        }
+
         function viewPatientDetails(patientId) {
             window.location.href = '/KJ/doctor/view_patient/' + patientId;
         }
@@ -285,6 +322,11 @@
             }
             if (section === 'medicine' || section === 'both') {
                 medicineSection.classList.remove('hidden');
+                // if both selected, focus the medicine search box so the doctor can search medicines immediately
+                const medSearch = document.getElementById('medicineSearch');
+                if (medSearch && section === 'both') {
+                    medSearch.focus();
+                }
             }
         }
 
@@ -315,7 +357,7 @@
             showTestLoading();
 
             testSearchTimeout = setTimeout(() => {
-                fetch(`/KJ/doctor/search_tests?q=${encodeURIComponent(query)}`)
+                fetch(`${BASE_PATH}/doctor/search_tests?q=${encodeURIComponent(query)}`)
                     .then(response => {
                         if (!response.ok) {
                             throw new Error(`HTTP error! status: ${response.status}`);
@@ -481,7 +523,7 @@
             showMedicineLoading();
 
             medicineSearchTimeout = setTimeout(() => {
-                fetch(`/KJ/doctor/search_medicines?q=${encodeURIComponent(query)}`)
+                fetch(`${BASE_PATH}/doctor/search_medicines?q=${encodeURIComponent(query)}`)
                     .then(response => {
                         if (!response.ok) {
                             throw new Error(`HTTP error! status: ${response.status}`);
