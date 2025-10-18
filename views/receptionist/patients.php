@@ -11,13 +11,13 @@
             <p class="text-blue-100 mt-2 text-lg">Manage patient records, registrations, and workflows</p>
         </div>
         <div class="flex flex-wrap items-center gap-3">
-            <a href="/KJ/receptionist/register_patient" class="bg-white text-blue-700 hover:bg-blue-50 px-4 py-2 rounded-lg font-medium transition-all duration-300 transform hover:scale-105 shadow-lg">
+            <a href="<?php echo htmlspecialchars($BASE_PATH); ?>/receptionist/register_patient" class="bg-white text-blue-700 hover:bg-blue-50 px-4 py-2 rounded-lg font-medium transition-all duration-300 transform hover:scale-105 shadow-lg">
                 <i class="fas fa-plus mr-2"></i>Register New Patient
             </a>
-            <a href="/KJ/receptionist/dispense_medicines" class="bg-blue-500 bg-opacity-30 hover:bg-opacity-50 text-white px-4 py-2 rounded-lg font-medium transition-all duration-300 backdrop-blur-sm">
+            <a href="<?php echo htmlspecialchars($BASE_PATH); ?>/receptionist/dispense_medicines" class="bg-blue-500 bg-opacity-30 hover:bg-opacity-50 text-white px-4 py-2 rounded-lg font-medium transition-all duration-300 backdrop-blur-sm">
                 <i class="fas fa-pills mr-2"></i>Dispense Medicines
             </a>
-            <a href="/KJ/receptionist/appointments" class="bg-blue-500 bg-opacity-30 hover:bg-opacity-50 text-white px-4 py-2 rounded-lg font-medium transition-all duration-300 backdrop-blur-sm">
+            <a href="<?php echo htmlspecialchars($BASE_PATH); ?>/receptionist/appointments" class="bg-blue-500 bg-opacity-30 hover:bg-opacity-50 text-white px-4 py-2 rounded-lg font-medium transition-all duration-300 backdrop-blur-sm">
                 <i class="fas fa-calendar-check mr-2"></i>Appointments
             </a>
         </div>
@@ -243,20 +243,20 @@
         
         <td class="px-6 py-4 whitespace-nowrap">
             <div class="flex items-center gap-2">
-                <a href="/KJ/doctor/view_patient?id=<?php echo $patient['id']; ?>" 
+                <a href="<?php echo htmlspecialchars($BASE_PATH); ?>/doctor/view_patient?id=<?php echo $patient['id']; ?>" 
                    class="bg-blue-100 hover:bg-blue-200 text-blue-700 px-3 py-1 rounded-lg text-sm font-medium transition-all duration-300 transform hover:scale-105" title="View Patient">
                     <i class="fas fa-eye"></i>
                 </a>
                 
                 <?php if (!$patient['consultation_registration_paid']): ?>
-                <a href="/KJ/receptionist/payments?patient_id=<?php echo $patient['id']; ?>&step=consultation" 
+                <a href="<?php echo htmlspecialchars($BASE_PATH); ?>/receptionist/payments?patient_id=<?php echo $patient['id']; ?>&+step=consultation" 
                    class="bg-yellow-100 hover:bg-yellow-200 text-yellow-700 px-3 py-1 rounded-lg text-sm font-medium transition-all duration-300 transform hover:scale-105" title="Process Payment">
                     <i class="fas fa-credit-card"></i>
                 </a>
                 <?php endif; ?>
                 
                 <?php if ($step === 'medicine_dispensing' && isset($patient['medicine_prescribed']) && $patient['medicine_prescribed'] && (!isset($patient['medicine_dispensed']) || !$patient['medicine_dispensed'])): ?>
-                <a href="/KJ/receptionist/dispense_medicines?patient_id=<?php echo $patient['id']; ?>" 
+                <a href="<?php echo htmlspecialchars($BASE_PATH); ?>/receptionist/dispense_medicines?patient_id=<?php echo $patient['id']; ?>" 
                    class="bg-purple-100 hover:bg-purple-200 text-purple-700 px-3 py-1 rounded-lg text-sm font-medium transition-all duration-300 transform hover:scale-105" title="Dispense Medicine">
                     <i class="fas fa-pills"></i>
                 </a>
@@ -600,7 +600,7 @@ function editPatient(patientId) {
 function scheduleAppointment(patientId) {
     // Implementation for scheduling appointment
     console.log('Schedule appointment for patient:', patientId);
-    window.location.href = `/KJ/receptionist/appointments?patient_id=${patientId}`;
+    window.location.href = `${BASE_PATH}/receptionist/appointments?patient_id=${patientId}`;
 }
 
 function processFinalPayment(patientId, patientName) {

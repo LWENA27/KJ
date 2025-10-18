@@ -13,4 +13,25 @@ if (!function_exists('format_tsh')) {
     }
 }
 
+if (!function_exists('safe_date')) {
+    /**
+     * Format a date safely. Returns $fallback when $date is empty or cannot be parsed by strtotime.
+     *
+     * @param string $format PHP date format
+     * @param mixed $date Date string or timestamp
+     * @param string $fallback Value to return when date is not available
+     * @return string
+     */
+    function safe_date(string $format, $date, string $fallback = ''): string {
+        if ($date === null || $date === '' ) return $fallback;
+        // If numeric, assume timestamp
+        if (is_numeric($date)) {
+            return date($format, (int)$date);
+        }
+        $ts = @strtotime($date);
+        if ($ts === false) return $fallback;
+        return date($format, $ts);
+    }
+}
+
 ?>

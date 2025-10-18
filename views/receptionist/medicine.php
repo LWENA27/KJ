@@ -179,11 +179,7 @@ $recentTransactions = $recent_transactions ?? [];
                                             </td>
                                             <td class="table-cell">
                                                 <span class="text-sm text-gray-600">
-                                                    <?php if (!empty($patient['prescribed_at'])): ?>
-                                                        <?= htmlspecialchars(date('M j, Y', strtotime($patient['prescribed_at']))) ?>
-                                                    <?php else: ?>
-                                                        N/A
-                                                    <?php endif; ?>
+                                                    <?= htmlspecialchars(safe_date('M j, Y', $patient['prescribed_at'], 'N/A')) ?>
                                                 </span>
                                             </td>
                                             <td class="table-cell">
@@ -328,11 +324,7 @@ $recentTransactions = $recent_transactions ?? [];
                                     <?php foreach ($recentTransactions as $transaction): ?>
                                         <tr class="hover:bg-gray-50">
                                             <td class="table-cell">
-                                                <?php if (!empty($transaction['dispensed_at'])): ?>
-                                                    <?= htmlspecialchars(date('M j, Y g:i A', strtotime($transaction['dispensed_at']))) ?>
-                                                <?php else: ?>
-                                                    N/A
-                                                <?php endif; ?>
+                                                <?= htmlspecialchars(safe_date('M j, Y g:i A', $transaction['dispensed_at'], 'N/A')) ?>
                                             </td>
                                             <td class="table-cell">
                                                 <?= htmlspecialchars($transaction['patient_name'] ?? '') ?>

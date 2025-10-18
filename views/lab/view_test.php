@@ -2,7 +2,7 @@
     <div class="flex items-center justify-between">
         <h1 class="text-3xl font-bold text-gray-900">Test Details</h1>
         <div class="flex space-x-3">
-            <a href="/KJ/lab/tests" class="bg-gray-500 hover:bg-gray-600 text-white px-4 py-2 rounded-md">
+            <a href="<?php echo htmlspecialchars($BASE_PATH); ?>/lab/tests" class="bg-gray-500 hover:bg-gray-600 text-white px-4 py-2 rounded-md">
                 <i class="fas fa-arrow-left mr-2"></i>Back to Tests
             </a>
             
@@ -107,7 +107,7 @@
             <div>
                 <label class="block text-sm font-medium text-gray-700 mb-2">Requested Date</label>
                 <p class="text-gray-900 bg-gray-50 px-3 py-2 rounded-md">
-                    <?php echo date('M j, Y H:i', strtotime($test['created_at'])); ?>
+                    <?php echo safe_date('M j, Y H:i', $test['created_at']); ?>
                 </p>
             </div>
             <div>
@@ -131,7 +131,7 @@
                 </div>
                 <div class="ml-4">
                     <p class="text-sm font-medium text-gray-900">Test Ordered</p>
-                    <p class="text-xs text-gray-500"><?php echo date('M j, Y H:i', strtotime($test['created_at'])); ?></p>
+                    <p class="text-xs text-gray-500"><?php echo safe_date('M j, Y H:i', $test['created_at']); ?></p>
                 </div>
             </div>
 
@@ -142,7 +142,7 @@
                 </div>
                 <div class="ml-4">
                     <p class="text-sm font-medium text-gray-900">Sample Collected</p>
-                    <p class="text-xs text-gray-500"><?php echo date('M j, Y H:i', strtotime($test['sample_date'])); ?></p>
+                    <p class="text-xs text-gray-500"><?php echo safe_date('M j, Y H:i', $test['sample_date']); ?></p>
                 </div>
             </div>
             <?php else: ?>
@@ -192,7 +192,7 @@
                 </div>
                 <div class="ml-4">
                     <p class="text-sm font-medium text-gray-900">Results Recorded</p>
-                    <p class="text-xs text-gray-500"><?php echo $test['result_date'] ? date('M j, Y H:i', strtotime($test['result_date'])) : 'Date not available'; ?></p>
+                    <p class="text-xs text-gray-500"><?php echo $test['result_date'] ? safe_date('M j, Y H:i', $test['result_date']) : 'Date not available'; ?></p>
                 </div>
             </div>
             <?php else: ?>
@@ -242,7 +242,7 @@
             </div>
         </div>
         <?php else: ?>
-        <form method="POST" action="/KJ/lab/record_result" class="space-y-4" id="resultForm">
+    <form method="POST" action="<?php echo htmlspecialchars($BASE_PATH); ?>/lab/record_result" class="space-y-4" id="resultForm">
             <input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars($csrf_token); ?>">
             <input type="hidden" name="test_id" value="<?php echo $test['id']; ?>">
 
@@ -293,7 +293,7 @@
 <script>
 function startTest(testId) {
     if (confirm('Are you sure you want to start processing this test?')) {
-        fetch('/KJ/lab/start_test', {
+    fetch(window.BASE_PATH + '/lab/start_test', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/x-www-form-urlencoded',
@@ -317,7 +317,7 @@ function startTest(testId) {
 
 function collectSample(testId) {
     if (confirm('Mark sample as collected?')) {
-        fetch('/KJ/lab/collect_sample', {
+    fetch(window.BASE_PATH + '/lab/collect_sample', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/x-www-form-urlencoded',
@@ -339,21 +339,27 @@ function collectSample(testId) {
     }
 }
 
-// Form validation and submission
-document.getElementById('resultForm').addEventListener('submit', function(e) {
-    const resultValue = document.getElementById('result_value').value.trim();
-    const submitBtn = document.getElementById('submitBtn');
+// Form validation and submission (guard if form exists)
+var resultFormEl = document.getElementById('resultForm');
+if (resultFormEl) {
+    resultFormEl.addEventListener('submit', function(e) {
+        const resultValueEl = document.getElementById('result_value');
+        const submitBtn = document.getElementById('submitBtn');
+        const resultValue = resultValueEl ? resultValueEl.value.trim() : '';
 
-    if (!resultValue) {
-        e.preventDefault();
-        alert('Please enter a result value');
-        return false;
-    }
+        if (!resultValue) {
+            e.preventDefault();
+            alert('Please enter a result value');
+            return false;
+        }
 
-    // Disable button to prevent double submission
-    submitBtn.disabled = true;
-    submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>Saving...';
-});
+        // Disable button to prevent double submission
+        if (submitBtn) {
+            submitBtn.disabled = true;
+            submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>Saving...';
+        }
+    });
+}
 
 // Take Sample Modal Functions
 function openTakeSampleModal() {
@@ -389,7 +395,7 @@ function closeAddResultModal() {
                 </button>
             </div>
             
-            <form method="POST" action="/KJ/lab/take_sample" class="space-y-4">
+                <form method="POST" action="<?php echo htmlspecialchars($BASE_PATH); ?>/lab/take_sample" class="space-y-4">
                 <input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars($csrf_token); ?>">
                 <input type="hidden" name="test_order_id" value="<?php echo $test['id']; ?>">
                 
@@ -437,7 +443,7 @@ function closeAddResultModal() {
                 </button>
             </div>
             
-            <form method="POST" action="/KJ/lab/add_result" class="space-y-4">
+            <form method="POST" action="<?php echo htmlspecialchars($BASE_PATH); ?>/lab/add_result" class="space-y-4">
                 <input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars($csrf_token); ?>">
                 <input type="hidden" name="test_order_id" value="<?php echo $test['id']; ?>">
                 

@@ -53,7 +53,7 @@
                         </div>
                         <div class="text-right">
                             <p class="text-sm text-gray-500">
-                                <?php echo date('M j, Y H:i', strtotime($result['result_date'])); ?>
+                                <?php echo safe_date('M j, Y H:i', $result['result_date'], 'N/A'); ?>
                             </p>
                         </div>
                     </div>

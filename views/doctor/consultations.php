@@ -44,9 +44,9 @@
                             </div>
                         </div>
                         <div class="flex items-center space-x-2">
-                            <a href="/KJ/doctor/view_patient/<?php echo $c['patient_id']; ?>" class="text-blue-600 hover:text-blue-900 text-sm"><i class="fas fa-eye mr-1"></i>View</a>
+                            <a href="<?php echo htmlspecialchars($BASE_PATH); ?>/doctor/view_patient/<?php echo $c['patient_id']; ?>" class="text-blue-600 hover:text-blue-900 text-sm"><i class="fas fa-eye mr-1"></i>View</a>
                             <?php if (($c['status'] ?? 'pending') !== 'completed'): ?>
-                            <a href="/KJ/doctor/view_patient/<?php echo $c['patient_id']; ?>" class="text-green-600 hover:text-green-900 text-sm"><i class="fas fa-user-md mr-1"></i>Attend</a>
+                            <a href="<?php echo htmlspecialchars($BASE_PATH); ?>/doctor/view_patient/<?php echo $c['patient_id']; ?>" class="text-green-600 hover:text-green-900 text-sm"><i class="fas fa-user-md mr-1"></i>Attend</a>
                             <?php endif; ?>
                         </div>
                     </li>
@@ -72,7 +72,7 @@
                     <?php
                         $status = $consultation['status'] ?? 'pending';
                         $apt_date = $consultation['appointment_date'] ?? $consultation['visit_date'] ?? $consultation['created_at'];
-                        $registered = date('M j, Y H:i', strtotime($apt_date));
+                        $registered = safe_date('M j, Y H:i', $apt_date, 'N/A');
                         // Safe name fallback (try aliased fields first)
                         $first = trim($consultation['patient_first'] ?? $consultation['first_name'] ?? '');
                         $last = trim($consultation['patient_last'] ?? $consultation['last_name'] ?? '');
@@ -97,9 +97,9 @@
                         <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700"><?php echo htmlspecialchars(ucwords(str_replace('_', ' ', $status))); ?></td>
                         <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
                             <div class="flex items-center space-x-2">
-                                <a href="/KJ/doctor/view_patient/<?php echo $consultation['patient_id']; ?>" class="text-blue-600 hover:text-blue-900 transition duration-150"><i class="fas fa-eye mr-1"></i>View</a>
+                                <a href="<?php echo htmlspecialchars($BASE_PATH); ?>/doctor/view_patient/<?php echo $consultation['patient_id']; ?>" class="text-blue-600 hover:text-blue-900 transition duration-150"><i class="fas fa-eye mr-1"></i>View</a>
                                 <?php if ($status !== 'completed'): ?>
-                                <a href="/KJ/doctor/view_patient/<?php echo $consultation['patient_id']; ?>" class="text-green-600 hover:text-green-900 transition duration-150"><i class="fas fa-user-md mr-1"></i>Attend</a>
+                                <a href="<?php echo htmlspecialchars($BASE_PATH); ?>/doctor/view_patient/<?php echo $consultation['patient_id']; ?>" class="text-green-600 hover:text-green-900 transition duration-150"><i class="fas fa-user-md mr-1"></i>Attend</a>
                                 <?php endif; ?>
                             </div>
                         </td>
@@ -124,12 +124,12 @@
                         <div class="text-sm font-medium text-gray-900"><?php echo htmlspecialchars($mname); ?></div>
                         <div class="text-xs text-gray-500"><?php echo htmlspecialchars($consultation['patient_phone'] ?? $consultation['phone'] ?? 'N/A'); ?></div>
                     </div>
-                    <div class="text-xs text-gray-500"><?php echo date('M j, Y H:i', strtotime($apt_date)); ?></div>
+                    <div class="text-xs text-gray-500"><?php echo safe_date('M j, Y H:i', $apt_date, 'N/A'); ?></div>
                 </div>
                 <div class="flex space-x-2 mt-3">
-                    <a href="/KJ/doctor/view_patient/<?php echo $consultation['patient_id']; ?>" class="flex-1 bg-blue-500 hover:bg-blue-600 text-white text-center px-3 py-2 rounded-lg font-medium transition duration-150"><i class="fas fa-eye mr-1"></i>View</a>
+                    <a href="<?php echo htmlspecialchars($BASE_PATH); ?>/doctor/view_patient/<?php echo $consultation['patient_id']; ?>" class="flex-1 bg-blue-500 hover:bg-blue-600 text-white text-center px-3 py-2 rounded-lg font-medium transition duration-150"><i class="fas fa-eye mr-1"></i>View</a>
                     <?php if (($consultation['status'] ?? 'pending') !== 'completed'): ?>
-                    <a href="/KJ/doctor/view_patient/<?php echo $consultation['patient_id']; ?>" class="flex-1 bg-green-500 hover:bg-green-600 text-white text-center px-3 py-2 rounded-lg font-medium transition duration-150"><i class="fas fa-user-md mr-1"></i>Attend</a>
+                    <a href="<?php echo htmlspecialchars($BASE_PATH); ?>/doctor/view_patient/<?php echo $consultation['patient_id']; ?>" class="flex-1 bg-green-500 hover:bg-green-600 text-white text-center px-3 py-2 rounded-lg font-medium transition duration-150"><i class="fas fa-user-md mr-1"></i>Attend</a>
                     <?php endif; ?>
                 </div>
             </div>
@@ -214,8 +214,8 @@
                         
                         // Format appointment date
                         $apt_date = $consultation['appointment_date'] ?? $consultation['visit_date'] ?? $consultation['created_at'];
-                        $formatted_date = date('M j, Y', strtotime($apt_date));
-                        $formatted_time = date('H:i', strtotime($apt_date));
+                        $formatted_date = safe_date('M j, Y', $apt_date, 'N/A');
+                        $formatted_time = safe_date('H:i', $apt_date, 'N/A');
 
                         // Safe name fallback
                         $first = trim($consultation['first_name'] ?? '');
@@ -263,13 +263,13 @@
                         </td>
                         <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
                             <div class="flex items-center space-x-2">
-                                <a href="/KJ/doctor/view_patient/<?php echo $consultation['patient_id']; ?>" 
-                                   class="text-blue-600 hover:text-blue-900 transition duration-150">
+                                          <a href="<?php echo htmlspecialchars($BASE_PATH); ?>/doctor/view_patient/<?php echo $consultation['patient_id']; ?>" 
+                                              class="text-blue-600 hover:text-blue-900 transition duration-150">
                                     <i class="fas fa-eye mr-1"></i>View
                                 </a>
                                 <?php if ($status !== 'completed'): ?>
-                                <a href="/KJ/doctor/view_patient/<?php echo $consultation['patient_id']; ?>" 
-                                   class="text-green-600 hover:text-green-900 transition duration-150">
+                                          <a href="<?php echo htmlspecialchars($BASE_PATH); ?>/doctor/view_patient/<?php echo $consultation['patient_id']; ?>" 
+                                              class="text-green-600 hover:text-green-900 transition duration-150">
                                     <i class="fas fa-edit mr-1"></i>Continue
                                 </a>
                                 <?php endif; ?>
@@ -331,8 +331,8 @@
                 $symptoms = $consultation['main_complaint'] ?? $consultation['symptoms'] ?? 'N/A';
                 $diagnosis = $consultation['final_diagnosis'] ?? $consultation['diagnosis'] ?? 'Pending';
                 $apt_date = $consultation['appointment_date'] ?? $consultation['visit_date'] ?? $consultation['created_at'];
-                $formatted_date = date('M j, Y', strtotime($apt_date));
-                $formatted_time = date('H:i', strtotime($apt_date));
+                $formatted_date = safe_date('M j, Y', $apt_date, 'N/A');
+                $formatted_time = safe_date('H:i', $apt_date, 'N/A');
             ?>
             <div class="p-4 hover:bg-gray-50 transition duration-150">
                 <!-- Patient Header -->

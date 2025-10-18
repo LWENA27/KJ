@@ -8,19 +8,19 @@
                 <i class="fas fa-print mr-2"></i>Print Record
             </button>
             <!-- Change this button -->
-            <button onclick="window.location.href='/KJ/doctor/attend_patient/<?php echo $patient['id']; ?>'"
+            <button onclick="window.location.href='<?php echo htmlspecialchars($BASE_PATH); ?>/doctor/attend_patient/<?php echo $patient['id']; ?>'"
                     class="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded-md">
                 <i class="fas fa-stethoscope mr-2"></i>Attend Patient
             </button>
-            <a href="/KJ/doctor/view_lab_results/<?php echo $patient['id']; ?>"
+            <a href="<?php echo htmlspecialchars($BASE_PATH); ?>/doctor/view_lab_results/<?php echo $patient['id']; ?>"
                class="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-md">
                 <i class="fas fa-vial mr-2"></i>View Lab Results
             </a>
-            <a href="/KJ/doctor/patient_journey/<?php echo $patient['id']; ?>"
+            <a href="<?php echo htmlspecialchars($BASE_PATH); ?>/doctor/patient_journey/<?php echo $patient['id']; ?>"
                class="bg-purple-500 hover:bg-purple-600 text-white px-4 py-2 rounded-md">
                 <i class="fas fa-route mr-2"></i>View Journey
             </a>
-            <a href="/KJ/doctor/patients" class="bg-gray-500 hover:bg-gray-600 text-white px-4 py-2 rounded-md">
+            <a href="<?php echo htmlspecialchars($BASE_PATH); ?>/doctor/patients" class="bg-gray-500 hover:bg-gray-600 text-white px-4 py-2 rounded-md">
                 <i class="fas fa-arrow-left mr-2"></i>Back to Patients
             </a>
         </div>
@@ -211,7 +211,7 @@
             <div class="flex items-center">
                 <span class="font-medium mr-2">DATE:</span>
                 <span class="border-b border-gray-400 flex-1 px-2">
-                    <?php $apt = $latest_consultation['appointment_date'] ?? $latest_consultation['visit_date'] ?? $latest_consultation['created_at'] ?? null; echo $apt ? date('d/m/Y', strtotime($apt)) : ''; ?>
+                    <?php $apt = $latest_consultation['appointment_date'] ?? $latest_consultation['visit_date'] ?? $latest_consultation['created_at'] ?? null; echo $apt ? safe_date('d/m/Y', $apt, '') : ''; ?>
                 </span>
             </div>
             <div class="flex items-center">

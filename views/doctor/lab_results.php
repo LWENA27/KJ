@@ -32,11 +32,11 @@
                                     <i class="fas fa-user text-green-600"></i>
                                 </div>
                                 <div>
-                                    <div class="text-sm font-medium text-gray-900">
+                                        <div class="text-sm font-medium text-gray-900">
                                         <?php echo htmlspecialchars($result['first_name'] . ' ' . $result['last_name']); ?>
                                     </div>
                                     <div class="text-sm text-gray-500">
-                                        <?php $apt = $result['appointment_date'] ?? $result['visit_date'] ?? $result['created_at']; echo date('M j, Y', strtotime($apt)); ?>
+                                        <?php $apt = $result['appointment_date'] ?? $result['visit_date'] ?? $result['created_at']; echo safe_date('M j, Y', $apt, 'N/A'); ?>
                                     </div>
                                 </div>
                             </div>
@@ -73,7 +73,7 @@
                             </span>
                         </td>
                         <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                            <?php echo date('M j, Y', strtotime($result['created_at'])); ?>
+                            <?php echo safe_date('M j, Y', $result['created_at'], 'N/A'); ?>
                         </td>
                         <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
                             <button 

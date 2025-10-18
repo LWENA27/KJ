@@ -45,7 +45,7 @@
     <!-- Statistics Cards -->
     <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
         <!-- Pending Patients -->
-        <div class="bg-gradient-to-r from-blue-500 to-blue-600 rounded-lg shadow-lg p-6 text-white transform hover:scale-105 transition-all duration-300 cursor-pointer group" onclick="window.location.href='/KJ/receptionist/patients'">
+        <div class="bg-gradient-to-r from-blue-500 to-blue-600 rounded-lg shadow-lg p-6 text-white transform hover:scale-105 transition-all duration-300 cursor-pointer group" onclick="window.location.href='<?php echo htmlspecialchars($BASE_PATH); ?>/receptionist/patients'">
             <div class="flex items-center justify-between">
                 <div>
                     <p class="text-blue-100 text-sm font-medium">Pending Patients</p>
@@ -62,7 +62,7 @@
         </div>
 
         <!-- Today's Appointments -->
-        <div class="bg-gradient-to-r from-green-500 to-green-600 rounded-lg shadow-lg p-6 text-white transform hover:scale-105 transition-all duration-300 cursor-pointer group" onclick="window.location.href='/KJ/receptionist/appointments'">
+        <div class="bg-gradient-to-r from-green-500 to-green-600 rounded-lg shadow-lg p-6 text-white transform hover:scale-105 transition-all duration-300 cursor-pointer group" onclick="window.location.href='<?php echo htmlspecialchars($BASE_PATH); ?>/receptionist/appointments'">
             <div class="flex items-center justify-between">
                 <div>
                     <p class="text-green-100 text-sm font-medium">Today's Appointments</p>
@@ -79,7 +79,7 @@
         </div>
 
         <!-- Low Stock Medicines -->
-        <div class="bg-gradient-to-r from-yellow-500 to-orange-500 rounded-lg shadow-lg p-6 text-white transform hover:scale-105 transition-all duration-300 cursor-pointer group" onclick="window.location.href='/KJ/receptionist/medicine'">>
+        <div class="bg-gradient-to-r from-yellow-500 to-orange-500 rounded-lg shadow-lg p-6 text-white transform hover:scale-105 transition-all duration-300 cursor-pointer group" onclick="window.location.href='<?php echo htmlspecialchars($BASE_PATH); ?>/receptionist/medicine'">>
             <div class="flex items-center justify-between">
                 <div>
                     <p class="text-yellow-100 text-sm font-medium">Low Stock Alert</p>

@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: 127.0.0.1
--- Generation Time: Oct 11, 2025 at 02:17 PM
+-- Generation Time: Oct 18, 2025 at 07:15 AM
 -- Server version: 10.4.32-MariaDB
 -- PHP Version: 8.1.25
 
@@ -103,7 +103,10 @@ CREATE TABLE `consultations` (
 INSERT INTO `consultations` (`id`, `visit_id`, `patient_id`, `doctor_id`, `consultation_number`, `consultation_type`, `main_complaint`, `history_of_present_illness`, `on_examination`, `diagnosis`, `treatment_plan`, `notes`, `follow_up_required`, `follow_up_date`, `follow_up_instructions`, `referred_to`, `referral_reason`, `status`, `cancellation_reason`, `started_at`, `completed_at`, `created_at`, `updated_at`) VALUES
 (1, 1, 1, 3, 1, 'new', NULL, NULL, NULL, NULL, NULL, NULL, 0, NULL, NULL, NULL, NULL, 'in_progress', NULL, '2025-10-11 05:15:14', NULL, '2025-10-11 03:50:52', '2025-10-11 05:15:14'),
 (2, 2, 2, 3, 1, 'new', NULL, NULL, NULL, NULL, NULL, NULL, 0, NULL, NULL, NULL, NULL, 'in_progress', NULL, '2025-10-11 06:09:42', NULL, '2025-10-11 06:04:10', '2025-10-11 06:09:42'),
-(3, 3, 3, 1, 1, 'new', NULL, NULL, NULL, NULL, NULL, NULL, 0, NULL, NULL, NULL, NULL, 'pending', NULL, NULL, NULL, '2025-10-11 11:12:44', '2025-10-11 11:12:44');
+(3, 3, 3, 1, 1, 'new', NULL, NULL, NULL, NULL, NULL, NULL, 0, NULL, NULL, NULL, NULL, 'pending', NULL, NULL, NULL, '2025-10-11 11:12:44', '2025-10-11 11:12:44'),
+(4, 4, 4, 3, 1, 'new', 'kichwa', NULL, 'ubongo', '', '', NULL, 0, NULL, NULL, NULL, NULL, 'completed', NULL, '2025-10-17 08:04:05', '2025-10-17 08:04:05', '2025-10-17 08:02:10', '2025-10-17 08:04:05'),
+(5, 5, 5, 1, 1, 'new', NULL, NULL, NULL, NULL, NULL, NULL, 0, NULL, NULL, NULL, NULL, 'pending', NULL, NULL, NULL, '2025-10-17 08:35:54', '2025-10-17 08:35:54'),
+(6, 6, 6, 3, 1, 'new', 'kichwa', NULL, 'snfh', '', '', NULL, 0, NULL, NULL, NULL, NULL, 'completed', NULL, '2025-10-18 05:14:25', '2025-10-18 05:14:25', '2025-10-18 05:02:27', '2025-10-18 05:14:25');
 
 -- --------------------------------------------------------
 
@@ -144,6 +147,13 @@ CREATE TABLE `lab_results` (
   `reviewed_at` timestamp NULL DEFAULT NULL,
   `review_notes` text DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+--
+-- Dumping data for table `lab_results`
+--
+
+INSERT INTO `lab_results` (`id`, `order_id`, `patient_id`, `test_id`, `result_value`, `result_text`, `result_unit`, `is_normal`, `is_critical`, `interpretation`, `technician_id`, `technician_notes`, `completed_at`, `reviewed_by`, `reviewed_at`, `review_notes`) VALUES
+(1, 1, 4, 4, '1.0', 'Test completed successfully.', 'mg/dL', 1, 0, NULL, 4, NULL, '2025-10-17 05:05:00', NULL, NULL, NULL);
 
 -- --------------------------------------------------------
 
@@ -237,6 +247,14 @@ CREATE TABLE `lab_test_orders` (
   `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
   `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp()
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+--
+-- Dumping data for table `lab_test_orders`
+--
+
+INSERT INTO `lab_test_orders` (`id`, `visit_id`, `patient_id`, `consultation_id`, `test_id`, `ordered_by`, `assigned_to`, `priority`, `status`, `cancellation_reason`, `instructions`, `sample_collected_at`, `expected_completion`, `created_at`, `updated_at`) VALUES
+(1, 4, 4, 4, 4, 3, 4, 'normal', 'completed', NULL, NULL, NULL, NULL, '2025-10-17 08:04:05', '2025-10-17 08:05:15'),
+(2, 6, 6, 6, 4, 3, 4, 'normal', 'pending', NULL, NULL, NULL, NULL, '2025-10-18 05:14:25', '2025-10-18 05:14:25');
 
 -- --------------------------------------------------------
 
@@ -408,7 +426,10 @@ CREATE TABLE `patients` (
 INSERT INTO `patients` (`id`, `registration_number`, `first_name`, `last_name`, `date_of_birth`, `gender`, `phone`, `email`, `address`, `occupation`, `emergency_contact_name`, `emergency_contact_phone`, `blood_group`, `allergies`, `chronic_conditions`, `insurance_company`, `insurance_number`, `created_at`, `updated_at`) VALUES
 (1, 'KJ20250001', 'lwena', 'samson', '2001-07-02', 'male', '068327434', 'lwena027@gmail.com', '', NULL, 'ADAM lwena home of technologies LWENA', '0683274343', NULL, NULL, NULL, NULL, NULL, '2025-10-11 03:50:52', '2025-10-11 03:50:52'),
 (2, 'KJ20250002', 'adam', 'lwena', '2025-07-02', 'male', '0683274343', 'adamlwena22@gmai.com', '', NULL, 'jumla', '0683274343', NULL, NULL, NULL, NULL, NULL, '2025-10-11 06:04:10', '2025-10-11 06:04:10'),
-(3, 'KJ20250003', 'adam', 'lwena', '2025-05-04', 'male', '0683274343', 'adamlwena22@gmai.com', '', NULL, 'adam samson lwena', '0683274343', NULL, NULL, NULL, NULL, NULL, '2025-10-11 11:12:44', '2025-10-11 11:12:44');
+(3, 'KJ20250003', 'adam', 'lwena', '2025-05-04', 'male', '0683274343', 'adamlwena22@gmai.com', '', NULL, 'adam samson lwena', '0683274343', NULL, NULL, NULL, NULL, NULL, '2025-10-11 11:12:44', '2025-10-11 11:12:44'),
+(4, 'KJ20250004', 'diamond', 'platinumz', '1984-04-02', 'male', '087242534', 'platnumz@gmai.com', '', NULL, 'jumla lokole', '0683274343', NULL, NULL, NULL, NULL, NULL, '2025-10-17 08:02:10', '2025-10-17 08:02:10'),
+(5, 'KJ20250005', 'sule', 'sule', '2025-05-11', 'male', '6543245', 'hjjf@gmail.com', '', NULL, 'zahanati', '0987645678', NULL, NULL, NULL, NULL, NULL, '2025-10-17 08:35:54', '2025-10-17 08:35:54'),
+(6, 'KJ20250006', 'hamza', 'mtinangi', '2005-02-02', 'male', '07212121212', 'hamza@gmail.com', '', NULL, 'lwena samson', '068327434', NULL, NULL, NULL, NULL, NULL, '2025-10-18 05:02:27', '2025-10-18 05:02:27');
 
 -- --------------------------------------------------------
 
@@ -454,7 +475,10 @@ CREATE TABLE `patient_visits` (
 INSERT INTO `patient_visits` (`id`, `patient_id`, `visit_number`, `visit_date`, `visit_type`, `assigned_doctor_id`, `registered_by`, `status`, `completed_at`, `created_at`, `updated_at`) VALUES
 (1, 1, 0, '2025-10-11', 'consultation', NULL, 2, 'active', NULL, '2025-10-11 03:50:52', '2025-10-11 05:15:14'),
 (2, 2, 0, '2025-10-11', 'consultation', NULL, 2, 'active', NULL, '2025-10-11 06:04:10', '2025-10-11 06:09:42'),
-(3, 3, 0, '2025-10-11', 'consultation', NULL, 2, 'active', NULL, '2025-10-11 11:12:44', '2025-10-11 11:12:44');
+(3, 3, 0, '2025-10-11', 'consultation', NULL, 2, 'active', NULL, '2025-10-11 11:12:44', '2025-10-11 11:12:44'),
+(4, 4, 0, '2025-10-17', 'consultation', NULL, 2, 'active', NULL, '2025-10-17 08:02:10', '2025-10-17 08:05:15'),
+(5, 5, 0, '2025-10-17', 'consultation', NULL, 2, 'active', NULL, '2025-10-17 08:35:54', '2025-10-17 08:35:54'),
+(6, 6, 0, '2025-10-18', 'consultation', NULL, 2, 'active', NULL, '2025-10-18 05:02:27', '2025-10-18 05:14:25');
 
 -- --------------------------------------------------------
 
@@ -485,7 +509,11 @@ CREATE TABLE `payments` (
 INSERT INTO `payments` (`id`, `visit_id`, `patient_id`, `payment_type`, `item_id`, `item_type`, `amount`, `payment_method`, `payment_status`, `reference_number`, `collected_by`, `payment_date`, `notes`) VALUES
 (1, 1, 1, 'registration', NULL, NULL, 3000.00, 'cash', 'paid', NULL, 2, '2025-10-11 03:50:52', 'Initial consultation payment'),
 (2, 2, 2, 'registration', NULL, NULL, 3000.00, 'cash', 'paid', NULL, 2, '2025-10-11 06:04:10', 'Initial consultation payment'),
-(3, 3, 3, 'registration', NULL, NULL, 3000.00, 'cash', 'paid', NULL, 2, '2025-10-11 11:12:44', 'Initial consultation payment');
+(3, 3, 3, 'registration', NULL, NULL, 3000.00, 'cash', 'paid', NULL, 2, '2025-10-11 11:12:44', 'Initial consultation payment'),
+(4, 4, 4, 'registration', NULL, NULL, 3000.00, 'cash', 'paid', NULL, 2, '2025-10-17 08:02:10', 'Initial consultation payment'),
+(5, 4, 4, 'lab_test', 1, 'lab_order', 8000.00, 'cash', 'paid', '', 2, '2025-10-17 08:04:55', NULL),
+(6, 5, 5, 'registration', NULL, NULL, 3000.00, 'cash', 'paid', NULL, 2, '2025-10-17 08:35:54', 'Initial consultation payment'),
+(7, 6, 6, 'registration', NULL, NULL, 3000.00, 'cash', 'paid', NULL, 2, '2025-10-18 05:02:27', 'Initial consultation payment');
 
 -- --------------------------------------------------------
 
@@ -514,6 +542,13 @@ CREATE TABLE `prescriptions` (
   `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
   `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp()
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+--
+-- Dumping data for table `prescriptions`
+--
+
+INSERT INTO `prescriptions` (`id`, `consultation_id`, `visit_id`, `patient_id`, `doctor_id`, `medicine_id`, `quantity_prescribed`, `quantity_dispensed`, `dosage`, `frequency`, `duration`, `instructions`, `status`, `cancellation_reason`, `dispensed_by`, `dispensed_at`, `notes`, `created_at`, `updated_at`) VALUES
+(2, 6, 6, 6, 3, 1, 10, 0, '200g', 'as prescribed', '', '4', 'pending', NULL, NULL, NULL, NULL, '2025-10-18 05:14:25', '2025-10-18 05:14:25');
 
 -- --------------------------------------------------------
 
@@ -644,7 +679,10 @@ CREATE TABLE `vital_signs` (
 INSERT INTO `vital_signs` (`id`, `visit_id`, `patient_id`, `temperature`, `blood_pressure_systolic`, `blood_pressure_diastolic`, `pulse_rate`, `respiratory_rate`, `weight`, `height`, `recorded_by`, `recorded_at`) VALUES
 (1, 1, 1, 35.0, 120, 80, 75, NULL, 60.0, 127.0, 2, '2025-10-11 03:50:52'),
 (2, 2, 2, 37.0, 120, 270, 76, NULL, 45.0, 3.0, 2, '2025-10-11 06:04:10'),
-(3, 3, 3, 36.0, 120, 270, 76, NULL, 35.0, 123.0, 2, '2025-10-11 11:12:44');
+(3, 3, 3, 36.0, 120, 270, 76, NULL, 35.0, 123.0, 2, '2025-10-11 11:12:44'),
+(4, 4, 4, 36.0, 120, 270, 120, NULL, 78.0, 178.0, 2, '2025-10-17 08:02:10'),
+(5, 5, 5, 36.0, 120, 80, 75, NULL, 60.0, 127.0, 2, '2025-10-17 08:35:54'),
+(6, 6, 6, 36.0, 120, 80, 75, NULL, 60.0, 127.0, 2, '2025-10-18 05:02:27');
 
 -- --------------------------------------------------------
 
@@ -886,13 +924,13 @@ ALTER TABLE `vital_signs`
 -- AUTO_INCREMENT for table `consultations`
 --
 ALTER TABLE `consultations`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=4;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=7;
 
 --
 -- AUTO_INCREMENT for table `lab_results`
 --
 ALTER TABLE `lab_results`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=2;
 
 --
 -- AUTO_INCREMENT for table `lab_tests`
@@ -910,7 +948,7 @@ ALTER TABLE `lab_test_categories`
 -- AUTO_INCREMENT for table `lab_test_orders`
 --
 ALTER TABLE `lab_test_orders`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=3;
 
 --
 -- AUTO_INCREMENT for table `medicines`
@@ -934,25 +972,25 @@ ALTER TABLE `medicine_dispensing`
 -- AUTO_INCREMENT for table `patients`
 --
 ALTER TABLE `patients`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=4;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=7;
 
 --
 -- AUTO_INCREMENT for table `patient_visits`
 --
 ALTER TABLE `patient_visits`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=4;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=7;
 
 --
 -- AUTO_INCREMENT for table `payments`
 --
 ALTER TABLE `payments`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=4;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=8;
 
 --
 -- AUTO_INCREMENT for table `prescriptions`
 --
 ALTER TABLE `prescriptions`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=3;
 
 --
 -- AUTO_INCREMENT for table `services`
@@ -976,7 +1014,7 @@ ALTER TABLE `users`
 -- AUTO_INCREMENT for table `vital_signs`
 --
 ALTER TABLE `vital_signs`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=4;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=7;
 
 --
 -- Constraints for dumped tables

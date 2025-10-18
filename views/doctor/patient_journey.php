@@ -38,7 +38,7 @@
             <div>
                 <label class="block text-sm font-medium text-gray-700 mb-2">Date of Birth</label>
                 <p class="text-gray-900 bg-gray-50 px-3 py-2 rounded-md">
-                    <?php echo date('M j, Y', strtotime($patient['date_of_birth'])); ?>
+                    <?php echo safe_date('M j, Y', $patient['date_of_birth'], 'N/A'); ?>
                     (<?php echo date_diff(date_create($patient['date_of_birth']), date_create('today'))->y; ?> years old)
                 </p>
             </div>
@@ -48,7 +48,7 @@
             </div>
             <div>
                 <label class="block text-sm font-medium text-gray-700 mb-2">Registration Date</label>
-                <p class="text-gray-900 bg-gray-50 px-3 py-2 rounded-md"><?php echo date('M j, Y H:i', strtotime($patient['created_at'])); ?></p>
+                <p class="text-gray-900 bg-gray-50 px-3 py-2 rounded-md"><?php echo safe_date('M j, Y H:i', $patient['created_at'], ''); ?></p>
             </div>
             <div>
                 <label class="block text-sm font-medium text-gray-700 mb-2">Current Status</label>

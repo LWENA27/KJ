@@ -9,12 +9,12 @@
                 <p class="text-gray-600 mt-1">View all recorded payment transactions</p>
             </div>
             <div class="flex space-x-3">
-                <a href="/KJ/receptionist/payments" 
+                <a href="<?php echo htmlspecialchars($BASE_PATH); ?>/receptionist/payments" 
                    class="inline-flex items-center px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors">
                     <i class="fas fa-exclamation-circle mr-2"></i>
                     Pending Payments
                 </a>
-                <a href="/KJ/receptionist/dashboard" 
+                <a href="<?php echo htmlspecialchars($BASE_PATH); ?>/receptionist/dashboard" 
                    class="inline-flex items-center px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors">
                     <i class="fas fa-arrow-left mr-2"></i>
                     Dashboard
@@ -64,7 +64,7 @@
                     <p class="text-2xl font-bold text-gray-900 mt-1">
                         <?php 
                         $today = array_filter($payments, function($p) {
-                            return date('Y-m-d', strtotime($p['payment_date'])) === date('Y-m-d');
+                            return safe_date('Y-m-d', $p['payment_date']) === date('Y-m-d');
                         });
                         echo count($today);
                         ?>
@@ -99,7 +99,7 @@
 
     <!-- Search and Filter -->
     <div class="bg-white rounded-lg shadow mb-6 p-4">
-        <form method="GET" action="/KJ/receptionist/payment_history" class="grid grid-cols-1 md:grid-cols-4 gap-4">
+    <form method="GET" action="<?php echo htmlspecialchars($BASE_PATH); ?>/receptionist/payment_history" class="grid grid-cols-1 md:grid-cols-4 gap-4">
             <div>
                 <label class="block text-sm font-medium text-gray-700 mb-1">Search Patient</label>
                 <input type="text" name="search" value="<?php echo htmlspecialchars($_GET['search'] ?? ''); ?>"
@@ -132,7 +132,7 @@
                         class="flex-1 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors">
                     <i class="fas fa-search mr-2"></i>Filter
                 </button>
-                <a href="/KJ/receptionist/payment_history" 
+                <a href="<?php echo htmlspecialchars($BASE_PATH); ?>/receptionist/payment_history" 
                    class="px-4 py-2 bg-gray-200 text-gray-700 rounded-md hover:bg-gray-300 transition-colors">
                     <i class="fas fa-redo"></i>
                 </a>
@@ -236,10 +236,10 @@
                                     </span>
                                 </td>
                                 <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                                    <div><?php echo date('M d, Y', strtotime($payment['payment_date'])); ?></div>
+                                    <div><?php echo safe_date('M d, Y', $payment['payment_date'], 'N/A'); ?></div>
                                     <div class="text-xs text-gray-500">
                                         <i class="far fa-clock mr-1"></i>
-                                        <?php echo date('h:i A', strtotime($payment['payment_date'])); ?>
+                                        <?php echo safe_date('h:i A', $payment['payment_date'], ''); ?>
                                     </div>
                                 </td>
                                 <td class="px-6 py-4 whitespace-nowrap">
@@ -275,6 +275,6 @@ function viewPayment(paymentId) {
 
 function printReceipt(paymentId) {
     // TODO: Implement print receipt functionality
-    window.open('/KJ/receptionist/print_receipt/' + paymentId, '_blank');
+    window.open('<?php echo htmlspecialchars($BASE_PATH); ?>/receptionist/print_receipt/' + paymentId, '_blank');
 }
 </script>

@@ -201,7 +201,7 @@
                                         <!-- Action Button (Start Testing Form) -->
                                         <div class="flex items-center space-x-2">
                                             
-                                            <a href="/KJ/lab/view_test/<?php echo $patient['id']; ?>"
+                                            <a href="<?php echo htmlspecialchars($BASE_PATH); ?>/lab/view_test/<?php echo $patient['id']; ?>"
                                                 class="bg-blue-500 hover:bg-blue-600 text-white px-3 py-2 rounded-lg text-sm font-medium transition-colors">
                                                 <i class="fas fa-eye mr-1"></i>Details
                                             </a>
@@ -768,7 +768,7 @@
 
     // Check for new patients
     function checkNewPatients() {
-        fetch('/KJ/lab/check_new_patients', {
+    fetch(BASE_PATH + '/lab/check_new_patients', {
                 method: 'GET',
                 headers: {
                     'Content-Type': 'application/json',
