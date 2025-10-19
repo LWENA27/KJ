@@ -74,7 +74,7 @@ $controller = $segments[0] ?? 'auth';
 $action = $segments[1] ?? 'login';
 
 // Validate controller
-$validControllers = ['auth', 'admin', 'doctor', 'lab', 'receptionist'];
+$validControllers = ['auth', 'admin', 'doctor', 'lab', 'receptionist', 'patienthistory'];
 if (!in_array($controller, $validControllers)) {
     http_response_code(404);
     echo "Controller not found: " . htmlspecialchars($controller);

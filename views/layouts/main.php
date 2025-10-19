@@ -1132,7 +1132,7 @@
                                 </div>
 
                                 <!-- Search (Enhanced) -->
-                                <div class="relative hidden lg:flex" id="globalSearch">
+                                <div class="relative hidden md:flex" id="globalSearch">
                                     <input type="text" id="searchInput" placeholder="Search patients, tests..."
                                         class="w-64 px-4 py-2 pl-10 pr-4 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
                                     <i class="fas fa-search absolute left-3 top-3 text-gray-400"></i>
@@ -1422,51 +1422,78 @@
         }
 
         function performGlobalSearch(query) {
-            // Simulate search results (in real implementation, this would be an AJAX call)
             const searchResults = document.getElementById('searchResults');
-            const mockResults = [{
-                    type: 'patient',
-                    name: 'John Doe',
-                    id: 'P-001',
-                    info: 'Age 45, Last visit: Today'
-                },
-                {
-                    type: 'test',
-                    name: 'Blood Sugar',
-                    id: 'T-001',
-                    info: 'Category: Blood Tests'
-                },
-                {
-                    type: 'medicine',
-                    name: 'Paracetamol',
-                    id: 'M-001',
-                    info: 'Stock: 500 tablets'
-                }
-            ].filter(item => item.name.toLowerCase().includes(query.toLowerCase()));
+            
+            // Show loading state
+            searchResults.innerHTML = '<div class="p-3 text-gray-500 text-center"><i class="fas fa-spinner fa-spin mr-2"></i>Searching...</div>';
+            searchResults.classList.remove('hidden');
 
-            let resultsHTML = '';
-            if (mockResults.length > 0) {
-                mockResults.forEach(result => {
-                    const icon = result.type === 'patient' ? 'fa-user' :
-                        result.type === 'test' ? 'fa-flask' : 'fa-pills';
-                    resultsHTML += `
-                        <div class="p-3 hover:bg-gray-50 cursor-pointer border-b border-gray-100 last:border-b-0">
-                            <div class="flex items-center space-x-3">
-                                <i class="fas ${icon} text-gray-400"></i>
-                                <div>
-                                    <div class="font-medium text-gray-900">${result.name}</div>
-                                    <div class="text-sm text-gray-500">${result.info}</div>
+            // Make AJAX call to search patients
+            const formData = new FormData();
+            formData.append('query', query);
+            formData.append('filters', JSON.stringify({}));
+
+            fetch(window.BASE_PATH + '/patienthistory/search_patients', {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error('Search request failed');
+                }
+                return response.json();
+            })
+            .then(patients => {
+                let resultsHTML = '';
+                if (patients.length > 0) {
+                    patients.forEach(patient => {
+                        const fullName = `${patient.first_name} ${patient.last_name}`;
+                        const age = patient.age ? `, Age ${patient.age}` : '';
+                        const phone = patient.phone ? `, ${patient.phone}` : '';
+                        const info = `Reg: ${patient.registration_number}${age}${phone}`;
+                        
+                        resultsHTML += `
+                            <div class="p-3 hover:bg-gray-50 cursor-pointer border-b border-gray-100 last:border-b-0" onclick="viewPatient(${patient.id})">
+                                <div class="flex items-center space-x-3">
+                                    <i class="fas fa-user text-blue-500"></i>
+                                    <div>
+                                        <div class="font-medium text-gray-900">${fullName}</div>
+                                        <div class="text-sm text-gray-500">${info}</div>
+                                    </div>
                                 </div>
                             </div>
-                        </div>
-                    `;
-                });
-            } else {
-                resultsHTML = '<div class="p-3 text-gray-500 text-center">No results found</div>';
-            }
+                        `;
+                    });
+                } else {
+                    resultsHTML = '<div class="p-3 text-gray-500 text-center">No results found</div>';
+                }
 
-            searchResults.innerHTML = resultsHTML;
-            searchResults.classList.remove('hidden');
+                searchResults.innerHTML = resultsHTML;
+            })
+            .catch(error => {
+                console.error('Search error:', error);
+                searchResults.innerHTML = '<div class="p-3 text-red-500 text-center">Search failed. Please try again.</div>';
+            });
+        }
+
+        // Helper function to view patient (works for all roles)
+        function viewPatient(patientId) {
+            const userRole = '<?php echo $_SESSION["user_role"] ?? ""; ?>';
+            let viewUrl;
+            
+            switch(userRole) {
+                case 'doctor':
+                    viewUrl = `${window.BASE_PATH}/doctor/view_patient/${patientId}`;
+                    break;
+                case 'receptionist':
+                case 'admin':
+                    viewUrl = `${window.BASE_PATH}/doctor/view_patient?id=${patientId}`;
+                    break;
+                default:
+                    viewUrl = `${window.BASE_PATH}/doctor/view_patient?id=${patientId}`;
+            }
+            
+            window.location.href = viewUrl;
         }
 
         // Enhanced notification system with action buttons

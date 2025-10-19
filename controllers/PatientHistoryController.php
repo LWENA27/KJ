@@ -1,7 +1,7 @@
 <?php
 require_once __DIR__ . '/../includes/BaseController.php';
 
-class PatientHistoryController extends BaseController {
+class PatienthistoryController extends BaseController {
 
     public function __construct() {
         parent::__construct();
@@ -24,55 +24,33 @@ class PatientHistoryController extends BaseController {
         }
 
         try {
-            // Build dynamic search query
-            $search_conditions = [];
-            $params = [];
-
-            // Basic search terms
-            $search_terms = explode(' ', $query);
-            foreach ($search_terms as $term) {
-                $search_conditions[] = "(p.first_name LIKE ? OR p.last_name LIKE ? OR p.phone LIKE ?)";
-                $params[] = "%{$term}%";
-                $params[] = "%{$term}%";
-                $params[] = "%{$term}%";
-            }
-
-            // Apply filters
-            $filter_conditions = [];
-            if (!empty($filters['age_range'])) {
-                $filter_conditions[] = "TIMESTAMPDIFF(YEAR, p.date_of_birth, CURDATE()) BETWEEN ? AND ?";
-                $age_parts = explode('-', $filters['age_range']);
-                $params[] = $age_parts[0];
-                $params[] = $age_parts[1];
-            }
-
-            if (!empty($filters['last_visit'])) {
-                $filter_conditions[] = "EXISTS (SELECT 1 FROM consultations c LEFT JOIN patient_visits pv ON c.visit_id = pv.id WHERE c.patient_id = p.id AND DATE(COALESCE(c.follow_up_date, pv.visit_date, c.created_at)) >= DATE_SUB(NOW(), INTERVAL ? DAY))";
-                $params[] = $filters['last_visit'];
-            }
-
-            $where_clause = implode(' AND ', array_merge($search_conditions, $filter_conditions));
-
+            // Simple search first for debugging
             $stmt = $this->pdo->prepare("
-                SELECT p.*, 
-                       TIMESTAMPDIFF(YEAR, p.date_of_birth, CURDATE()) as age,
-                       (SELECT COUNT(*) FROM consultations WHERE patient_id = p.id) as visit_count,
-                       (SELECT MAX(COALESCE(appointment_date, pv2.visit_date, created_at)) FROM consultations LEFT JOIN patient_visits pv2 ON consultations.visit_id = pv2.id WHERE consultations.patient_id = p.id) as last_visit
-                FROM patients p
-                WHERE {$where_clause}
-                ORDER BY p.first_name, p.last_name
-                LIMIT 50
+                SELECT id, first_name, last_name, phone, registration_number, 
+                       TIMESTAMPDIFF(YEAR, date_of_birth, CURDATE()) as age
+                FROM patients 
+                WHERE first_name LIKE ? OR last_name LIKE ? OR phone LIKE ? OR registration_number LIKE ?
+                ORDER BY first_name, last_name
+                LIMIT 10
             ");
-            $stmt->execute($params);
+            $searchTerm = "%{$query}%";
+            $stmt->execute([$searchTerm, $searchTerm, $searchTerm, $searchTerm]);
             $patients = $stmt->fetchAll();
 
             header('Content-Type: application/json');
             echo json_encode($patients);
+            exit;
         } catch (Exception $e) {
+            error_log("Search error: " . $e->getMessage());
             http_response_code(500);
-            echo json_encode(['error' => 'Search failed']);
+            echo json_encode(['error' => 'Search failed: ' . $e->getMessage()]);
+            exit;
         }
-        exit;
+        
+        // Original complex search code (commented out for debugging)
+        /*
+        // Original complex search code (commented out for debugging)
+        */
     }
 
     // Get patient health trends and analytics
