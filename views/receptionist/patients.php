@@ -243,7 +243,16 @@
         
         <td class="px-6 py-4 whitespace-nowrap">
             <div class="flex items-center gap-2">
-                <a href="<?php echo htmlspecialchars($BASE_PATH); ?>/doctor/view_patient?id=<?php echo $patient['id']; ?>" 
+                <?php 
+                $userRole = $_SESSION['role'] ?? '';
+                // Debug: Let's see what role is detected
+                echo "<!-- DEBUG: User role = '$userRole' -->";
+                $viewUrl = ($userRole === 'receptionist') 
+                    ? htmlspecialchars($BASE_PATH) . "/receptionist/view_patient?id=" . $patient['id']
+                    : htmlspecialchars($BASE_PATH) . "/doctor/view_patient?id=" . $patient['id'];
+                echo "<!-- DEBUG: Generated URL = '$viewUrl' -->";
+                ?>
+                <a href="<?php echo $viewUrl; ?>" 
                    class="bg-blue-100 hover:bg-blue-200 text-blue-700 px-3 py-1 rounded-lg text-sm font-medium transition-all duration-300 transform hover:scale-105" title="View Patient">
                     <i class="fas fa-eye"></i>
                 </a>
@@ -410,7 +419,7 @@
 <!-- Enhanced JavaScript with Professional Features -->
 <script>
 // Search functionality with enhanced UX
-document.getElementById('patientSearch')?.addEventListener('input', function(e) {
+document.getElementById('compactPatientSearch')?.addEventListener('input', function(e) {
     const searchTerm = e.target.value.toLowerCase();
     const rows = document.querySelectorAll('tbody tr');
     let visibleCount = 0;
@@ -656,6 +665,24 @@ document.addEventListener('DOMContentLoaded', function() {
             setTimeout(() => {
                 this.style.opacity = '1';
             }, 1000);
+        });
+    });
+
+    // Make table rows clickable to view patient (role-aware)
+    document.querySelectorAll('tbody tr').forEach(row => {
+        row.addEventListener('click', function(e) {
+            // Don't trigger if clicking on action buttons/links
+            if (e.target.closest('a') || e.target.closest('button')) {
+                return;
+            }
+            
+            // Find the patient ID from the view patient link in this row
+            const viewLink = this.querySelector('a[href*="view_patient"]');
+            if (viewLink) {
+                // Use the existing role-aware link that's already generated in PHP
+                const href = viewLink.getAttribute('href');
+                window.location.href = href;
+            }
         });
     });
 });

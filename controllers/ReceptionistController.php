@@ -1224,4 +1224,68 @@ class ReceptionistController extends BaseController
             'sidebar_data' => $this->getSidebarData()
         ]);
     }
+
+    public function view_patient($patient_id = null) {
+        // Accept either path param or ?id= fallback
+        if ($patient_id === null) {
+            $patient_id = filter_input(INPUT_GET, 'id', FILTER_VALIDATE_INT) ?: null;
+        }
+        if (!$patient_id) {
+            $this->redirect('receptionist/patients');
+        }
+
+        // Get patient details
+        $stmt = $this->pdo->prepare("SELECT * FROM patients WHERE id = ?");
+        $stmt->execute([$patient_id]);
+        $patient = $stmt->fetch();
+
+        if (!$patient) {
+            $this->redirect('receptionist/patients');
+        }
+
+        // Get existing consultations (basic info for receptionist)
+        $stmt = $this->pdo->prepare("
+            SELECT c.*, pv.visit_date, u.first_name as doctor_first, u.last_name as doctor_last
+            FROM consultations c
+            LEFT JOIN patient_visits pv ON c.visit_id = pv.id
+            LEFT JOIN users u ON c.doctor_id = u.id
+            WHERE c.patient_id = ? 
+            ORDER BY COALESCE(c.follow_up_date, pv.visit_date, c.created_at) DESC
+            LIMIT 5
+        ");
+        $stmt->execute([$patient_id]);
+        $consultations = $stmt->fetchAll();
+
+        // Get latest vital signs for this patient (read-only for receptionist)
+        $stmt = $this->pdo->prepare("
+            SELECT vs.*, pv.visit_date
+            FROM vital_signs vs
+            LEFT JOIN patient_visits pv ON vs.visit_id = pv.id
+            WHERE vs.patient_id = ?
+            ORDER BY vs.recorded_at DESC
+            LIMIT 1
+        ");
+        $stmt->execute([$patient_id]);
+        $vital_signs = $stmt->fetch();
+
+        // Get payment history for this patient
+        $stmt = $this->pdo->prepare("
+            SELECT p.*, pv.visit_date
+            FROM payments p
+            LEFT JOIN patient_visits pv ON p.visit_id = pv.id
+            WHERE p.patient_id = ?
+            ORDER BY p.payment_date DESC
+            LIMIT 10
+        ");
+        $stmt->execute([$patient_id]);
+        $payments = $stmt->fetchAll();
+
+        $this->render('receptionist/view_patient', [
+            'patient' => $patient,
+            'consultations' => $consultations,
+            'vital_signs' => $vital_signs,
+            'payments' => $payments,
+            'csrf_token' => $this->generateCSRF()
+        ]);
+    }
 }
