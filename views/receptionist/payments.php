@@ -1,5 +1,11 @@
 <?php $title = "Pending Payments"; ?>
 
+<!-- Force-hide the Amount Already Paid container to prevent other JS from showing it -->
+<style>
+    /* Keep the amount-paid panel hidden regardless of JS changes */
+    #modal_amount_paid_container { display: none !important; }
+</style>
+
 <div class="max-w-7xl mx-auto">
     <!-- Page Header -->
     <div class="bg-gradient-to-r from-purple-600 via-purple-700 to-indigo-800 rounded-lg shadow-xl p-6 mb-6">
@@ -36,8 +42,9 @@
                     <p class="text-3xl font-bold text-red-600"><?php echo count($pending_lab_payments); ?></p>
                     <p class="text-sm text-gray-500 mt-1">
                         Tsh <?php 
-                        $lab_total = array_sum(array_column($pending_lab_payments, 'total_amount')); 
-                        echo number_format($lab_total, 0);
+                        // Sum of remaining amounts for lab tests
+                        $lab_total_pending = array_sum(array_column($pending_lab_payments, 'remaining_amount_to_pay')); 
+                        echo number_format($lab_total_pending, 0);
                         ?>
                     </p>
                 </div>
@@ -55,8 +62,9 @@
                     <p class="text-3xl font-bold text-orange-600"><?php echo count($pending_medicine_payments); ?></p>
                     <p class="text-sm text-gray-500 mt-1">
                         Tsh <?php 
-                        $med_total = array_sum(array_column($pending_medicine_payments, 'total_amount')); 
-                        echo number_format($med_total, 0);
+                        // Sum of remaining amounts for medicines
+                        $med_total_pending = array_sum(array_column($pending_medicine_payments, 'remaining_amount_to_pay')); 
+                        echo number_format($med_total_pending, 0);
                         ?>
                     </p>
                 </div>
@@ -75,7 +83,7 @@
                         <?php echo count($pending_lab_payments) + count($pending_medicine_payments); ?>
                     </p>
                     <p class="text-sm text-gray-500 mt-1">
-                        Tsh <?php echo number_format($lab_total + $med_total, 0); ?>
+                        Tsh <?php echo number_format($lab_total_pending + $med_total_pending, 0); ?>
                     </p>
                 </div>
                 <div class="w-14 h-14 bg-gradient-to-br from-purple-500 to-purple-600 rounded-xl flex items-center justify-center shadow-lg">
@@ -135,7 +143,7 @@
                                 Visit Date
                             </th>
                             <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                Amount
+                                Amount Due
                             </th>
                             <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                                 Actions
@@ -174,11 +182,25 @@
                                 </td>
                                 <td class="px-6 py-4 whitespace-nowrap">
                                     <div class="text-lg font-bold text-red-600">
-                                        Tsh <?php echo number_format($payment['total_amount'], 0); ?>
+                                        Tsh <?php echo number_format($payment['remaining_amount_to_pay'], 0); ?>
                                     </div>
+                                    <?php if ($payment['amount_already_paid'] > 0): ?>
+                                        <div class="text-xs text-gray-500 mt-1">
+                                            (Paid: Tsh <?php echo number_format($payment['amount_already_paid'], 0); ?> / Total: Tsh <?php echo number_format($payment['total_amount'], 0); ?>)
+                                        </div>
+                                    <?php endif; ?>
                                 </td>
                                 <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                                    <button onclick="openPaymentModal(<?php echo $payment['patient_id']; ?>, <?php echo $payment['visit_id']; ?>, 'lab_test', <?php echo $payment['total_amount']; ?>, '<?php echo htmlspecialchars($payment['first_name'] . ' ' . $payment['last_name'], ENT_QUOTES); ?>', <?php echo $payment['order_id']; ?>, 'lab_order')"
+                                    <button onclick="openPaymentModal(
+                                                <?php echo $payment['patient_id']; ?>, 
+                                                <?php echo $payment['visit_id']; ?>, 
+                                                'lab_test', 
+                                                <?php echo $payment['total_amount']; ?>, 
+                                                <?php echo $payment['amount_already_paid']; ?>, 
+                                                '<?php echo htmlspecialchars($payment['first_name'] . ' ' . $payment['last_name'], ENT_QUOTES); ?>', 
+                                                <?php echo $payment['order_id']; ?>, 
+                                                'lab_order'
+                                            )"
                                             class="inline-flex items-center px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 transition-colors">
                                         <i class="fas fa-credit-card mr-2"></i>
                                         Record Payment
@@ -221,7 +243,7 @@
                                 Visit Date
                             </th>
                             <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                Amount
+                                Amount Due
                             </th>
                             <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                                 Actions
@@ -260,11 +282,25 @@
                                 </td>
                                 <td class="px-6 py-4 whitespace-nowrap">
                                     <div class="text-lg font-bold text-orange-600">
-                                        Tsh <?php echo number_format($payment['total_amount'], 0); ?>
+                                        Tsh <?php echo number_format($payment['remaining_amount_to_pay'], 0); ?>
                                     </div>
+                                    <?php if ($payment['amount_already_paid'] > 0): ?>
+                                        <div class="text-xs text-gray-500 mt-1">
+                                            (Paid: Tsh <?php echo number_format($payment['amount_already_paid'], 0); ?> / Total: Tsh <?php echo number_format($payment['total_cost_of_prescription'], 0); ?>)
+                                        </div>
+                                    <?php endif; ?>
                                 </td>
                                 <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                                    <button onclick="openPaymentModal(<?php echo $payment['patient_id']; ?>, <?php echo $payment['visit_id']; ?>, 'medicine', <?php echo $payment['total_amount']; ?>, '<?php echo htmlspecialchars($payment['first_name'] . ' ' . $payment['last_name'], ENT_QUOTES); ?>', <?php echo $payment['prescription_id']; ?>, 'prescription')"
+                                    <button onclick="openPaymentModal(
+                                                <?php echo $payment['patient_id']; ?>, 
+                                                <?php echo $payment['visit_id']; ?>, 
+                                                'medicine', 
+                                                <?php echo $payment['total_cost_of_prescription']; ?>, 
+                                                <?php echo $payment['amount_already_paid']; ?>, 
+                                                '<?php echo htmlspecialchars($payment['first_name'] . ' ' . $payment['last_name'], ENT_QUOTES); ?>', 
+                                                <?php echo $payment['prescription_id']; ?>, 
+                                                'prescription'
+                                            )"
                                             class="inline-flex items-center px-4 py-2 bg-orange-600 text-white rounded-md hover:bg-orange-700 transition-colors">
                                         <i class="fas fa-credit-card mr-2"></i>
                                         Record Payment
@@ -296,7 +332,8 @@
             <input type="hidden" id="modal_patient_id" name="patient_id">
             <input type="hidden" id="modal_visit_id" name="visit_id">
             <input type="hidden" id="modal_payment_type" name="payment_type">
-            <input type="hidden" id="modal_amount" name="amount">
+            <!-- This hidden input will now store the actual amount entered by the receptionist -->
+            <input type="hidden" id="modal_amount_hidden" name="amount"> 
             <input type="hidden" id="modal_item_id" name="item_id">
             <input type="hidden" id="modal_item_type" name="item_type">
 
@@ -313,10 +350,34 @@
                     <p id="modal_payment_type_display" class="text-lg font-semibold text-gray-900"></p>
                 </div>
 
-                <!-- Amount Display -->
-                <div class="bg-purple-50 rounded-lg p-4 border-2 border-purple-200">
-                    <label class="block text-sm font-medium text-gray-700 mb-1">Amount to Pay</label>
-                    <p id="modal_amount_display" class="text-2xl font-bold text-purple-600"></p>
+                <!-- New: Total Prescription Cost (visible for medicine payments) -->
+                <div id="modal_total_cost_container" class="bg-blue-50 rounded-lg p-4 border-2 border-blue-200 hidden">
+                    <label class="block text-sm font-medium text-gray-700 mb-1 hidden">Total Prescription Cost</label>
+                    <p id="modal_total_cost_display" class="text-xl font-bold text-blue-600 hidden"></p>
+                </div>
+
+                <!-- New: Amount Already Paid (kept hidden) -->
+                <div id="modal_amount_paid_container" class="hidden bg-green-50 rounded-lg p-4 border-2 border-green-200">
+                    <label class="hidden block text-sm font-medium text-gray-700 mb-1">Amount Already Paid</label>
+                    <p id="modal_amount_paid_display" class="text-xl font-bold text-green-600"></p>
+                </div>
+
+                <!-- Remaining Balance Display -->
+                <div id="modal_remaining_balance_container" class="bg-purple-50 rounded-lg p-4 border-2 border-purple-200">
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Remaining Balance</label>
+                    <p id="modal_remaining_balance_display" class="text-2xl font-bold text-purple-600"></p>
+                </div>
+
+                <!-- Amount to Pay Input Field -->
+                <div>
+                    <label for="amount_to_pay_input" class="block text-sm font-medium text-gray-700 mb-2">
+                        Amount Patient is Paying <span class="text-red-500">*</span>
+                    </label>
+                    <input type="number" id="amount_to_pay_input" name="amount_to_pay_input"
+                           min="0" step="any" required
+                           placeholder="Enter amount patient is paying"
+                           class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
+                           oninput="document.getElementById('modal_amount_hidden').value = this.value;">
                 </div>
 
                 <!-- Payment Method -->
@@ -361,11 +422,13 @@
 </div>
 
 <script>
-function openPaymentModal(patientId, visitId, paymentType, amount, patientName, itemId, itemType) {
+// Updated openPaymentModal function to handle total cost, amount paid, and remaining balance
+function openPaymentModal(patientId, visitId, paymentType, totalCost, amountPaid = 0, patientName, itemId, itemType) {
     document.getElementById('modal_patient_id').value = patientId;
     document.getElementById('modal_visit_id').value = visitId;
     document.getElementById('modal_payment_type').value = paymentType;
-    document.getElementById('modal_amount').value = amount;
+    // The hidden input for the actual amount being paid in this transaction
+    document.getElementById('modal_amount_hidden').value = ''; // Clear previous value
     document.getElementById('modal_item_id').value = itemId || '';
     document.getElementById('modal_item_type').value = itemType || '';
     
@@ -374,8 +437,35 @@ function openPaymentModal(patientId, visitId, paymentType, amount, patientName, 
     const typeDisplay = paymentType === 'lab_test' ? 'Laboratory Tests' : 'Medicines';
     document.getElementById('modal_payment_type_display').textContent = typeDisplay;
     
-    document.getElementById('modal_amount_display').textContent = 'Tsh ' + parseFloat(amount).toLocaleString('en-US');
+    // Calculate remaining balance
+    const remainingBalance = totalCost - amountPaid;
+
+    // Update displays
+    document.getElementById('modal_remaining_balance_display').textContent = 'Tsh ' + parseFloat(remainingBalance).toLocaleString('en-US');
     
+    // Set the input field's value to the remaining balance by default, but allow editing
+    const amountToPayInput = document.getElementById('amount_to_pay_input');
+    amountToPayInput.value = remainingBalance > 0 ? remainingBalance.toFixed(0) : 0;
+    amountToPayInput.max = remainingBalance > 0 ? remainingBalance.toFixed(0) : 0; // Max can be remaining balance
+    // Also update the hidden input for form submission
+    document.getElementById('modal_amount_hidden').value = amountToPayInput.value;
+
+    // Show/hide specific fields for medicine payments
+    const totalCostContainer = document.getElementById('modal_total_cost_container');
+    const totalCostDisplay = document.getElementById('modal_total_cost_display');
+    const amountPaidContainer = document.getElementById('modal_amount_paid_container');
+    const amountPaidDisplay = document.getElementById('modal_amount_paid_display');
+
+    if (paymentType === 'medicine') {
+        totalCostContainer.classList.remove('hidden');
+        amountPaidContainer.classList.remove('hidden');
+        totalCostDisplay.textContent = 'Tsh ' + parseFloat(totalCost).toLocaleString('en-US');
+        amountPaidDisplay.textContent = 'Tsh ' + parseFloat(amountPaid).toLocaleString('en-US');
+    } else {
+        totalCostContainer.classList.add('hidden');
+        amountPaidContainer.classList.add('hidden');
+    }
+
     const modal = document.getElementById('paymentModal');
     modal.classList.remove('hidden');
     modal.classList.add('flex');
@@ -386,8 +476,10 @@ function closePaymentModal() {
     modal.classList.add('hidden');
     modal.classList.remove('flex');
     
-    // Reset form
+    // Reset form and hide conditional fields
     document.getElementById('paymentForm').reset();
+    document.getElementById('modal_total_cost_container').classList.add('hidden');
+    document.getElementById('modal_amount_paid_container').classList.add('hidden');
 }
 
 // Close modal on ESC key
@@ -403,4 +495,29 @@ document.getElementById('paymentModal').addEventListener('click', function(event
         closePaymentModal();
     }
 });
+// Defensive re-hide: ensure the amount-paid container remains hidden even if other scripts try to show it
+(function enforceAmountPaidHidden(){
+    // Wait for DOM ready
+    function hideNow(){
+        var container = document.getElementById('modal_amount_paid_container');
+        if (!container) return;
+        // Immediately hide
+        container.style.display = 'none';
+        // Observe attribute changes to re-hide if another script toggles classes or styles
+        var observer = new MutationObserver(function(mutations) {
+            mutations.forEach(function(m) {
+                if (m.type === 'attributes' && (m.attributeName === 'class' || m.attributeName === 'style')) {
+                    container.style.display = 'none';
+                }
+            });
+        });
+        observer.observe(container, { attributes: true, attributeFilter: ['class', 'style'] });
+    }
+
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', hideNow);
+    } else {
+        hideNow();
+    }
+})();
 </script>
