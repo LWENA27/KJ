@@ -315,88 +315,85 @@ class ReceptionistController extends BaseController
 
     public function payments()
     {
-        // Get all payment records (paid and pending)
+        // Get all payment records (paid and pending) - this query is not fully shown, assuming it's fine for general payments
         $stmt = $this->pdo->prepare("
-            SELECT p.*, 
-                   pt.first_name, 
-                   pt.last_name, 
-                   pv.visit_date,
-                   p.payment_status as status,
-                   COALESCE(c.follow_up_date, pv.visit_date, DATE(c.created_at)) as appointment_date
+            SELECT p.*, pat.first_name, pat.last_name, pat.registration_number, u.first_name as collected_by_name
             FROM payments p
-            JOIN patients pt ON p.patient_id = pt.id
-            LEFT JOIN patient_visits pv ON p.visit_id = pv.id
-            LEFT JOIN consultations c ON c.visit_id = pv.id
+            JOIN patients pat ON p.patient_id = pat.id
+            LEFT JOIN users u ON p.collected_by = u.id
             ORDER BY p.payment_status ASC, p.payment_date DESC
         ");
         $stmt->execute();
         $payments = $stmt->fetchAll();
 
         // Get pending lab test payments (tests ordered but not paid)
+        // This query needs to be more robust to calculate remaining amount
         $stmt = $this->pdo->prepare("
-            SELECT DISTINCT
-                lto.id as order_id,
+            SELECT 
+                lto.id AS order_id,
+                lto.visit_id,
                 lto.patient_id,
-                pv.id as visit_id,
-                pt.first_name,
-                pt.last_name,
-                pt.registration_number,
+                p.first_name,
+                p.last_name,
+                p.registration_number,
                 pv.visit_date,
-                c.id as consultation_id,
-                GROUP_CONCAT(DISTINCT lt.test_name SEPARATOR ', ') as test_names,
-                SUM(lt.price) as total_amount,
-                'lab_test' as payment_type,
-                lto.created_at
+                GROUP_CONCAT(lt.test_name SEPARATOR ', ') AS test_names,
+                SUM(lt.price) AS total_amount,
+                COALESCE(SUM(pay.amount), 0) AS amount_already_paid,
+                (SUM(lt.price) - COALESCE(SUM(pay.amount), 0)) AS remaining_amount_to_pay
             FROM lab_test_orders lto
-            JOIN patients pt ON lto.patient_id = pt.id
+            JOIN lab_tests lt ON lto.test_id = lt.id  
+            JOIN patients p ON lto.patient_id = p.id
             JOIN patient_visits pv ON lto.visit_id = pv.id
-            JOIN lab_tests lt ON lto.test_id = lt.id
-            LEFT JOIN consultations c ON lto.consultation_id = c.id
-            LEFT JOIN payments pay ON pay.visit_id = pv.id 
-                AND pay.payment_type = 'lab_test' 
-                AND pay.payment_status = 'paid'
-            WHERE pay.id IS NULL
-            GROUP BY lto.patient_id, pv.id, c.id
+            LEFT JOIN payments pay ON lto.visit_id = pay.visit_id 
+                                  AND lto.patient_id = pay.patient_id 
+                                  AND pay.item_type = 'lab_order' 
+                                  AND pay.item_id = lto.id
+                                  AND pay.payment_status = 'paid'
+            WHERE lto.status = 'pending_payment' -- Assuming 'pending_payment' status for lab orders
+            GROUP BY lto.id, lto.visit_id, lto.patient_id, p.first_name, p.last_name, p.registration_number, pv.visit_date
+            HAVING remaining_amount_to_pay > 0
             ORDER BY lto.created_at DESC
         ");
         $stmt->execute();
         $pending_lab_payments = $stmt->fetchAll();
 
         // Get pending medicine payments (medicines prescribed but not paid)
+        // This query is crucial for partial payments
         $stmt = $this->pdo->prepare("
-            SELECT DISTINCT
-                pr.id as prescription_id,
+            SELECT 
+                pr.id AS prescription_id,
+                pr.visit_id,
                 pr.patient_id,
-                pv.id as visit_id,
-                pt.first_name,
-                pt.last_name,
-                pt.registration_number,
+                p.first_name,
+                p.last_name,
+                p.registration_number,
                 pv.visit_date,
-                c.id as consultation_id,
-                GROUP_CONCAT(DISTINCT m.name SEPARATOR ', ') as medicine_names,
-                SUM(m.unit_price * pr.quantity_prescribed) as total_amount,
-                'medicine' as payment_type,
-                pr.created_at
+                GROUP_CONCAT(m.name || ' (' || pr.quantity_prescribed || ' ' || m.unit || ')' SEPARATOR ', ') AS medicine_names,
+                SUM(pr.quantity_prescribed * m.unit_price) AS total_cost_of_prescription,
+                COALESCE(SUM(pay.amount), 0) AS amount_already_paid,
+                (SUM(pr.quantity_prescribed * m.unit_price) - COALESCE(SUM(pay.amount), 0)) AS remaining_amount_to_pay
             FROM prescriptions pr
-            JOIN patients pt ON pr.patient_id = pt.id
-            JOIN consultations c ON pr.consultation_id = c.id
-            JOIN patient_visits pv ON c.visit_id = pv.id
             JOIN medicines m ON pr.medicine_id = m.id
-            LEFT JOIN payments pay ON pay.visit_id = pv.id 
-                AND pay.payment_type = 'medicine' 
-                AND pay.payment_status = 'paid'
-            WHERE pay.id IS NULL
-            GROUP BY pr.patient_id, pv.id, c.id
+            JOIN patients p ON pr.patient_id = p.id
+            JOIN patient_visits pv ON pr.visit_id = pv.id
+            LEFT JOIN payments pay ON pr.visit_id = pay.visit_id 
+                                  AND pr.patient_id = pay.patient_id 
+                                  AND pay.item_type = 'prescription' 
+                                  AND pay.item_id = pr.id
+                                  AND pay.payment_status = 'paid'
+            WHERE pr.status IN ('pending', 'partial')
+            GROUP BY pr.id, pr.visit_id, pr.patient_id, p.first_name, p.last_name, p.registration_number, pv.visit_date
+            HAVING remaining_amount_to_pay > 0
             ORDER BY pr.created_at DESC
         ");
         $stmt->execute();
         $pending_medicine_payments = $stmt->fetchAll();
 
         $this->render('receptionist/payments', [
-            'payments' => $payments,
+            'payments' => $payments, // Pass general payments too if needed by the view
             'pending_lab_payments' => $pending_lab_payments,
             'pending_medicine_payments' => $pending_medicine_payments,
-            'sidebar_data' => $this->getSidebarData(),
             'csrf_token' => $this->generateCSRF()
         ]);
     }
@@ -516,6 +513,8 @@ class ReceptionistController extends BaseController
         $amount = floatval($_POST['amount'] ?? 0);
         $payment_method = $_POST['payment_method'] ?? 'cash';
         $reference_number = $_POST['reference_number'] ?? null;
+        $item_id = $_POST['item_id'] ?? null; // This will be prescription_id for medicine payments
+        $item_type = $_POST['item_type'] ?? null; // This will be 'prescription' for medicine payments
 
         if (!$patient_id || !$visit_id || !$payment_type || $amount <= 0) {
             $_SESSION['error'] = 'Invalid payment details';
@@ -526,19 +525,10 @@ class ReceptionistController extends BaseController
         try {
             $this->pdo->beginTransaction();
 
-            // Check if payment already exists
-            $stmt = $this->pdo->prepare("
-                SELECT id FROM payments 
-                WHERE visit_id = ? AND payment_type = ? AND payment_status = 'paid'
-            ");
-            $stmt->execute([$visit_id, $payment_type]);
-            if ($stmt->fetch()) {
-                throw new Exception('Payment already recorded for this item');
-            }
-
-            // Get item_id and item_type from POST
-            $item_id = $_POST['item_id'] ?? null;
-            $item_type = $_POST['item_type'] ?? null;
+            // Check if payment already exists for this specific item (e.g., a full payment for a prescription)
+            // For partial payments, we allow multiple payments for the same item_id until total amount is covered.
+            // The check below is more for preventing duplicate full payments.
+            // We'll rely on the dispensing logic to check total paid vs total cost.
 
             // Insert payment record
             $stmt = $this->pdo->prepare("
@@ -560,10 +550,12 @@ class ReceptionistController extends BaseController
             ]);
 
             // Update workflow status based on payment type
+            // For medicine, we keep it in 'medicine_dispensing' until all prescribed items are fully dispensed.
             if ($payment_type === 'lab_test') {
                 $this->updateWorkflowStatus($patient_id, 'lab_testing', ['lab_tests_paid' => true]);
             } elseif ($payment_type === 'medicine') {
-                $this->updateWorkflowStatus($patient_id, 'medicine_dispensing', ['medicine_prescribed' => true]);
+                // No change to workflow status here, as patient might still need to pay more or collect.
+                // The workflow status will be updated in process_medicine_dispensing when actual dispensing happens.
             }
 
             $this->pdo->commit();
@@ -578,27 +570,75 @@ class ReceptionistController extends BaseController
 
     public function medicine()
     {
-        // Get patients waiting for medicine dispensing (prescribed and paid)
+        // Get patients waiting for medicine dispensing (prescribed and paid, but not fully dispensed)
+        // This query identifies individual prescriptions that are still 'pending' or 'partial'.
+        // It also calculates payment status for each prescription.
         $stmt = $this->pdo->prepare("
-            SELECT DISTINCT p.id AS patient_id, p.first_name, p.last_name,
-                   pv.id as visit_id,
-                   pv.visit_date,
-                   COUNT(DISTINCT pr.id) as prescription_count,
-                   SUM(CASE WHEN pr.status = 'pending' THEN 1 ELSE 0 END) as pending_count,
-                   SUM(CASE WHEN pr.status = 'dispensed' THEN 1 ELSE 0 END) as dispensed_count,
-                   MAX(pr.created_at) as last_prescribed_at
+            SELECT 
+                p.id AS patient_id, 
+                p.first_name, 
+                p.last_name,
+                p.registration_number,
+                pv.id as visit_id,
+                pv.visit_date,
+                pr.id AS prescription_id,
+                pr.medicine_id,
+                m.name AS medicine_name,
+                m.unit AS medicine_unit,
+                m.unit_price,
+                pr.quantity_prescribed,
+                pr.quantity_dispensed,
+                pr.dosage,
+                pr.frequency,
+                pr.duration,
+                pr.instructions,
+                pr.status AS prescription_status,
+                pr.created_at AS prescribed_at,
+                COALESCE(SUM(pay.amount), 0) AS amount_paid_for_this_prescription
             FROM patients p
             JOIN patient_visits pv ON p.id = pv.patient_id
             JOIN prescriptions pr ON pv.id = pr.visit_id
-            LEFT JOIN payments pay ON pv.id = pay.visit_id AND pay.payment_type = 'medicine' AND pay.item_id = pr.id
+            JOIN medicines m ON pr.medicine_id = m.id
+            LEFT JOIN payments pay ON pr.visit_id = pay.visit_id 
+                                  AND pr.patient_id = pay.patient_id 
+                                  AND pay.item_type = 'prescription' 
+                                  AND pay.item_id = pr.id
+                                  AND pay.payment_status = 'paid'
             WHERE pr.status IN ('pending', 'partial')
-                AND (pay.payment_status = 'paid' OR pay.id IS NULL)
-            GROUP BY p.id, p.first_name, p.last_name, pv.id, pv.visit_date
-            HAVING pending_count > 0
-            ORDER BY last_prescribed_at DESC
+            GROUP BY pr.id, p.id, p.first_name, p.last_name, p.registration_number, pv.id, pv.visit_date,
+                     pr.medicine_id, m.name, m.unit, m.unit_price, pr.quantity_prescribed, pr.quantity_dispensed,
+                     pr.dosage, pr.frequency, pr.duration, pr.instructions, pr.status, pr.created_at
+            ORDER BY p.first_name, p.last_name, pr.created_at DESC
         ");
         $stmt->execute();
-        $pending_patients = $stmt->fetchAll();
+        $raw_pending_prescriptions = $stmt->fetchAll();
+
+        // Group prescriptions by patient for easier display in the view
+        $pending_patients_grouped = [];
+        foreach ($raw_pending_prescriptions as $prescription) {
+            $patient_id = $prescription['patient_id'];
+            if (!isset($pending_patients_grouped[$patient_id])) {
+                $pending_patients_grouped[$patient_id] = [
+                    'patient_id' => $patient_id,
+                    'first_name' => $prescription['first_name'],
+                    'last_name' => $prescription['last_name'],
+                    'registration_number' => $prescription['registration_number'],
+                    'visit_id' => $prescription['visit_id'],
+                    'visit_date' => $prescription['visit_date'],
+                    'prescribed_at' => $prescription['prescribed_at'], // Use the earliest prescription date for the patient's entry
+                    'total_prescribed_cost' => 0,
+                    'total_paid_for_patient' => 0,
+                    'prescriptions' => []
+                ];
+            }
+            $prescription_cost = $prescription['quantity_prescribed'] * $prescription['unit_price'];
+            $pending_patients_grouped[$patient_id]['total_prescribed_cost'] += $prescription_cost;
+            $pending_patients_grouped[$patient_id]['total_paid_for_patient'] += $prescription['amount_paid_for_this_prescription'];
+            $pending_patients_grouped[$patient_id]['prescriptions'][] = $prescription;
+        }
+
+        // Re-index to a simple array for the view
+        $pending_patients = array_values($pending_patients_grouped);
 
         // Get all medicines for inventory management (use medicine_batches for stock)
         $stmt = $this->pdo->prepare("
@@ -658,7 +698,8 @@ class ReceptionistController extends BaseController
             SELECT p.first_name, p.last_name,
                    CONCAT(p.first_name, ' ', p.last_name) as patient_name,
                    m.name as medicine_name,
-                   pr.quantity_dispensed,
+                   pr.quantity_dispensed as quantity, /* Changed to 'quantity' for consistency with view */
+                   m.unit_price, /* Added unit_price for transaction history */
                    (pr.quantity_dispensed * m.unit_price) as total_cost,
                    pr.dispensed_at,
                    u.first_name as dispensed_by
@@ -674,8 +715,8 @@ class ReceptionistController extends BaseController
         $recent_transactions = $stmt->fetchAll();
 
         $this->render('receptionist/medicine', [
-            'pending_patients' => $pending_patients,
-            'medicines' => $medicines,
+            'pending_patients' => $pending_patients, // This now contains grouped data
+            'medicines' => $medicines, // Pass all medicines for stock lookup in JS
             'categories' => $categories,
             'recent_transactions' => $recent_transactions,
             'csrf_token' => $this->generateCSRF(),
@@ -687,109 +728,179 @@ class ReceptionistController extends BaseController
     public function process_medicine_dispensing()
     {
         if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
-            $this->redirect('receptionist/dispense_medicines');
+            $this->redirect('receptionist/medicine');
+            return;
         }
 
         $this->validateCSRF();
 
-        $patient_id = $_POST['patient_id'];
-        $consultation_id = $_POST['consultation_id'];
-        $dispensed_medicines = $_POST['dispensed_medicines'] ?? [];
+        $patient_id = $_POST['patient_id'] ?? null;
+        // The 'dispensed_items' array should contain prescription_id => quantity_to_dispense
+        $dispensed_items = $_POST['dispensed_items'] ?? []; 
 
         // Debug logging
-        error_log("Processing medicine dispensing for patient: $patient_id, consultation: $consultation_id");
-        error_log("Dispensed medicines: " . print_r($dispensed_medicines, true));
+        error_log("Processing medicine dispensing for patient: $patient_id");
+        error_log("Dispensed items: " . print_r($dispensed_items, true));
 
-        if (!$patient_id) {
-            $_SESSION['error'] = 'Invalid patient data';
-            $this->redirect('receptionist/dispense_medicines');
+        if (!$patient_id || empty($dispensed_items)) {
+            $_SESSION['error'] = 'Invalid patient data or no medicines selected for dispensing.';
+            $this->redirect('receptionist/medicine');
+            return;
         }
 
         try {
             $this->pdo->beginTransaction();
 
-            // Check if this is a "mark as completed" action (no consultation_id or empty dispensed_medicines)
-            if (empty($consultation_id) || $consultation_id === '0' || empty($dispensed_medicines)) {
-                error_log("Marking patient as completed without dispensing");
-                // Just mark as completed without dispensing medicines
-                $this->updateWorkflowStatus($patient_id, 'completed', [
-                    'medicine_dispensed' => true,
-                    'medicine_dispensed_by' => $_SESSION['user_id'],
-                    'medicine_dispensed_at' => date('Y-m-d H:i:s')
-                ]);
+            $visit_id = null; // To be determined from the first prescription processed
 
-                $this->pdo->commit();
-                $_SESSION['success'] = 'Patient marked as completed without medicine dispensing';
-                $this->redirect('receptionist/dispense_medicines');
-                return;
+            foreach ($dispensed_items as $prescription_id => $quantity_to_dispense) {
+                $quantity_to_dispense = intval($quantity_to_dispense);
+
+                if ($quantity_to_dispense <= 0) {
+                    continue; // Skip if nothing is to be dispensed for this item
+                }
+
+                // Get prescription details, including current dispensed quantity, medicine info, and stock
+                $stmt = $this->pdo->prepare("
+                    SELECT pr.id, pr.patient_id, pr.visit_id, pr.medicine_id, pr.quantity_prescribed, pr.quantity_dispensed,
+                           m.name as medicine_name, m.unit_price,
+                           COALESCE(SUM(mb.quantity_remaining), 0) as stock_quantity
+                    FROM prescriptions pr
+                    JOIN medicines m ON pr.medicine_id = m.id
+                    LEFT JOIN medicine_batches mb ON m.id = mb.medicine_id
+                    WHERE pr.id = ?
+                    GROUP BY pr.id, pr.patient_id, pr.visit_id, pr.medicine_id, pr.quantity_prescribed, pr.quantity_dispensed, m.name, m.unit_price
+                    FOR UPDATE // Lock the row to prevent race conditions during dispensing
+                ");
+                $stmt->execute([$prescription_id]);
+                $prescription = $stmt->fetch();
+
+                if (!$prescription) {
+                    throw new Exception("Prescription ID $prescription_id not found.");
+                }
+
+                // Set visit_id from the first prescription
+                if ($visit_id === null) {
+                    $visit_id = $prescription['visit_id'];
+                }
+
+                $already_dispensed = $prescription['quantity_dispensed'];
+                $quantity_prescribed = $prescription['quantity_prescribed'];
+                $medicine_name = $prescription['medicine_name'];
+                $unit_price = $prescription['unit_price'];
+                $stock_quantity = $prescription['stock_quantity'];
+
+                $remaining_to_prescribe = $quantity_prescribed - $already_dispensed;
+
+                // Calculate total amount paid for this specific prescription
+                // Sum all payments linked to this prescription_id and visit_id
+                $stmt_paid = $this->pdo->prepare("
+                    SELECT COALESCE(SUM(amount), 0) as total_paid
+                    FROM payments
+                    WHERE visit_id = ? AND patient_id = ? AND payment_type = 'medicine' AND item_id = ? AND item_type = 'prescription' AND payment_status = 'paid'
+                ");
+                $stmt_paid->execute([$prescription['visit_id'], $prescription['patient_id'], $prescription_id]);
+                $total_paid_for_prescription = $stmt_paid->fetchColumn();
+
+                // Calculate the maximum quantity the patient has paid for
+                // If unit_price is 0, assume infinite paid quantity to avoid division by zero.
+                $max_paid_quantity = ($unit_price > 0) ? floor($total_paid_for_prescription / $unit_price) : PHP_INT_MAX;
+
+                // Determine the actual maximum quantity that can be dispensed in this transaction
+                // It's the minimum of (remaining prescribed, available stock, paid quantity)
+                $max_dispensable_quantity = min($remaining_to_prescribe, $stock_quantity, $max_paid_quantity);
+
+                if ($quantity_to_dispense > $max_dispensable_quantity) {
+                    throw new Exception("Cannot dispense $quantity_to_dispense of $medicine_name. Max dispensable based on stock, payment, and remaining prescription is $max_dispensable_quantity.");
+                }
+
+                // If the quantity to dispense is valid, proceed
+                $new_dispensed_quantity = $already_dispensed + $quantity_to_dispense;
+
+                // Deduct from medicine stock using FEFO (First-Expiry-First-Out)
+                $remaining_for_deduction = $quantity_to_dispense;
+                $batch_stmt = $this->pdo->prepare("
+                    SELECT id, quantity_remaining
+                    FROM medicine_batches
+                    WHERE medicine_id = ? AND quantity_remaining > 0
+                    ORDER BY expiry_date ASC, created_at ASC
+                ");
+                $batch_stmt->execute([$prescription['medicine_id']]);
+                $batches = $batch_stmt->fetchAll();
+
+                foreach ($batches as $batch) {
+                    if ($remaining_for_deduction <= 0) break;
+
+                    $deduct = min($remaining_for_deduction, $batch['quantity_remaining']);
+                    $update_stmt = $this->pdo->prepare("
+                        UPDATE medicine_batches
+                        SET quantity_remaining = quantity_remaining - ?
+                        WHERE id = ?
+                    ");
+                    $update_stmt->execute([$deduct, $batch['id']]);
+                    $remaining_for_deduction -= $deduct;
+                }
+                error_log("Updated stock for medicine ID {$prescription['medicine_id']} by deducting $quantity_to_dispense");
+
+                // Update the prescription record
+                $new_status = 'partial';
+                if ($new_dispensed_quantity >= $quantity_prescribed) {
+                    $new_status = 'dispensed'; // Fully dispensed
+                } elseif ($new_dispensed_quantity > 0) {
+                    $new_status = 'partial'; // Partially dispensed
+                } else {
+                    $new_status = 'pending'; // No change if 0 dispensed (should be caught by $quantity_to_dispense <= 0 check)
+                }
+
+                $update_prescription_stmt = $this->pdo->prepare("
+                    UPDATE prescriptions
+                    SET quantity_dispensed = ?,
+                        status = ?,
+                        dispensed_by = ?,
+                        dispensed_at = NOW(),
+                        updated_at = NOW()
+                    WHERE id = ?
+                ");
+                $update_prescription_stmt->execute([
+                    $new_dispensed_quantity,
+                    $new_status,
+                    $_SESSION['user_id'],
+                    $prescription_id
+                ]);
+                error_log("Updated prescription ID $prescription_id: quantity_dispensed=$new_dispensed_quantity, status=$new_status");
             }
 
-            // Get medicine allocations for this consultation (with current stock from batches)
-            $stmt = $this->pdo->prepare("
-                SELECT ma.*, m.name, m.generic_name,
-                       COALESCE(SUM(mb.quantity_remaining), 0) as stock_quantity
-                FROM medicine_allocations ma
-                JOIN medicines m ON ma.medicine_id = m.id
-                LEFT JOIN medicine_batches mb ON m.id = mb.medicine_id
-                WHERE ma.consultation_id = ?
-                GROUP BY ma.id, ma.medicine_id, ma.consultation_id, ma.quantity, ma.instructions, ma.created_at, m.name, m.generic_name
-            ");
-            $stmt->execute([$consultation_id]);
-            $allocations = $stmt->fetchAll();
+            // After processing all items, check if the patient's overall medicine dispensing for the visit is complete
+            // This means all prescriptions for the current visit are either 'dispensed' or 'cancelled'
+            if ($visit_id) {
+                $pending_prescriptions_for_visit_stmt = $this->pdo->prepare("
+                    SELECT COUNT(id) FROM prescriptions
+                    WHERE visit_id = ? AND status IN ('pending', 'partial')
+                ");
+                $pending_prescriptions_for_visit_stmt->execute([$visit_id]);
+                $remaining_pending_count = $pending_prescriptions_for_visit_stmt->fetchColumn();
 
-            error_log("Found " . count($allocations) . " medicine allocations");
-
-            // Process each dispensed medicine
-            foreach ($allocations as $allocation) {
-                $dispensed_quantity = intval($dispensed_medicines[$allocation['id']] ?? 0);
-
-                error_log("Processing allocation ID {$allocation['id']}: prescribed {$allocation['quantity']}, dispensing $dispensed_quantity");
-
-                if ($dispensed_quantity > 0) {
-                    if ($dispensed_quantity > $allocation['quantity']) {
-                        throw new Exception("Cannot dispense more than prescribed quantity for {$allocation['name']}");
-                    }
-
-                    if ($dispensed_quantity > $allocation['stock_quantity']) {
-                        throw new Exception("Insufficient stock for {$allocation['name']}");
-                    }
-
-                    // Update medicine stock using FEFO (First-Expiry-First-Out)
-                    $remaining = $dispensed_quantity;
-                    $batch_stmt = $this->pdo->prepare("
-                        SELECT id, quantity_remaining 
-                        FROM medicine_batches 
-                        WHERE medicine_id = ? AND quantity_remaining > 0
-                        ORDER BY expiry_date ASC, created_at ASC
-                    ");
-                    $batch_stmt->execute([$allocation['medicine_id']]);
-                    $batches = $batch_stmt->fetchAll();
-
-                    foreach ($batches as $batch) {
-                        if ($remaining <= 0) break;
-                        
-                        $deduct = min($remaining, $batch['quantity_remaining']);
-                        $update_stmt = $this->pdo->prepare("
-                            UPDATE medicine_batches 
-                            SET quantity_remaining = quantity_remaining - ? 
-                            WHERE id = ?
-                        ");
-                        $update_stmt->execute([$deduct, $batch['id']]);
-                        $remaining -= $deduct;
-                    }
-                    error_log("Updated stock for medicine ID {$allocation['medicine_id']}");
+                if ($remaining_pending_count === 0) {
+                    // All prescriptions for this visit are now fully dispensed or cancelled
+                    $this->updateWorkflowStatus($patient_id, 'completed', [
+                        'medicine_dispensed' => true,
+                        'medicine_dispensed_by' => $_SESSION['user_id'],
+                        'medicine_dispensed_at' => date('Y-m-d H:i:s')
+                    ]);
+                    error_log("Workflow status updated to 'completed' for patient $patient_id (all medicines dispensed)");
+                } else {
+                    // Still some pending/partial prescriptions, keep workflow status as 'medicine_dispensing'
+                    $this->updateWorkflowStatus($patient_id, 'medicine_dispensing', [
+                        'medicine_dispensed' => false, // Still pending
+                        'medicine_dispensed_by' => $_SESSION['user_id'], // Last person to touch it
+                        'medicine_dispensed_at' => date('Y-m-d H:i:s')
+                    ]);
+                    error_log("Workflow status updated to 'medicine_dispensing' for patient $patient_id (some medicines still pending)");
                 }
             }
 
-            // Update workflow status
-            $this->updateWorkflowStatus($patient_id, 'completed', [
-                'medicine_dispensed' => true,
-                'medicine_dispensed_by' => $_SESSION['user_id'],
-                'medicine_dispensed_at' => date('Y-m-d H:i:s')
-            ]);
-
             $this->pdo->commit();
-            $_SESSION['success'] = 'Medicines dispensed successfully';
+            $_SESSION['success'] = 'Medicines dispensed successfully (partially or fully).';
             error_log("Medicine dispensing completed successfully for patient $patient_id");
         } catch (Exception $e) {
             $this->pdo->rollBack();
@@ -797,29 +908,50 @@ class ReceptionistController extends BaseController
             $_SESSION['error'] = 'Failed to dispense medicines: ' . $e->getMessage();
         }
 
-        $this->redirect('receptionist/dispense_medicines');
+        $this->redirect('receptionist/medicine');
     }
 
     public function force_complete_medicine($patient_id)
     {
         if (!$patient_id) {
-            $this->redirect('receptionist/dispense_medicines');
+            $this->redirect('receptionist/medicine'); // Changed from dispense_medicines
         }
 
         try {
-            $this->updateWorkflowStatus($patient_id, 'completed', [
-                'medicine_dispensed' => true,
-                'medicine_dispensed_by' => $_SESSION['user_id'],
-                'medicine_dispensed_at' => date('Y-m-d H:i:s')
-            ]);
+            // Mark all pending/partial prescriptions for this patient's latest visit as 'cancelled' or 'dispensed' (if 0 quantity)
+            // This is a "force complete" so we assume any remaining are not being dispensed.
+            $stmt_visit = $this->pdo->prepare("SELECT id FROM patient_visits WHERE patient_id = ? ORDER BY created_at DESC LIMIT 1");
+            $stmt_visit->execute([$patient_id]);
+            $visit = $stmt_visit->fetch();
+
+            if ($visit) {
+                $this->pdo->beginTransaction();
+                $update_prescriptions_stmt = $this->pdo->prepare("
+                    UPDATE prescriptions
+                    SET status = 'cancelled', notes = 'Force completed by receptionist', updated_at = NOW()
+                    WHERE visit_id = ? AND status IN ('pending', 'partial')
+                ");
+                $update_prescriptions_stmt->execute([$visit['id']]);
+
+                $this->updateWorkflowStatus($patient_id, 'completed', [
+                    'medicine_dispensed' => true,
+                    'medicine_dispensed_by' => $_SESSION['user_id'],
+                    'medicine_dispensed_at' => date('Y-m-d H:i:s')
+                ]);
+                $this->pdo->commit();
+            } else {
+                throw new Exception("No active visit found for patient to force complete medicine.");
+            }
 
             $_SESSION['success'] = 'Patient medicine dispensing completed (forced)';
         } catch (Exception $e) {
+            $this->pdo->rollBack();
             $_SESSION['error'] = 'Failed to complete medicine dispensing: ' . $e->getMessage();
         }
 
         $this->redirect('receptionist/medicine');
     }
+
 
     public function add_medicine()
     {
@@ -946,127 +1078,6 @@ class ReceptionistController extends BaseController
             $_SESSION['success'] = 'Medicine stock updated successfully';
         } catch (Exception $e) {
             $_SESSION['error'] = 'Failed to update stock: ' . $e->getMessage();
-        }
-
-        $this->redirect('receptionist/medicine');
-    }
-
-    public function dispense_patient_medicine()
-    {
-        if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
-            $this->redirect('receptionist/medicine');
-            return;
-        }
-
-        $this->validateCSRF($_POST['csrf_token']);
-
-        try {
-            $patient_id = intval($_POST['patient_id']);
-
-            if ($patient_id <= 0) {
-                throw new Exception('Invalid patient ID');
-            }
-
-            $this->pdo->beginTransaction();
-
-            // Get the medicine prescription for this patient
-            $stmt = $this->pdo->prepare("
-                SELECT mp.*
-                FROM medicine_prescriptions mp
-                WHERE mp.patient_id = ? AND mp.payment_status = 'paid' AND mp.is_fully_dispensed = 0
-                LIMIT 1
-            ");
-            $stmt->execute([$patient_id]);
-            $prescription = $stmt->fetch();
-
-            if (!$prescription) {
-                throw new Exception('No paid prescription found for this patient');
-            }
-
-            // Get prescribed medicines through consultations (with stock from batches)
-            $stmt = $this->pdo->prepare("
-                SELECT ma.*, 
-                       COALESCE(SUM(mb.quantity_remaining), 0) as stock_quantity, 
-                       m.name as medicine_name, 
-                       c.id as consultation_id
-                FROM consultations c
-                JOIN medicine_allocations ma ON c.id = ma.consultation_id
-                JOIN medicines m ON ma.medicine_id = m.id
-                LEFT JOIN medicine_batches mb ON m.id = mb.medicine_id
-                WHERE c.patient_id = ?
-                GROUP BY ma.id, ma.medicine_id, ma.consultation_id, ma.quantity, ma.instructions, ma.created_at, m.name, c.id
-            ");
-            $stmt->execute([$patient_id]);
-            $allocations = $stmt->fetchAll();
-
-            if (empty($allocations)) {
-                throw new Exception('No medicine allocations found for this patient');
-            }
-
-            // Check stock and dispense (using medicine_batches with FEFO)
-            foreach ($allocations as $allocation) {
-                if ($allocation['quantity'] > $allocation['stock_quantity']) {
-                    throw new Exception("Insufficient stock for " . $allocation['medicine_name']);
-                }
-
-                // Deduct from batches using First-Expiry-First-Out (FEFO)
-                $remaining = $allocation['quantity'];
-                $batch_stmt = $this->pdo->prepare("
-                    SELECT id, quantity_remaining 
-                    FROM medicine_batches 
-                    WHERE medicine_id = ? AND quantity_remaining > 0
-                    ORDER BY expiry_date ASC, created_at ASC
-                ");
-                $batch_stmt->execute([$allocation['medicine_id']]);
-                $batches = $batch_stmt->fetchAll();
-
-                foreach ($batches as $batch) {
-                    if ($remaining <= 0) break;
-                    
-                    $deduct = min($remaining, $batch['quantity_remaining']);
-                    $update_stmt = $this->pdo->prepare("
-                        UPDATE medicine_batches 
-                        SET quantity_remaining = quantity_remaining - ? 
-                        WHERE id = ?
-                    ");
-                    $update_stmt->execute([$deduct, $batch['id']]);
-                    $remaining -= $deduct;
-                }
-            }
-
-            // Update prescription as fully dispensed
-            $stmt = $this->pdo->prepare("
-                UPDATE medicine_prescriptions 
-                SET is_fully_dispensed = 1, 
-                    dispensed_by = ?, 
-                    dispensed_at = NOW(),
-                    dispensed_amount = total_amount
-                WHERE id = ?
-            ");
-            $stmt->execute([$_SESSION['user_id'], $prescription['id']]);
-
-            // Update visit status to completed and record workflow step
-            // Find visit id from the prescription (prescription linked to visit_id)
-            $visit_id = $prescription['visit_id'] ?? null;
-            if ($visit_id) {
-                $stmt = $this->pdo->prepare("UPDATE patient_visits SET status = 'completed', updated_at = NOW() WHERE id = ?");
-                $stmt->execute([$visit_id]);
-
-                // Record a patient_workflow_status entry for auditing (non-blocking)
-                try {
-                    $stmt = $this->pdo->prepare("INSERT INTO patient_workflow_status (patient_id, workflow_step, status, started_at, completed_at, assigned_to, notes, created_at, updated_at) VALUES (?, 'medicine_dispensed', 'completed', NOW(), NOW(), ?, 'Medicine dispensed', NOW(), NOW())");
-                    $stmt->execute([$patient_id, $_SESSION['user_id']]);
-                } catch (Exception $e) {
-                    // Non-fatal: if patient_workflow_status doesn't exist or insert fails, continue
-                    error_log('Failed to insert patient_workflow_status: ' . $e->getMessage());
-                }
-            }
-
-            $this->pdo->commit();
-            $_SESSION['success'] = 'Medicine dispensed successfully';
-        } catch (Exception $e) {
-            $this->pdo->rollBack();
-            $_SESSION['error'] = 'Failed to dispense medicine: ' . $e->getMessage();
         }
 
         $this->redirect('receptionist/medicine');
