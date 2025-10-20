@@ -273,6 +273,52 @@
                 </div>
             </div>
 
+            <!-- Lab Tests Selection Section (Hidden by default) -->
+            <div id="labTestsSection" class="border-b pb-6 hidden">
+                <h3 class="text-xl font-semibold text-gray-900 mb-4 flex items-center">
+                    <i class="fas fa-vial mr-3 text-yellow-600"></i>Lab Tests
+                </h3>
+
+                <div class="mb-4 text-sm text-gray-700">
+                    Select one or more lab tests for the patient. Prices are shown next to each test.
+                </div>
+
+                <div class="mb-4">
+                    <label for="lab_search" class="block text-sm font-medium text-gray-700 mb-1">
+                        Search Lab Tests
+                        <span class="text-xs text-gray-500 font-normal">(Type at least 2 characters to search)</span>
+                    </label>
+                    <input id="lab_search" type="text" placeholder="Type to search tests (name or code)..." 
+                           class="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-yellow-500 focus:border-yellow-500">
+                    <div id="lab_search_results" class="mt-2 bg-white border rounded-md max-h-40 overflow-auto hidden"></div>
+                    <div id="lab_selected" class="mt-3 space-y-2">
+                        <div id="no_tests_selected" class="text-sm text-gray-500 italic">No tests selected yet. Search and click to add tests.</div>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                        <label for="lab_total_amount" class="block text-sm font-medium text-gray-700 mb-1">
+                            Total Lab Amount (TZS)
+                            <span class="text-xs text-green-600 font-normal">• Auto-calculated from selected tests</span>
+                        </label>
+                        <input type="number" id="lab_total_amount" name="lab_total_amount" readonly value="0"
+                               class="w-full px-3 py-2 border border-gray-300 rounded-md bg-gray-50 text-lg font-semibold text-green-700">
+                    </div>
+
+                    <div>
+                        <label for="payment_method_lab" class="block text-sm font-medium text-gray-700 mb-1">Payment Method</label>
+                        <select id="payment_method_lab" name="payment_method" class="w-full px-3 py-2 border border-gray-300 rounded-md">
+                            <option value="">Select Payment Method</option>
+                            <option value="cash">Cash</option>
+                            <option value="card">Card</option>
+                            <option value="mobile_money">Mobile Money</option>
+                            <option value="insurance">Insurance</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+
            
             <!-- Form Actions -->
             <div class="flex justify-end space-x-3 pt-6">
@@ -368,14 +414,11 @@
                 break;
                 
             case 'lab_test':
-                // Only show vital signs for lab tests
-                if (elements.vitalSignsSection) {
-                    elements.vitalSignsSection.classList.remove('hidden');
-                }
-                if (elements.visitBadge && elements.visitBadgeText) {
-                    elements.visitBadge.classList.remove('hidden');
-                    elements.visitBadgeText.textContent = 'Lab tests will be selected by medical staff';
-                }
+                // Do NOT show vital signs for lab-only visits
+                // Show lab tests selection instead
+                const labSection = document.getElementById('labTestsSection');
+                if (labSection) labSection.classList.remove('hidden');
+                // Do not show the visit badge for lab-only registrations
                 break;
                 
             case 'medicine_pickup':
@@ -441,6 +484,163 @@
     } else {
         init();
     }
+
+})();
+
+// Global function for updating lab totals (needs to be accessible from other scripts)
+function updateLabTotal() {
+    // Calculate total from selected tests
+    const selectedTests = document.querySelectorAll('#lab_selected [data-price]');
+    let total = 0;
+    
+    selectedTests.forEach(testItem => {
+        const price = parseFloat(testItem.dataset.price) || 0;
+        total += price;
+    });
+    
+    // Update the lab total amount input
+    const totalInput = document.getElementById('lab_total_amount');
+    if (totalInput) {
+        totalInput.value = total;
+    }
+}
+
+// Global function for removing selected tests (called from onclick handlers)
+function removeSelectedTest(testId) {
+    const testElement = document.getElementById('selected_test_' + testId);
+    if (testElement) {
+        testElement.remove();
+        
+        // Show "no tests selected" message if no tests remain
+        const selectedTests = document.querySelectorAll('#lab_selected [data-price]');
+        const noTestsMsg = document.getElementById('no_tests_selected');
+        if (selectedTests.length === 0 && noTestsMsg) {
+            noTestsMsg.style.display = 'block';
+        }
+        
+        updateLabTotal();
+    }
+}
+</script>
+
+<script>
+// AJAX search for lab tests and multi-select handling
+(function(){
+    const searchInput = document.getElementById('lab_search');
+    const resultsDiv = document.getElementById('lab_search_results');
+    const selectedDiv = document.getElementById('lab_selected');
+
+    if (!searchInput) return;
+
+    let debounce;
+
+    function renderResultRow(test) {
+        const row = document.createElement('div');
+        row.className = 'p-2 hover:bg-gray-50 cursor-pointer flex justify-between items-center';
+        row.dataset.id = test.id;
+        row.innerHTML = `<span class="text-sm">${test.test_name} <span class="text-xs text-gray-500">(${test.test_code})</span></span><span class="text-sm font-medium">TZS ${Number(test.price).toLocaleString('en-US')}</span>`;
+        row.addEventListener('click', () => addSelectedTest(test));
+        return row;
+    }
+
+    function addSelectedTest(test) {
+        // Prevent duplicates
+        if (document.getElementById('selected_test_' + test.id)) return;
+
+        // Hide "no tests selected" message
+        const noTestsMsg = document.getElementById('no_tests_selected');
+        if (noTestsMsg) noTestsMsg.style.display = 'none';
+
+        const item = document.createElement('div');
+        item.className = 'flex items-center justify-between p-2 border rounded-md';
+        item.id = 'selected_test_' + test.id;
+        item.dataset.price = test.price; // Store price for calculation
+        item.innerHTML = `
+            <div class="flex items-center space-x-3">
+                <input type="hidden" name="selected_tests[]" value="${test.id}">
+                <span class="text-sm">${test.test_name} <span class="text-xs text-gray-500">(${test.test_code})</span></span>
+            </div>
+            <div class="flex items-center space-x-2">
+                <span class="text-sm font-medium">TZS ${Number(test.price).toLocaleString('en-US')}</span>
+                <button type="button" class="px-2 py-1 text-xs bg-red-100 text-red-600 hover:bg-red-200 rounded" onclick="removeSelectedTest('${test.id}')">
+                    <i class="fas fa-times"></i> Remove
+                </button>
+            </div>
+        `;
+        selectedDiv.appendChild(item);
+        
+        // Clear search input and hide results after selection
+        searchInput.value = '';
+        resultsDiv.classList.add('hidden');
+        
+        updateLabTotal();
+    }
+
+    function showResults(items) {
+        resultsDiv.innerHTML = '';
+        if (!items || items.length === 0) {
+            resultsDiv.classList.add('hidden');
+            return;
+        }
+        items.forEach(it => resultsDiv.appendChild(renderResultRow(it)));
+        resultsDiv.classList.remove('hidden');
+    }
+
+    function searchTests(q) {
+        if (!q || q.length < 2) { 
+            showResults([]); 
+            return; 
+        }
+        console.log('Searching tests for:', q);
+    const searchUrl = '<?php echo $BASE_PATH; ?>/lab/search_tests?q=' + encodeURIComponent(q);
+        console.log('Search URL:', searchUrl);
+    // Use receptionist search endpoint (no lab role required)
+    const recipSearchUrl = '<?php echo $BASE_PATH; ?>/receptionist/search_lab_tests?q=' + encodeURIComponent(q);
+    console.log('Search URL:', recipSearchUrl);
+    fetch(recipSearchUrl, { credentials: 'same-origin' })
+            .then(r => {
+                console.log('Search response status:', r.status, 'headers:', r.headers.get('content-type'));
+                const ct = r.headers.get('content-type') || '';
+                if (!ct.includes('application/json')) {
+                    // Likely redirected to login or returned HTML
+                    return r.text().then(text => { throw new Error('Non-JSON response: ' + (text.slice(0,200)) ); });
+                }
+                return r.json();
+            })
+            .then(data => {
+                console.log('Search response data:', data);
+                if (!data || (Array.isArray(data) && data.length === 0)) {
+                    // show a friendly no-results row
+                    showResults([]);
+                    resultsDiv.innerHTML = '<div class="p-2 text-sm text-gray-500">No matching tests found</div>';
+                    resultsDiv.classList.remove('hidden');
+                    return;
+                }
+                showResults(data);
+            })
+            .catch(err => {
+                console.error('Search request failed:', err);
+                let msg = 'Search failed';
+                if (err && err.message && err.message.startsWith('Non-JSON response')) {
+                    msg = 'Search returned non-JSON response (likely you are logged out). Please refresh and login again.';
+                }
+                resultsDiv.innerHTML = '<div class="p-2 text-sm text-red-500">' + msg + '</div>';
+                resultsDiv.classList.remove('hidden');
+            });
+    }
+
+    searchInput.addEventListener('input', function() {
+        clearTimeout(debounce);
+        const q = this.value.trim();
+        debounce = setTimeout(() => searchTests(q), 250);
+    });
+
+    // hide results when clicking outside
+    document.addEventListener('click', function(e){
+        if (!resultsDiv.contains(e.target) && e.target !== searchInput) {
+            resultsDiv.classList.add('hidden');
+        }
+    });
 
 })();
 </script>

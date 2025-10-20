@@ -181,7 +181,7 @@ class ReceptionistController extends BaseController
             try {
                 $this->pdo->beginTransaction();
 
-                // Only process payment for consultation visits
+                // Only process payment for consultation visits by default
                 if ($visit_type === 'consultation') {
                     // Validate consultation payment
                     if (empty($consultation_fee) || empty($payment_method)) {
@@ -260,24 +260,83 @@ class ReceptionistController extends BaseController
                     }
                 }
 
+                // Handle lab-only visit: create lab_test_orders and optional payment
+                if ($visit_type === 'lab_test') {
+                    // Selected tests are expected as an array of test IDs
+                    $selected_tests = $_POST['selected_tests'] ?? [];
+                    if (!is_array($selected_tests)) {
+                        // If a comma-separated string was submitted, convert to array
+                        $selected_tests = array_filter(array_map('trim', explode(',', (string)$selected_tests)));
+                    }
+
+                    if (!empty($selected_tests)) {
+                        // Insert lab test orders
+                        $stmtOrder = $this->pdo->prepare("INSERT INTO lab_test_orders (visit_id, patient_id, test_id, ordered_by, status, created_at, updated_at) VALUES (?, ?, ?, ?, 'pending', NOW(), NOW())");
+                        $total_lab_amount = 0;
+                        $stmtPrice = $this->pdo->prepare("SELECT price FROM lab_tests WHERE id = ? LIMIT 1");
+                        foreach ($selected_tests as $test_id) {
+                            $tid = intval($test_id);
+                            if ($tid <= 0) continue;
+                            $stmtOrder->execute([$visit_id, $patient_id, $tid, $_SESSION['user_id']]);
+                            // Sum price
+                            $stmtPrice->execute([$tid]);
+                            $price = (float)$stmtPrice->fetchColumn();
+                            $total_lab_amount += $price;
+                        }
+
+                        // If a payment method and amount provided, record lab test payment
+                        $lab_payment_method = $post['payment_method'] ?? null;
+                        $lab_payment_amount = $post['lab_total_amount'] ?? null;
+                        if (empty($lab_payment_amount)) {
+                            // If not explicitly provided, use the calculated total
+                            $lab_payment_amount = $total_lab_amount;
+                        }
+
+                        if (!empty($lab_payment_amount) && !empty($lab_payment_method)) {
+                            $stmtPay = $this->pdo->prepare(
+                                "INSERT INTO payments (visit_id, patient_id, payment_type, amount, payment_method, payment_status, reference_number, collected_by, payment_date, notes) VALUES (?, ?, 'lab_test', ?, ?, 'paid', NULL, ?, NOW(), ?)"
+                            );
+                            $stmtPay->execute([
+                                $visit_id,
+                                $patient_id,
+                                $lab_payment_amount,
+                                $lab_payment_method,
+                                $_SESSION['user_id'],
+                                'Lab test payment at registration'
+                            ]);
+
+                            // Update workflow status if helper exists
+                            try {
+                                $this->updateWorkflowStatus($patient_id, 'lab_testing', ['lab_tests_paid' => true]);
+                            } catch (Exception $e) {
+                                // non-fatal
+                            }
+                        }
+                    }
+                }
+
                 // Record vital signs if provided — insert into vital_signs linked to the visit
                 $bp_systolic = null; $bp_diastolic = null;
                 if (!empty($blood_pressure) && is_string($blood_pressure) && strpos($blood_pressure, '/') !== false) {
                     [$bp_systolic, $bp_diastolic] = array_map('intval', array_map('trim', explode('/', $blood_pressure, 2)));
                 }
-                if (!empty($temperature) || !empty($bp_systolic) || !empty($bp_diastolic) || !empty($pulse_rate) || !empty($body_weight) || !empty($height)) {
-                    $stmt = $this->pdo->prepare("INSERT INTO vital_signs (visit_id, patient_id, temperature, blood_pressure_systolic, blood_pressure_diastolic, pulse_rate, weight, height, recorded_by, recorded_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())");
-                    $stmt->execute([
-                        $visit_id,
-                        $patient_id,
-                        !empty($temperature) ? $temperature : null,
-                        $bp_systolic ?: null,
-                        $bp_diastolic ?: null,
-                        !empty($pulse_rate) ? $pulse_rate : null,
-                        !empty($body_weight) ? $body_weight : null,
-                        !empty($height) ? $height : null,
-                        $_SESSION['user_id']
-                    ]);
+                // Record vital signs if provided — insert into vital_signs linked to the visit
+                // Skip recording vital signs for lab-only visits
+                if ($visit_type !== 'lab_test') {
+                    if (!empty($temperature) || !empty($bp_systolic) || !empty($bp_diastolic) || !empty($pulse_rate) || !empty($body_weight) || !empty($height)) {
+                        $stmt = $this->pdo->prepare("INSERT INTO vital_signs (visit_id, patient_id, temperature, blood_pressure_systolic, blood_pressure_diastolic, pulse_rate, weight, height, recorded_by, recorded_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())");
+                        $stmt->execute([
+                            $visit_id,
+                            $patient_id,
+                            !empty($temperature) ? $temperature : null,
+                            $bp_systolic ?: null,
+                            $bp_diastolic ?: null,
+                            !empty($pulse_rate) ? $pulse_rate : null,
+                            !empty($body_weight) ? $body_weight : null,
+                            !empty($height) ? $height : null,
+                            $_SESSION['user_id']
+                        ]);
+                    }
                 }
 
                 $this->pdo->commit();
@@ -292,6 +351,28 @@ class ReceptionistController extends BaseController
         $this->render('receptionist/register_patient', [
             'csrf_token' => $this->generateCSRF()
         ]);
+    }
+
+    /**
+     * AJAX endpoint used by receptionists to search lab tests by name/code.
+     * GET param: q
+     */
+    public function search_lab_tests() {
+        $q = trim($_GET['q'] ?? '');
+        header('Content-Type: application/json');
+        try {
+            if ($q === '') {
+                echo json_encode([]);
+                return;
+            }
+            $stmt = $this->pdo->prepare("SELECT id, test_name, price, test_code FROM lab_tests WHERE is_active = 1 AND (test_name LIKE ? OR test_code LIKE ?) ORDER BY test_name LIMIT 30");
+            $like = '%' . $q . '%';
+            $stmt->execute([$like, $like]);
+            $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
+            echo json_encode($rows);
+        } catch (Exception $e) {
+            echo json_encode([]);
+        }
     }
 
     public function appointments()

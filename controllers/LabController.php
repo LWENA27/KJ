@@ -717,5 +717,28 @@ class LabController extends BaseController {
         // Only redirect for non-AJAX requests
         $this->redirect('lab/view_test/' . $test_order_id);
     }
+
+    /**
+     * AJAX endpoint to search lab tests by name/code. Returns JSON.
+     * GET param: q (search query)
+     */
+    public function search_tests() {
+        $q = trim($_GET['q'] ?? '');
+        header('Content-Type: application/json');
+        try {
+            if ($q === '') {
+                echo json_encode([]);
+                return;
+            }
+
+            $stmt = $this->pdo->prepare("SELECT id, test_name, price, test_code FROM lab_tests WHERE is_active = 1 AND (test_name LIKE ? OR test_code LIKE ?) ORDER BY test_name LIMIT 30");
+            $like = '%' . $q . '%';
+            $stmt->execute([$like, $like]);
+            $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
+            echo json_encode($rows);
+        } catch (Exception $e) {
+            echo json_encode([]);
+        }
+    }
 }
 ?>
