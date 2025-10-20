@@ -249,8 +249,8 @@
                 echo "<!-- DEBUG: User role = '$userRole' -->";
                 $viewUrl = ($userRole === 'receptionist') 
                     ? htmlspecialchars($BASE_PATH) . "/receptionist/view_patient?id=" . $patient['id']
-                    : htmlspecialchars($BASE_PATH) . "/doctor/view_patient?id=" . $patient['id'];
-                echo "<!-- DEBUG: Generated URL = '$viewUrl' -->";
+                   : htmlspecialchars($BASE_PATH) . "/receptionist/view_patient?id=" . $patient['id'];
+              echo "<!-- DEBUG: Generated URL = '$viewUrl' -->";
                 ?>
                 <a href="<?php echo $viewUrl; ?>" 
                    class="bg-blue-100 hover:bg-blue-200 text-blue-700 px-3 py-1 rounded-lg text-sm font-medium transition-all duration-300 transform hover:scale-105" title="View Patient">
