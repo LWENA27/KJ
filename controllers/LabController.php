@@ -254,10 +254,6 @@ class LabController extends BaseController {
             $this->redirect('lab/tests');
         }
 
-        // Debug: Log CSRF tokens
-        error_log('CSRF Debug - POST token: ' . ($_POST['csrf_token'] ?? 'NOT SET'));
-        error_log('CSRF Debug - Session token: ' . ($_SESSION['csrf_token'] ?? 'NOT SET'));
-
         $this->validateCSRF();
 
         $test_id = intval($_POST['test_id'] ?? 0);

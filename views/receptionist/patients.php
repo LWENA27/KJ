@@ -14,6 +14,9 @@
             <a href="<?php echo htmlspecialchars($BASE_PATH); ?>/receptionist/register_patient" class="bg-white text-blue-700 hover:bg-blue-50 px-4 py-2 rounded-lg font-medium transition-all duration-300 transform hover:scale-105 shadow-lg">
                 <i class="fas fa-plus mr-2"></i>Register New Patient
             </a>
+            <a href="<?php echo htmlspecialchars($BASE_PATH); ?>/receptionist/create_revisit" class="bg-green-500 bg-opacity-90 hover:bg-green-600 text-white px-4 py-2 rounded-lg font-medium transition-all duration-300 transform hover:scale-105 shadow-lg">
+                <i class="fas fa-user-check mr-2"></i>Patient Revisit
+            </a>
             <a href="<?php echo htmlspecialchars($BASE_PATH); ?>/receptionist/dispense_medicines" class="bg-blue-500 bg-opacity-30 hover:bg-opacity-50 text-white px-4 py-2 rounded-lg font-medium transition-all duration-300 backdrop-blur-sm">
                 <i class="fas fa-pills mr-2"></i>Dispense Medicines
             </a>
@@ -472,7 +475,13 @@ function closePatientModal() {
 }
 
 function viewPatient(id) {
-    // Navigate to patient view page
+    // Delegate to global viewPatient (defined in layout) which is role-aware
+    if (typeof window.viewPatient === 'function') {
+        window.viewPatient(id);
+        return;
+    }
+
+    // Fallback: navigate to doctor view if global function isn't available
     window.location.href = `<?php echo htmlspecialchars($BASE_PATH); ?>/doctor/view_patient?id=${id}`;
 }
 
@@ -573,15 +582,24 @@ document.addEventListener('DOMContentLoaded', function() {
                             <h4 class="text-sm font-medium text-primary-900 mb-1">Payment Summary</h4>
                             <p class="text-sm text-primary-700">
                                 This payment covers all remaining services including lab tests, medicine dispensing, and consultation fees.
-                            </p>
-                        </div>
-                    </div>
-                </div>
-            </div>
+                            <?php 
+                            // Use the same session key used elsewhere: 'user_role'
+                            $userRole = $_SESSION['user_role'] ?? $_SESSION['role'] ?? '';
+                            // Debug: Let's see what role is detected
+                            echo "<!-- DEBUG: User role = '$userRole' -->";
 
-            <div class="modal-footer">
-                <button type="button" onclick="closeFinalPaymentModal()" class="btn btn-secondary">
-                    Cancel
+                            // Build a role-appropriate URL (use query param format to match routing elsewhere)
+                            if ($userRole === 'receptionist') {
+                                $viewUrl = htmlspecialchars($BASE_PATH) . "/receptionist/view_patient?id=" . $patient['id'];
+                            } elseif ($userRole === 'admin') {
+                                $viewUrl = htmlspecialchars($BASE_PATH) . "/admin/view_patient?id=" . $patient['id'];
+                            } else {
+                                // default to doctor view
+                                $viewUrl = htmlspecialchars($BASE_PATH) . "/doctor/view_patient?id=" . $patient['id'];
+                            }
+
+                            echo "<!-- DEBUG: Generated URL = '$viewUrl' -->";
+                            ?>
                 </button>
                 <button type="submit" class="btn btn-success">
                     <i class="fas fa-credit-card mr-2"></i>Process Payment
