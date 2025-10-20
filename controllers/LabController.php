@@ -605,9 +605,6 @@ class LabController extends BaseController {
         $this->validateCSRF();
 
         try {
-            // Debug received POST data
-            error_log("POST data received in add_result: " . print_r($_POST, true));
-            
             $test_order_id = $_POST['test_order_id'];
             $result_value = $_POST['result_value'];
             $unit = $_POST['unit'] ?? '';
@@ -615,9 +612,6 @@ class LabController extends BaseController {
             $result_notes = $_POST['result_notes'] ?? '';
             $completion_time = $_POST['completion_time'] ?? date('Y-m-d H:i:s');
             $technician_id = $_SESSION['user_id'] ?? 1; // Default to 1 if no session
-            
-            error_log("Parsed values: test_id=$test_order_id, value=$result_value, unit=$unit, status=$result_status");
-            error_log("Completion time: $completion_time, technician: $technician_id");
 
             // Get order details
             $stmt = $this->pdo->prepare("
@@ -626,7 +620,7 @@ class LabController extends BaseController {
             $stmt->execute([$test_order_id]);
             $order = $stmt->fetch();
             
-            error_log("Order details fetched: " . ($order ? "Found" : "Not found") . " - " . print_r($order, true));
+            // Order details fetched; proceed if found
 
             if (!$order) {
                 throw new Exception('Test order not found');
@@ -653,7 +647,6 @@ class LabController extends BaseController {
             // Calculate is_normal based on result_status
             $is_normal = ($result_status === 'normal') ? 1 : 0;
             
-            // Debug SQL parameters - updated to match new SQL structure
             $sqlParams = [
                 $test_order_id,
                 $order['patient_id'],
@@ -665,7 +658,7 @@ class LabController extends BaseController {
                 $is_normal,           // 1 if normal, 0 if abnormal
                 $completion_time
             ];
-            error_log("SQL parameters for lab_results insert: " . print_r($sqlParams, true));
+            // Execute insert with prepared parameters
             
             try {
                 $stmt->execute($sqlParams);
