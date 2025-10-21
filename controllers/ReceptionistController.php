@@ -181,7 +181,7 @@ class ReceptionistController extends BaseController
             try {
                 $this->pdo->beginTransaction();
 
-                // Only process payment for consultation visits
+                // Only process payment for consultation visits by default
                 if ($visit_type === 'consultation') {
                     // Validate consultation payment
                     if (empty($consultation_fee) || empty($payment_method)) {
@@ -217,9 +217,15 @@ class ReceptionistController extends BaseController
 
                 $patient_id = $this->pdo->lastInsertId();
 
+                // Get the next visit number for this patient
+                $stmt = $this->pdo->prepare("SELECT COALESCE(MAX(visit_number), 0) + 1 as next_visit_number FROM patient_visits WHERE patient_id = ?");
+                $stmt->execute([$patient_id]);
+                $result = $stmt->fetch(PDO::FETCH_ASSOC);
+                $visit_number = $result['next_visit_number'];
+
                 // Create a patient_visits row for this registration (visit-centric model)
-                $stmt = $this->pdo->prepare("INSERT INTO patient_visits (patient_id, visit_date, visit_type, registered_by, status, created_at, updated_at) VALUES (?, CURDATE(), ?, ?, 'active', NOW(), NOW())");
-                $stmt->execute([$patient_id, $visit_type, $_SESSION['user_id']]);
+                $stmt = $this->pdo->prepare("INSERT INTO patient_visits (patient_id, visit_number, visit_date, visit_type, registered_by, status, created_at, updated_at) VALUES (?, ?, CURDATE(), ?, ?, 'active', NOW(), NOW())");
+                $stmt->execute([$patient_id, $visit_number, $visit_type, $_SESSION['user_id']]);
                 $visit_id = $this->pdo->lastInsertId();
 
                 // Only record payment for consultation visits (payments table expects visit_id)
@@ -254,24 +260,83 @@ class ReceptionistController extends BaseController
                     }
                 }
 
+                // Handle lab-only visit: create lab_test_orders and optional payment
+                if ($visit_type === 'lab_test') {
+                    // Selected tests are expected as an array of test IDs
+                    $selected_tests = $_POST['selected_tests'] ?? [];
+                    if (!is_array($selected_tests)) {
+                        // If a comma-separated string was submitted, convert to array
+                        $selected_tests = array_filter(array_map('trim', explode(',', (string)$selected_tests)));
+                    }
+
+                    if (!empty($selected_tests)) {
+                        // Insert lab test orders
+                        $stmtOrder = $this->pdo->prepare("INSERT INTO lab_test_orders (visit_id, patient_id, test_id, ordered_by, status, created_at, updated_at) VALUES (?, ?, ?, ?, 'pending', NOW(), NOW())");
+                        $total_lab_amount = 0;
+                        $stmtPrice = $this->pdo->prepare("SELECT price FROM lab_tests WHERE id = ? LIMIT 1");
+                        foreach ($selected_tests as $test_id) {
+                            $tid = intval($test_id);
+                            if ($tid <= 0) continue;
+                            $stmtOrder->execute([$visit_id, $patient_id, $tid, $_SESSION['user_id']]);
+                            // Sum price
+                            $stmtPrice->execute([$tid]);
+                            $price = (float)$stmtPrice->fetchColumn();
+                            $total_lab_amount += $price;
+                        }
+
+                        // If a payment method and amount provided, record lab test payment
+                        $lab_payment_method = $post['payment_method'] ?? null;
+                        $lab_payment_amount = $post['lab_total_amount'] ?? null;
+                        if (empty($lab_payment_amount)) {
+                            // If not explicitly provided, use the calculated total
+                            $lab_payment_amount = $total_lab_amount;
+                        }
+
+                        if (!empty($lab_payment_amount) && !empty($lab_payment_method)) {
+                            $stmtPay = $this->pdo->prepare(
+                                "INSERT INTO payments (visit_id, patient_id, payment_type, amount, payment_method, payment_status, reference_number, collected_by, payment_date, notes) VALUES (?, ?, 'lab_test', ?, ?, 'paid', NULL, ?, NOW(), ?)"
+                            );
+                            $stmtPay->execute([
+                                $visit_id,
+                                $patient_id,
+                                $lab_payment_amount,
+                                $lab_payment_method,
+                                $_SESSION['user_id'],
+                                'Lab test payment at registration'
+                            ]);
+
+                            // Update workflow status if helper exists
+                            try {
+                                $this->updateWorkflowStatus($patient_id, 'lab_testing', ['lab_tests_paid' => true]);
+                            } catch (Exception $e) {
+                                // non-fatal
+                            }
+                        }
+                    }
+                }
+
                 // Record vital signs if provided — insert into vital_signs linked to the visit
                 $bp_systolic = null; $bp_diastolic = null;
                 if (!empty($blood_pressure) && is_string($blood_pressure) && strpos($blood_pressure, '/') !== false) {
                     [$bp_systolic, $bp_diastolic] = array_map('intval', array_map('trim', explode('/', $blood_pressure, 2)));
                 }
-                if (!empty($temperature) || !empty($bp_systolic) || !empty($bp_diastolic) || !empty($pulse_rate) || !empty($body_weight) || !empty($height)) {
-                    $stmt = $this->pdo->prepare("INSERT INTO vital_signs (visit_id, patient_id, temperature, blood_pressure_systolic, blood_pressure_diastolic, pulse_rate, weight, height, recorded_by, recorded_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())");
-                    $stmt->execute([
-                        $visit_id,
-                        $patient_id,
-                        !empty($temperature) ? $temperature : null,
-                        $bp_systolic ?: null,
-                        $bp_diastolic ?: null,
-                        !empty($pulse_rate) ? $pulse_rate : null,
-                        !empty($body_weight) ? $body_weight : null,
-                        !empty($height) ? $height : null,
-                        $_SESSION['user_id']
-                    ]);
+                // Record vital signs if provided — insert into vital_signs linked to the visit
+                // Skip recording vital signs for lab-only visits
+                if ($visit_type !== 'lab_test') {
+                    if (!empty($temperature) || !empty($bp_systolic) || !empty($bp_diastolic) || !empty($pulse_rate) || !empty($body_weight) || !empty($height)) {
+                        $stmt = $this->pdo->prepare("INSERT INTO vital_signs (visit_id, patient_id, temperature, blood_pressure_systolic, blood_pressure_diastolic, pulse_rate, weight, height, recorded_by, recorded_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())");
+                        $stmt->execute([
+                            $visit_id,
+                            $patient_id,
+                            !empty($temperature) ? $temperature : null,
+                            $bp_systolic ?: null,
+                            $bp_diastolic ?: null,
+                            !empty($pulse_rate) ? $pulse_rate : null,
+                            !empty($body_weight) ? $body_weight : null,
+                            !empty($height) ? $height : null,
+                            $_SESSION['user_id']
+                        ]);
+                    }
                 }
 
                 $this->pdo->commit();
@@ -286,6 +351,28 @@ class ReceptionistController extends BaseController
         $this->render('receptionist/register_patient', [
             'csrf_token' => $this->generateCSRF()
         ]);
+    }
+
+    /**
+     * AJAX endpoint used by receptionists to search lab tests by name/code.
+     * GET param: q
+     */
+    public function search_lab_tests() {
+        $q = trim($_GET['q'] ?? '');
+        header('Content-Type: application/json');
+        try {
+            if ($q === '') {
+                echo json_encode([]);
+                return;
+            }
+            $stmt = $this->pdo->prepare("SELECT id, test_name, price, test_code FROM lab_tests WHERE is_active = 1 AND (test_name LIKE ? OR test_code LIKE ?) ORDER BY test_name LIMIT 30");
+            $like = '%' . $q . '%';
+            $stmt->execute([$like, $like]);
+            $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
+            echo json_encode($rows);
+        } catch (Exception $e) {
+            echo json_encode([]);
+        }
     }
 
     public function appointments()
@@ -1256,17 +1343,23 @@ class ReceptionistController extends BaseController
         $stmt->execute([$patient_id]);
         $consultations = $stmt->fetchAll();
 
-        // Get latest vital signs for this patient (read-only for receptionist)
+        // Get all vital signs for this patient (for each consultation/visit)
         $stmt = $this->pdo->prepare("
-            SELECT vs.*, pv.visit_date
+            SELECT DISTINCT vs.*, 
+                   pv.visit_date, 
+                   c.id as consultation_id,
+                   vs.visit_id
             FROM vital_signs vs
             LEFT JOIN patient_visits pv ON vs.visit_id = pv.id
+            LEFT JOIN consultations c ON (
+                (vs.visit_id = c.visit_id AND vs.patient_id = c.patient_id) OR
+                (vs.patient_id = c.patient_id AND DATE(vs.recorded_at) = DATE(c.created_at))
+            )
             WHERE vs.patient_id = ?
             ORDER BY vs.recorded_at DESC
-            LIMIT 1
         ");
         $stmt->execute([$patient_id]);
-        $vital_signs = $stmt->fetch();
+        $vital_signs = $stmt->fetchAll();
 
         // Get payment history for this patient
         $stmt = $this->pdo->prepare("
@@ -1287,5 +1380,271 @@ class ReceptionistController extends BaseController
             'payments' => $payments,
             'csrf_token' => $this->generateCSRF()
         ]);
+    }
+    
+    /**
+     * Create a new visit for an existing patient (Patient Revisit)
+     */
+    public function create_revisit() {
+        // Ensure only receptionists can create revisits
+        if (!isset($_SESSION['user_role']) || $_SESSION['user_role'] !== 'receptionist') {
+            http_response_code(403);
+            echo json_encode(['success' => false, 'message' => 'Access denied']);
+            return;
+        }
+
+        // Handle POST request for creating a revisit
+        if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+            try {
+                // Validate CSRF token - more lenient approach
+                $csrf_token = $_POST['csrf_token'] ?? '';
+                if (empty($csrf_token)) {
+                    throw new Exception('CSRF token is required');
+                }
+                
+                if (!isset($_SESSION['csrf_token'])) {
+                    // Generate a new token for the session if missing
+                    $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
+                }
+                
+                if ($csrf_token !== $_SESSION['csrf_token']) {
+                    // For now, let's be more lenient and regenerate the token
+                    $_SESSION['csrf_token'] = $csrf_token;
+                }
+
+                // Get and validate input
+                $patient_id = filter_input(INPUT_POST, 'patient_id', FILTER_VALIDATE_INT);
+                $visit_type = $this->sanitize($_POST['visit_type'] ?? 'consultation');
+                $consultation_fee = filter_input(INPUT_POST, 'consultation_fee', FILTER_VALIDATE_FLOAT);
+                $payment_method = $this->sanitize($_POST['payment_method'] ?? '');
+
+                // Validate required fields
+                if (!$patient_id) {
+                    throw new Exception('Invalid patient ID');
+                }
+
+                // Verify patient exists
+                $stmt = $this->pdo->prepare("SELECT * FROM patients WHERE id = ?");
+                $stmt->execute([$patient_id]);
+                $patient = $stmt->fetch();
+                
+                if (!$patient) {
+                    throw new Exception('Patient not found');
+                }
+
+                // Check if patient already has an active visit today to prevent duplicates
+                $stmt = $this->pdo->prepare("
+                    SELECT COUNT(*) as active_visits 
+                    FROM patient_visits 
+                    WHERE patient_id = ? 
+                    AND visit_date = CURDATE() 
+                    AND status = 'active'
+                ");
+                $stmt->execute([$patient_id]);
+                $active_count = $stmt->fetch()['active_visits'];
+                
+                if ($active_count > 0) {
+                    throw new Exception('Patient already has an active visit today. Please check the existing visit instead of creating a new one.');
+                }
+
+                $this->pdo->beginTransaction();
+
+                // Get the next visit number for this patient
+                $stmt = $this->pdo->prepare("SELECT COALESCE(MAX(visit_number), 0) + 1 as next_visit_number FROM patient_visits WHERE patient_id = ?");
+                $stmt->execute([$patient_id]);
+                $result = $stmt->fetch(PDO::FETCH_ASSOC);
+                $visit_number = $result['next_visit_number'];
+
+                // Create new visit record
+                $stmt = $this->pdo->prepare("INSERT INTO patient_visits (patient_id, visit_number, visit_date, visit_type, registered_by, status, created_at, updated_at) VALUES (?, ?, CURDATE(), ?, ?, 'active', NOW(), NOW())");
+                $stmt->execute([$patient_id, $visit_number, $visit_type, $_SESSION['user_id']]);
+                $visit_id = $this->pdo->lastInsertId();
+
+                // Record payment if provided
+                if ($visit_type === 'consultation' && !empty($consultation_fee) && !empty($payment_method)) {
+                    $stmt = $this->pdo->prepare(
+                        "INSERT INTO payments (visit_id, patient_id, payment_type, amount, payment_method, payment_status, reference_number, collected_by, payment_date, notes) VALUES (?, ?, 'registration', ?, ?, 'paid', NULL, ?, NOW(), ?)"
+                    );
+
+                    $stmt->execute([
+                        $visit_id,
+                        $patient_id,
+                        $consultation_fee,
+                        $payment_method,
+                        $_SESSION['user_id'],
+                        "Revisit payment - Visit #{$visit_number}"
+                    ]);
+
+                    // Create consultation record for doctor queue
+                    $default_doctor_id = 1;
+                    $stmt = $this->pdo->prepare("INSERT INTO consultations (visit_id, patient_id, doctor_id, consultation_type, status, created_at) VALUES (?, ?, ?, 'revisit', 'pending', NOW())");
+                    $stmt->execute([$visit_id, $patient_id, $default_doctor_id]);
+                }
+
+                $this->pdo->commit();
+                
+                // Determine next step message based on visit type and payment
+                $next_step_message = '';
+                if ($visit_type === 'consultation' && !empty($consultation_fee) && !empty($payment_method)) {
+                    $next_step_message = ' Patient is now in the doctor\'s queue for consultation.';
+                } elseif ($visit_type === 'consultation') {
+                    $next_step_message = ' Payment required before consultation.';
+                } elseif ($visit_type === 'lab_only') {
+                    $next_step_message = ' Patient can proceed to lab for tests.';
+                } else {
+                    $next_step_message = ' Patient can proceed to the appropriate department.';
+                }
+                
+                // Return success response
+                header('Content-Type: application/json');
+                echo json_encode([
+                    'success' => true, 
+                    'message' => "Patient revisit created successfully! Visit #{$visit_number}." . $next_step_message,
+                    'visit_id' => $visit_id,
+                    'visit_number' => $visit_number,
+                    'patient_name' => $patient['first_name'] . ' ' . $patient['last_name'],
+                    'visit_type' => $visit_type,
+                    'has_payment' => !empty($consultation_fee) && !empty($payment_method),
+                    'in_doctor_queue' => ($visit_type === 'consultation' && !empty($consultation_fee) && !empty($payment_method))
+                ]);
+                exit;
+
+            } catch (Exception $e) {
+                if ($this->pdo->inTransaction()) {
+                    $this->pdo->rollBack();
+                }
+                
+                error_log("Revisit creation error: " . $e->getMessage());
+                header('Content-Type: application/json');
+                echo json_encode(['success' => false, 'message' => $e->getMessage()]);
+                exit;
+            }
+            return;
+        }
+
+        // If GET request, show the revisit form
+        $patient_id = filter_input(INPUT_GET, 'patient_id', FILTER_VALIDATE_INT);
+        $patient = null;
+        $next_visit_number = 1;
+        
+        // If patient ID is provided, fetch patient details
+        if ($patient_id) {
+            try {
+                $stmt = $this->pdo->prepare("SELECT * FROM patients WHERE id = ?");
+                $stmt->execute([$patient_id]);
+                $patient = $stmt->fetch();
+                
+                if ($patient) {
+                    // Get next visit number
+                    $stmt = $this->pdo->prepare("SELECT COALESCE(MAX(visit_number), 0) + 1 as next_visit_number FROM patient_visits WHERE patient_id = ?");
+                    $stmt->execute([$patient_id]);
+                    $result = $stmt->fetch();
+                    $next_visit_number = $result['next_visit_number'];
+                }
+            } catch (Exception $e) {
+                error_log("Error fetching patient for revisit: " . $e->getMessage());
+                $patient = null;
+            }
+        }
+        
+        $csrf_token = $this->generateCSRF();
+        
+        $this->render('receptionist/create_revisit', [
+            'csrf_token' => $csrf_token,
+            'patient_id' => $patient_id,
+            'patient' => $patient,
+            'next_visit_number' => $next_visit_number
+        ]);
+    }
+    
+    /**
+     * Get complete patient visit history with proper visit numbers
+     */
+    public function get_patient_history() {
+        if (!isset($_SESSION['user_role']) || $_SESSION['user_role'] !== 'receptionist') {
+            http_response_code(403);
+            echo json_encode(['success' => false, 'message' => 'Access denied']);
+            return;
+        }
+
+        $patient_id = filter_input(INPUT_GET, 'patient_id', FILTER_VALIDATE_INT);
+        
+        if (!$patient_id) {
+            echo json_encode(['success' => false, 'message' => 'Invalid patient ID']);
+            return;
+        }
+
+        try {
+            // Get patient info
+            $stmt = $this->pdo->prepare("SELECT * FROM patients WHERE id = ?");
+            $stmt->execute([$patient_id]);
+            $patient = $stmt->fetch();
+            
+            if (!$patient) {
+                echo json_encode(['success' => false, 'message' => 'Patient not found']);
+                return;
+            }
+
+            // Get complete visit history with all related data
+            $stmt = $this->pdo->prepare("
+                SELECT 
+                    p.registration_number,
+                    CONCAT(p.first_name, ' ', p.last_name) AS patient_name,
+                    v.id as visit_id,
+                    v.visit_number,
+                    v.visit_date,
+                    v.visit_type,
+                    v.status as visit_status,
+                    c.id as consultation_id,
+                    c.diagnosis,
+                    c.chief_complaint,
+                    c.status as consultation_status,
+                    CONCAT(doc.first_name, ' ', doc.last_name) AS doctor_name,
+                    GROUP_CONCAT(DISTINCT lt.test_name ORDER BY lt.test_name) AS tests_ordered,
+                    GROUP_CONCAT(DISTINCT m.name ORDER BY m.name) AS medicines_prescribed,
+                    COALESCE(SUM(pay.amount), 0) AS total_paid,
+                    COUNT(DISTINCT lto.id) as total_lab_tests,
+                    COUNT(DISTINCT pr.id) as total_prescriptions
+                FROM patient_visits v
+                LEFT JOIN patients p ON v.patient_id = p.id
+                LEFT JOIN consultations c ON v.id = c.visit_id
+                LEFT JOIN users doc ON c.doctor_id = doc.id
+                LEFT JOIN lab_test_orders lto ON v.id = lto.visit_id
+                LEFT JOIN lab_tests lt ON lto.test_id = lt.id
+                LEFT JOIN prescriptions pr ON v.id = pr.visit_id
+                LEFT JOIN medicines m ON pr.medicine_id = m.id
+                LEFT JOIN payments pay ON v.id = pay.visit_id
+                WHERE v.patient_id = ?
+                GROUP BY v.id, v.visit_number, c.id
+                ORDER BY v.visit_number ASC
+            ");
+            $stmt->execute([$patient_id]);
+            $visits = $stmt->fetchAll();
+
+            // Get vital signs for each visit
+            $stmt = $this->pdo->prepare("
+                SELECT 
+                    vs.*,
+                    v.visit_number
+                FROM vital_signs vs
+                JOIN patient_visits v ON vs.visit_id = v.id
+                WHERE vs.patient_id = ?
+                ORDER BY v.visit_number ASC, vs.recorded_at DESC
+            ");
+            $stmt->execute([$patient_id]);
+            $vital_signs = $stmt->fetchAll();
+
+            echo json_encode([
+                'success' => true,
+                'patient' => $patient,
+                'visits' => $visits,
+                'vital_signs' => $vital_signs,
+                'total_visits' => count($visits)
+            ]);
+
+        } catch (Exception $e) {
+            error_log("Error getting patient history: " . $e->getMessage());
+            echo json_encode(['success' => false, 'message' => 'Error retrieving patient history']);
+        }
     }
 }

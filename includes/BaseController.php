@@ -66,21 +66,19 @@ class BaseController {
     protected function validateCSRF($token = null) {
         // Allow passing token explicitly or default to POST
         if ($token === null && !isset($_POST['csrf_token'])) {
-            error_log('CSRF validation failed: No CSRF token in POST data');
-            die('CSRF token validation failed: Missing token');
+            // No token provided in POST
+            throw new Exception('CSRF token validation failed: Missing token');
         }
 
         if (!isset($_SESSION['csrf_token'])) {
-            error_log('CSRF validation failed: No CSRF token in session');
-            die('CSRF token validation failed: Session token missing');
+            // No token in session
+            throw new Exception('CSRF token validation failed: Session token missing');
         }
 
         $provided = $token !== null ? $token : $_POST['csrf_token'];
         if ($provided !== $_SESSION['csrf_token']) {
-            error_log('CSRF validation failed: Token mismatch');
-            error_log('Provided token: ' . $provided);
-            error_log('Session token: ' . $_SESSION['csrf_token']);
-            die('CSRF token validation failed: Token mismatch');
+            // Token mismatch
+            throw new Exception('CSRF token validation failed: Token mismatch');
         }
     }
 

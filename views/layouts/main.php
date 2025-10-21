@@ -1478,21 +1478,26 @@
 
         // Helper function to view patient (works for all roles)
         function viewPatient(patientId) {
+            // Determine role from server-side session injected into the page
             const userRole = '<?php echo $_SESSION["user_role"] ?? ""; ?>';
             let viewUrl;
-            
-            switch(userRole) {
+
+            // Map roles to their respective patient view routes (use consistent ?id= query format)
+            switch (userRole) {
                 case 'doctor':
-                    viewUrl = `${window.BASE_PATH}/doctor/view_patient/${patientId}`;
+                    viewUrl = `${window.BASE_PATH}/doctor/view_patient?id=${patientId}`;
                     break;
                 case 'receptionist':
+                    viewUrl = `${window.BASE_PATH}/receptionist/view_patient?id=${patientId}`;
+                    break;
                 case 'admin':
-                    viewUrl = `${window.BASE_PATH}/doctor/view_patient?id=${patientId}`;
+                    viewUrl = `${window.BASE_PATH}/admin/view_patient?id=${patientId}`;
                     break;
                 default:
+                    // Fallback to doctor view if role is unknown
                     viewUrl = `${window.BASE_PATH}/doctor/view_patient?id=${patientId}`;
             }
-            
+
             window.location.href = viewUrl;
         }
 

@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: 127.0.0.1
--- Generation Time: Oct 18, 2025 at 07:15 AM
+-- Generation Time: Oct 20, 2025 at 09:18 AM
 -- Server version: 10.4.32-MariaDB
 -- PHP Version: 8.1.25
 
@@ -106,7 +106,9 @@ INSERT INTO `consultations` (`id`, `visit_id`, `patient_id`, `doctor_id`, `consu
 (3, 3, 3, 1, 1, 'new', NULL, NULL, NULL, NULL, NULL, NULL, 0, NULL, NULL, NULL, NULL, 'pending', NULL, NULL, NULL, '2025-10-11 11:12:44', '2025-10-11 11:12:44'),
 (4, 4, 4, 3, 1, 'new', 'kichwa', NULL, 'ubongo', '', '', NULL, 0, NULL, NULL, NULL, NULL, 'completed', NULL, '2025-10-17 08:04:05', '2025-10-17 08:04:05', '2025-10-17 08:02:10', '2025-10-17 08:04:05'),
 (5, 5, 5, 1, 1, 'new', NULL, NULL, NULL, NULL, NULL, NULL, 0, NULL, NULL, NULL, NULL, 'pending', NULL, NULL, NULL, '2025-10-17 08:35:54', '2025-10-17 08:35:54'),
-(6, 6, 6, 3, 1, 'new', 'kichwa', NULL, 'snfh', '', '', NULL, 0, NULL, NULL, NULL, NULL, 'completed', NULL, '2025-10-18 05:14:25', '2025-10-18 05:14:25', '2025-10-18 05:02:27', '2025-10-18 05:14:25');
+(6, 6, 6, 3, 1, 'new', 'kichwa', NULL, 'snfh', '', '', NULL, 0, NULL, NULL, NULL, NULL, 'completed', NULL, '2025-10-18 05:14:25', '2025-10-18 05:14:25', '2025-10-18 05:02:27', '2025-10-18 05:14:25'),
+(7, 7, 1, 1, 1, '', NULL, NULL, NULL, NULL, NULL, NULL, 0, NULL, NULL, NULL, NULL, 'pending', NULL, NULL, NULL, '2025-10-20 07:00:37', '2025-10-20 07:00:37'),
+(9, 9, 6, 1, 1, '', NULL, NULL, NULL, NULL, NULL, NULL, 0, NULL, NULL, NULL, NULL, 'pending', NULL, NULL, NULL, '2025-10-20 07:12:12', '2025-10-20 07:12:12');
 
 -- --------------------------------------------------------
 
@@ -473,12 +475,14 @@ CREATE TABLE `patient_visits` (
 --
 
 INSERT INTO `patient_visits` (`id`, `patient_id`, `visit_number`, `visit_date`, `visit_type`, `assigned_doctor_id`, `registered_by`, `status`, `completed_at`, `created_at`, `updated_at`) VALUES
-(1, 1, 0, '2025-10-11', 'consultation', NULL, 2, 'active', NULL, '2025-10-11 03:50:52', '2025-10-11 05:15:14'),
-(2, 2, 0, '2025-10-11', 'consultation', NULL, 2, 'active', NULL, '2025-10-11 06:04:10', '2025-10-11 06:09:42'),
-(3, 3, 0, '2025-10-11', 'consultation', NULL, 2, 'active', NULL, '2025-10-11 11:12:44', '2025-10-11 11:12:44'),
-(4, 4, 0, '2025-10-17', 'consultation', NULL, 2, 'active', NULL, '2025-10-17 08:02:10', '2025-10-17 08:05:15'),
-(5, 5, 0, '2025-10-17', 'consultation', NULL, 2, 'active', NULL, '2025-10-17 08:35:54', '2025-10-17 08:35:54'),
-(6, 6, 0, '2025-10-18', 'consultation', NULL, 2, 'active', NULL, '2025-10-18 05:02:27', '2025-10-18 05:14:25');
+(1, 1, 1, '2025-10-11', 'consultation', NULL, 2, 'active', NULL, '2025-10-11 03:50:52', '2025-10-20 06:40:16'),
+(2, 2, 1, '2025-10-11', 'consultation', NULL, 2, 'active', NULL, '2025-10-11 06:04:10', '2025-10-20 06:40:16'),
+(3, 3, 1, '2025-10-11', 'consultation', NULL, 2, 'active', NULL, '2025-10-11 11:12:44', '2025-10-20 06:40:16'),
+(4, 4, 1, '2025-10-17', 'consultation', NULL, 2, 'active', NULL, '2025-10-17 08:02:10', '2025-10-20 06:40:16'),
+(5, 5, 1, '2025-10-17', 'consultation', NULL, 2, 'active', NULL, '2025-10-17 08:35:54', '2025-10-20 06:40:16'),
+(6, 6, 1, '2025-10-18', 'consultation', NULL, 2, 'active', NULL, '2025-10-18 05:02:27', '2025-10-20 06:40:16'),
+(7, 1, 2, '2025-10-20', 'consultation', NULL, 2, 'active', NULL, '2025-10-20 07:00:37', '2025-10-20 07:00:37'),
+(9, 6, 2, '2025-10-20', 'consultation', NULL, 2, 'active', NULL, '2025-10-20 07:12:12', '2025-10-20 07:12:12');
 
 -- --------------------------------------------------------
 
@@ -513,7 +517,9 @@ INSERT INTO `payments` (`id`, `visit_id`, `patient_id`, `payment_type`, `item_id
 (4, 4, 4, 'registration', NULL, NULL, 3000.00, 'cash', 'paid', NULL, 2, '2025-10-17 08:02:10', 'Initial consultation payment'),
 (5, 4, 4, 'lab_test', 1, 'lab_order', 8000.00, 'cash', 'paid', '', 2, '2025-10-17 08:04:55', NULL),
 (6, 5, 5, 'registration', NULL, NULL, 3000.00, 'cash', 'paid', NULL, 2, '2025-10-17 08:35:54', 'Initial consultation payment'),
-(7, 6, 6, 'registration', NULL, NULL, 3000.00, 'cash', 'paid', NULL, 2, '2025-10-18 05:02:27', 'Initial consultation payment');
+(7, 6, 6, 'registration', NULL, NULL, 3000.00, 'cash', 'paid', NULL, 2, '2025-10-18 05:02:27', 'Initial consultation payment'),
+(8, 7, 1, 'registration', NULL, NULL, 3000.00, 'cash', 'paid', NULL, 2, '2025-10-20 07:00:37', 'Revisit payment - Visit #2'),
+(10, 9, 6, 'registration', NULL, NULL, 3000.00, 'cash', 'paid', NULL, 2, '2025-10-20 07:12:12', 'Revisit payment - Visit #2');
 
 -- --------------------------------------------------------
 
@@ -924,7 +930,7 @@ ALTER TABLE `vital_signs`
 -- AUTO_INCREMENT for table `consultations`
 --
 ALTER TABLE `consultations`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=7;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=10;
 
 --
 -- AUTO_INCREMENT for table `lab_results`
@@ -978,13 +984,13 @@ ALTER TABLE `patients`
 -- AUTO_INCREMENT for table `patient_visits`
 --
 ALTER TABLE `patient_visits`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=7;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=10;
 
 --
 -- AUTO_INCREMENT for table `payments`
 --
 ALTER TABLE `payments`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=8;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=11;
 
 --
 -- AUTO_INCREMENT for table `prescriptions`

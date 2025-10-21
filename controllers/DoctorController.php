@@ -316,11 +316,6 @@ class DoctorController extends BaseController {
         try {
             $this->pdo->beginTransaction();
 
-            // Debug logging
-            error_log("Consultation submission - Patient ID: $patient_id, Visit ID: $visit_id, Consultation ID: $consultation_id");
-            error_log("Selected tests: " . ($_POST['selected_tests'] ?? 'EMPTY'));
-            error_log("Selected medicines: " . ($_POST['selected_medicines'] ?? 'EMPTY'));
-
             // Update the consultation record with submitted data
             $stmt = $this->pdo->prepare("UPDATE consultations SET main_complaint = ?, on_examination = ?, diagnosis = ?, treatment_plan = ?, status = 'completed', completed_at = NOW(), updated_at = NOW() WHERE id = ?");
             $stmt->execute([
