@@ -78,6 +78,7 @@
                         <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
                             <button 
                                 data-test-id="<?php echo $result['id']; ?>"
+                                data-patient-id="<?php echo $result['patient_id']; ?>"
                                 data-patient-name="<?php echo htmlspecialchars($result['first_name'] . ' ' . $result['last_name']); ?>"
                                 data-test-name="<?php echo htmlspecialchars($result['test_name']); ?>"
                                 data-result-value="<?php echo htmlspecialchars($result['result_value'] ?? ''); ?>"
@@ -168,7 +169,11 @@
             
             <!-- Footer -->
             <div class="px-6 py-4 bg-gray-50 rounded-b-xl flex justify-end space-x-3">
-                <button type="button" id="closeModalBtn"
+              <button type="button" id="openPrescriptionBtn"
+                        class="px-4 py-2 bg-white border border-gray-300 rounded-lg text-gray-700 shadow-sm hover:bg-gray-50">
+                    Prescribe Medicine
+                </button>
+            <button type="button" id="closeModalBtn"
                         class="px-4 py-2 bg-white border border-gray-300 rounded-lg text-gray-700 shadow-sm hover:bg-gray-50">
                     Close
                 </button>
@@ -186,9 +191,6 @@
     <div class="fixed inset-0 bg-black bg-opacity-50 backdrop-blur-sm"></div>
     
     <div class="fixed inset-0 flex items-center justify-center p-4">
-        <!--
-            Centered modal box with reduced width and 100px left margin.
-        -->
         <div class="bg-white rounded-xl shadow-2xl transform transition-all w-full mx-4
                     md:min-w-[720px] lg:min-w-[880px] max-w-4xl min-h-[560px] overflow-y-auto"
              style="margin-left:100px;">
@@ -204,9 +206,10 @@
             </div>
             
             <!-- Body -->
-            <form id="prescriptionForm" method="POST" action="<?= $BASE_PATH ?>/doctor/prescribe_medicine">
+            <form id="prescriptionForm" method="POST" action="<?= $BASE_PATH ?>/doctor/prescribe_medicine" onsubmit="syncSelectedMedicinesFromDOM(); return validatePrescriptionForm();">
                 <input type="hidden" name="csrf_token" value="<?= $csrf_token ?>">
                 <input type="hidden" name="patient_id" id="prescriptionPatientId">
+                <input type="hidden" name="selected_medicines" id="selectedMedicinesJson" value="[]">
                 
                 <div class="px-6 py-4">
                     <div class="space-y-4">
@@ -214,18 +217,24 @@
                         <div>
                             <label class="block text-sm font-medium text-gray-700 mb-1">Search Medicine</label>
                             <div class="relative">
-                                <input type="text" id="medicineSearch" 
-                                    class="w-full rounded-lg border border-gray-300 px-4 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                                    placeholder="Type to search medicines...">
-                                <div id="medicineSearchResults" class="absolute z-10 w-full mt-1 bg-white shadow-lg rounded-lg border border-gray-200 hidden">
+                                <div class="flex">
+                                    <input type="text" id="medicineSearch" 
+                                           placeholder="Type to search medicines..."
+                                           autocomplete="off"
+                                           class="flex-1 px-3 py-2 border border-gray-300 rounded-l-md focus:outline-none focus:ring-2 focus:ring-green-500">
+                                    <button type="button" onclick="clearMedicineSearch()" id="clearMedicineSearch"
+                                            class="px-3 py-2 bg-gray-100 border border-l-0 border-gray-300 rounded-r-md hover:bg-gray-200 hidden">
+                                        <i class="fas fa-times"></i>
+                                    </button>
                                 </div>
+                                <div id="medicineResults" class="absolute z-10 w-full bg-white border border-gray-300 rounded-md mt-1 hidden max-h-60 overflow-y-auto shadow-lg"></div>
                             </div>
                         </div>
 
                         <!-- Selected Medicines -->
                         <div>
                             <label class="block text-sm font-medium text-gray-700 mb-1">Selected Medicines</label>
-                            <div id="selectedMedicines" class="space-y-2">
+                            <div id="selectedMedicinesList" class="space-y-2">
                                 <!-- Selected medicines will be added here dynamically -->
                             </div>
                         </div>
@@ -234,8 +243,8 @@
                         <div>
                             <label class="block text-sm font-medium text-gray-700 mb-1">Prescription Notes</label>
                             <textarea name="notes" rows="3" 
-                                class="w-full rounded-lg border border-gray-300 px-4 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                                placeholder="Enter prescription notes..."></textarea>
+                                    class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
+                                    placeholder="Additional instructions or notes about the prescription..."></textarea>
                         </div>
                     </div>
                 </div>
@@ -255,6 +264,339 @@
         </div>
     </div>
 </div>
+
+<script>
+// Initialize variables
+let selectedMedicines = [];
+
+// Form validation function
+function validatePrescriptionForm() {
+    // Get the currently selected medicines from the UI
+    const listDiv = document.getElementById('selectedMedicinesList');
+    const medicines = listDiv.querySelectorAll('div[data-medicine-id]');
+    
+    // Check if any medicines are selected
+    if (!medicines.length || selectedMedicines.length === 0) {
+        alert('Please select at least one medicine');
+        return false;
+    }
+
+    let validationPassed = true;
+    let medicineData = [];
+
+    medicines.forEach(div => {
+        const medicineId = parseInt(div.dataset.medicineId);
+        const medicine = selectedMedicines.find(m => m.id === medicineId);
+        if (!medicine) return;
+
+        const qtyInput = div.querySelector('input[name$="[quantity]"]');
+        const dosageInput = div.querySelector('input[name$="[dosage]"]');
+        const instrInput = div.querySelector('input[name$="[instructions]"]');
+
+        const qty = Number(qtyInput?.value);
+        const dosage = dosageInput?.value?.trim();
+        const instructions = instrInput?.value?.trim();
+
+        // Validate each field
+        if (isNaN(qty) || qty < 1) {
+            alert(`Please enter a valid quantity for ${medicine.name}`);
+            validationPassed = false;
+            return;
+        }
+
+        if (!dosage) {
+            alert(`Please specify dosage for ${medicine.name}`);
+            validationPassed = false;
+            return;
+        }
+
+        if (!instructions) {
+            alert(`Please specify instructions for ${medicine.name}`);
+            validationPassed = false;
+            return;
+        }
+
+        if (qty > medicine.stock_quantity) {
+            alert(`Cannot prescribe ${qty} units of ${medicine.name}. Only ${medicine.stock_quantity} available in stock.`);
+            validationPassed = false;
+            return;
+        }
+
+        // Add validated data
+        medicineData.push({
+            id: medicine.id,
+            name: medicine.name,
+            quantity: qty,
+            dosage: dosage,
+            instructions: instructions,
+            unit_price: medicine.unit_price
+        });
+    });
+
+    if (!validationPassed) {
+        return false;
+    }
+
+    // Update hidden input with validated data
+    document.getElementById('selectedMedicinesJson').value = JSON.stringify(medicineData);
+    return true;
+}
+
+// Sync selected medicines from DOM
+function syncSelectedMedicinesFromDOM() {
+    try {
+        const listDiv = document.getElementById('selectedMedicinesList');
+        if (!listDiv) return;
+
+        selectedMedicines = selectedMedicines.map(m => {
+            const div = Array.from(listDiv.querySelectorAll('div[data-medicine-id]')).find(d => d.dataset.medicineId == m.id);
+            if (!div) return m;
+
+            const qtyInput = div.querySelector('input[name$="[quantity]"]');
+            const dosageInput = div.querySelector('input[name$="[dosage]"]');
+            const instrInput = div.querySelector('input[name$="[instructions]"]');
+
+            return {
+                ...m,
+                quantity: qtyInput ? Number(qtyInput.value) : m.quantity,
+                dosage: dosageInput ? dosageInput.value : m.dosage,
+                instructions: instrInput ? instrInput.value : m.instructions
+            };
+        });
+    } catch (e) {
+        console.warn('syncSelectedMedicinesFromDOM failed', e);
+    }
+}
+
+// Medicine search event handler
+document.addEventListener('DOMContentLoaded', function() {
+    let medicineSearchTimeout;
+    const medicineSearchInput = document.getElementById('medicineSearch');
+    
+    if (medicineSearchInput) {
+        medicineSearchInput.addEventListener('input', function() {
+            clearTimeout(medicineSearchTimeout);
+            const query = this.value.trim();
+            
+            const clearBtn = document.getElementById('clearMedicineSearch');
+            if (query.length > 0) {
+                clearBtn.classList.remove('hidden');
+            } else {
+                clearBtn.classList.add('hidden');
+                document.getElementById('medicineResults').classList.add('hidden');
+                return;
+            }
+
+            if (query.length < 2) return;
+
+            medicineSearchTimeout = setTimeout(() => {
+                const url = `${window.location.origin}/KJ/doctor/search_medicines?q=${encodeURIComponent(query)}`;
+                fetch(url)
+                    .then(response => response.json())
+                    .then(medicines => {
+                        console.log('Medicines found:', medicines); // Debug log
+                        displayMedicineResults(medicines);
+                    })
+                    .catch(error => console.error('Error searching medicines:', error));
+            }, 300);
+        });
+
+        // Prevent form submission on enter in search field
+        medicineSearchInput.addEventListener('keydown', function(e) {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                return false;
+            }
+        });
+    }
+});
+
+// Display medicine search results
+function displayMedicineResults(medicines) {
+    console.log('Displaying medicines:', medicines); // Debug log
+    const resultsDiv = document.getElementById('medicineResults');
+    if (!resultsDiv) return;
+    
+    resultsDiv.innerHTML = '';
+
+    if (!Array.isArray(medicines) || medicines.length === 0) {
+        resultsDiv.innerHTML = '<div class="p-3 text-gray-500">No medicines found</div>';
+    } else {
+        medicines.forEach(medicine => {
+            const isSelected = selectedMedicines.some(selected => selected.id === medicine.id);
+            const div = document.createElement('div');
+            div.className = `p-3 hover:bg-gray-100 cursor-pointer border-b ${isSelected ? 'bg-green-50' : ''}`;
+            div.innerHTML = `
+                <div class="font-medium">${medicine.name || 'Unknown Medicine'}</div>
+                <div class="text-sm text-gray-600">${medicine.generic_name || ''} ${medicine.strength || ''} - Tsh ${parseFloat(medicine.unit_price || 0).toLocaleString('en-US')}</div>
+                <div class="text-xs text-gray-500">Stock: ${medicine.stock_quantity || 0} ${medicine.unit || 'units'}</div>
+            `;
+
+            if (!isSelected) {
+                div.addEventListener('click', () => {
+                    console.log('Medicine clicked:', medicine); // Debug log
+                    addMedicine(medicine);
+                });
+            }
+
+            resultsDiv.appendChild(div);
+        });
+    }
+
+    resultsDiv.classList.remove('hidden');
+}
+
+// Add medicine to selection
+function addMedicine(medicine) {
+    console.log('Adding medicine:', medicine); // Debug log
+    if (!selectedMedicines.some(selected => selected.id === medicine.id)) {
+        const newMedicine = {
+            ...medicine,
+            quantity: 1,
+            dosage: '',
+            instructions: ''
+        };
+        selectedMedicines.push(newMedicine);
+        console.log('Updated selectedMedicines:', selectedMedicines); // Debug log
+        
+        // Update both the UI and hidden input
+        updateSelectedMedicinesList();
+        document.getElementById('selectedMedicinesJson').value = JSON.stringify(selectedMedicines);
+        
+        // Clear search
+        document.getElementById('medicineResults').classList.add('hidden');
+        document.getElementById('medicineSearch').value = '';
+        document.getElementById('clearMedicineSearch').classList.add('hidden');
+        
+        // Focus on the quantity input of the newly added medicine
+        setTimeout(() => {
+            const newMedicineDiv = document.querySelector(`div[data-medicine-id="${medicine.id}"]`);
+            if (newMedicineDiv) {
+                const qtyInput = newMedicineDiv.querySelector('input[name$="[quantity]"]');
+                if (qtyInput) {
+                    qtyInput.focus();
+                }
+            }
+        }, 100);
+    }
+}
+
+// Remove medicine from selection
+function removeMedicine(medicineId) {
+    selectedMedicines = selectedMedicines.filter(medicine => medicine.id !== medicineId);
+    updateSelectedMedicinesList();
+}
+
+// Update medicine details
+function updateMedicineDetails(medicineId, field, value) {
+    const medicine = selectedMedicines.find(m => m.id === medicineId);
+    if (!medicine) return;
+
+    if (field === 'quantity') {
+        let quantity = parseInt(value, 10);
+        const stock = Number(medicine.stock_quantity);
+        if (isNaN(quantity) || quantity < 1) {
+            quantity = 1;
+        }
+        if (quantity > stock) {
+            alert(`Cannot prescribe more than available stock (${stock})`);
+            quantity = stock;
+        }
+        medicine[field] = quantity;
+    } else {
+        medicine[field] = value;
+    }
+}
+
+// Update the selected medicines list display
+function updateSelectedMedicinesList() {
+    const listDiv = document.getElementById('selectedMedicinesList');
+    listDiv.innerHTML = '';
+
+    if (selectedMedicines.length === 0) {
+        listDiv.innerHTML = '<div class="text-gray-500 text-sm">No medicines selected</div>';
+        return;
+    }
+
+    selectedMedicines.forEach(medicine => {
+        const div = document.createElement('div');
+        div.className = 'p-3 bg-white border rounded-md';
+        div.setAttribute('data-medicine-id', medicine.id);
+        div.innerHTML = `
+            <div class="flex justify-between items-start mb-2">
+                <div>
+                    <div class="font-medium">${medicine.name}</div>
+                    <div class="text-sm text-gray-600">${medicine.generic_name} ${medicine.strength} - Tsh ${parseFloat(medicine.unit_price).toLocaleString('en-US')}</div>
+                    <div class="text-xs text-gray-500">Available: ${medicine.stock_quantity} ${medicine.unit}</div>
+                </div>
+                <button type="button" onclick="removeMedicine(${medicine.id})" class="text-red-600 hover:text-red-800">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-2">
+                <div>
+                    <label class="block text-xs text-gray-600">Quantity</label>
+                    <input type="number" name="medicines[${medicine.id}][quantity]" 
+                           min="1" max="${medicine.stock_quantity}" value="${medicine.quantity}"
+                           class="w-full px-2 py-1 border border-gray-300 rounded text-sm"
+                           onchange="updateMedicineDetails(${medicine.id}, 'quantity', this.value)">
+                </div>
+                <div>
+                    <label class="block text-xs text-gray-600">Dosage</label>
+                    <input type="text" name="medicines[${medicine.id}][dosage]" 
+                           value="${medicine.dosage}"
+                           placeholder="e.g., 1 tablet"
+                           class="w-full px-2 py-1 border border-gray-300 rounded text-sm"
+                           onchange="updateMedicineDetails(${medicine.id}, 'dosage', this.value)">
+                </div>
+                <div>
+                    <label class="block text-xs text-gray-600">Instructions</label>
+                    <input type="text" name="medicines[${medicine.id}][instructions]" 
+                           value="${medicine.instructions}"
+                           placeholder="e.g., Take 3 times daily after meals"
+                           class="w-full px-2 py-1 border border-gray-300 rounded text-sm"
+                           onchange="updateMedicineDetails(${medicine.id}, 'instructions', this.value)">
+                </div>
+            </div>
+        `;
+        listDiv.appendChild(div);
+    });
+}
+
+// Clear medicine search
+function clearMedicineSearch() {
+    document.getElementById('medicineSearch').value = '';
+    document.getElementById('clearMedicineSearch').classList.add('hidden');
+    document.getElementById('medicineResults').classList.add('hidden');
+}
+
+// Close modal handlers
+document.getElementById('closePrescriptionModal').addEventListener('click', () => {
+    document.getElementById('prescriptionModal').classList.add('hidden');
+});
+
+document.getElementById('cancelPrescription').addEventListener('click', () => {
+    document.getElementById('prescriptionModal').classList.add('hidden');
+});
+
+// Hide search results when clicking outside
+document.addEventListener('click', function(e) {
+    if (!e.target.closest('#medicineSearch') && !e.target.closest('#medicineResults')) {
+        document.getElementById('medicineResults')?.classList.add('hidden');
+    }
+});
+
+// Event handler for prescribe buttons
+document.querySelectorAll('.prescribe-btn').forEach(button => {
+    button.addEventListener('click', function() {
+        const patientId = this.getAttribute('data-patient-id');
+        document.getElementById('prescriptionPatientId').value = patientId;
+        selectedMedicines = []; // Reset selected medicines
+        updateSelectedMedicinesList();
+        document.getElementById('prescriptionModal').classList.remove('hidden');
+    });
+});
+</script>
 
 <script>
 // Initialize the Details Modal functionality when the DOM is fully loaded
@@ -299,6 +641,12 @@ document.addEventListener('DOMContentLoaded', function() {
         // Show the modal
         testDetailsModal.classList.remove('hidden');
         document.body.classList.add('overflow-hidden');
+        // store patient id on the modal for other actions (e.g., open prescription)
+        if (testData.patientId) {
+            testDetailsModal.dataset.patientId = testData.patientId;
+        } else {
+            delete testDetailsModal.dataset.patientId;
+        }
         
         // Animate in
         setTimeout(() => {
@@ -318,6 +666,7 @@ document.addEventListener('DOMContentLoaded', function() {
         button.addEventListener('click', function() {
             const testData = {
                 testId: this.getAttribute('data-test-id'),
+                patientId: this.getAttribute('data-patient-id'),
                 patientName: this.getAttribute('data-patient-name'),
                 testName: this.getAttribute('data-test-name'),
                 resultValue: this.getAttribute('data-result-value'),
@@ -401,116 +750,26 @@ document.addEventListener('DOMContentLoaded', function() {
             printWindow.print();
         }, 500);
     });
-});
 
-document.addEventListener('DOMContentLoaded', function() {
-    const prescriptionModal = document.getElementById('prescriptionModal');
-    const prescribeButtons = document.querySelectorAll('.prescribe-btn');
-    const closePrescriptionModal = document.getElementById('closePrescriptionModal');
-    const cancelPrescription = document.getElementById('cancelPrescription');
-    const medicineSearch = document.getElementById('medicineSearch');
-    const medicineSearchResults = document.getElementById('medicineSearchResults');
-    const selectedMedicines = document.getElementById('selectedMedicines');
-    const prescriptionForm = document.getElementById('prescriptionForm');
-    
-    let searchTimeout;
-    
-    // Open prescription modal
-    prescribeButtons.forEach(button => {
-        button.addEventListener('click', function() {
-            const patientId = this.getAttribute('data-patient-id');
-            document.getElementById('prescriptionPatientId').value = patientId;
-            prescriptionModal.classList.remove('hidden');
-            document.body.classList.add('overflow-hidden');
+    // Open prescription modal from within the test details modal
+    const openPrescriptionBtn = document.getElementById('openPrescriptionBtn');
+    if (openPrescriptionBtn) {
+        openPrescriptionBtn.addEventListener('click', function() {
+            const pid = testDetailsModal.dataset.patientId;
+            if (!pid) {
+                alert('Patient not found for prescription');
+                return;
+            }
+            // Set patient id on prescription form and reset selection
+            const presPatientInput = document.getElementById('prescriptionPatientId');
+            if (presPatientInput) presPatientInput.value = pid;
+            selectedMedicines = [];
+            updateSelectedMedicinesList();
+
+            // Hide details modal and show prescription modal
+            testDetailsModal.classList.add('hidden');
+            document.getElementById('prescriptionModal').classList.remove('hidden');
         });
-    });
-    
-    // Close modal handlers
-    [closePrescriptionModal, cancelPrescription].forEach(button => {
-        button.addEventListener('click', () => {
-            prescriptionModal.classList.add('hidden');
-            document.body.classList.remove('overflow-hidden');
-        });
-    });
-    
-    // Medicine search handler
-    medicineSearch.addEventListener('input', function() {
-        clearTimeout(searchTimeout);
-        const query = this.value.trim();
-        
-        if (query.length < 2) {
-            medicineSearchResults.classList.add('hidden');
-            return;
-        }
-        
-        searchTimeout = setTimeout(() => {
-            fetch(`${BASE_PATH}/doctor/search_medicines?q=${encodeURIComponent(query)}`)
-                .then(response => response.json())
-                .then(medicines => {
-                    medicineSearchResults.innerHTML = '';
-                    
-                    medicines.forEach(medicine => {
-                        const div = document.createElement('div');
-                        div.className = 'p-2 hover:bg-gray-100 cursor-pointer';
-                        div.innerHTML = `
-                            <div class="font-medium">${medicine.name}</div>
-                            <div class="text-sm text-gray-600">Stock: ${medicine.stock_quantity}</div>
-                        `;
-                        div.addEventListener('click', () => selectMedicine(medicine));
-                        medicineSearchResults.appendChild(div);
-                    });
-                    
-                    medicineSearchResults.classList.remove('hidden');
-                });
-        }, 300);
-    });
-    
-    function selectMedicine(medicine) {
-        const medicineId = `medicine-${medicine.id}`;
-        
-        if (!document.getElementById(medicineId)) {
-            const div = document.createElement('div');
-            div.id = medicineId;
-            div.className = 'bg-gray-50 rounded-lg p-3 border border-gray-200';
-            div.innerHTML = `
-                <div class="flex items-center justify-between">
-                    <div>
-                        <div class="font-medium">${medicine.name}</div>
-                        <div class="text-sm text-gray-600">Available: ${medicine.stock_quantity}</div>
-                    </div>
-                    <button type="button" class="text-red-600 hover:text-red-800">
-                        <i class="fas fa-times"></i>
-                    </button>
-                </div>
-                <div class="mt-2 grid grid-cols-2 gap-2">
-                    <input type="number" name="medicines[${medicine.id}][quantity]" 
-                           class="rounded border-gray-300" placeholder="Quantity" min="1" max="${medicine.stock_quantity}">
-                    <input type="text" name="medicines[${medicine.id}][dosage]" 
-                           class="rounded border-gray-300" placeholder="Dosage">
-                </div>
-            `;
-            
-            div.querySelector('button').addEventListener('click', () => div.remove());
-            selectedMedicines.appendChild(div);
-        }
-        
-        medicineSearch.value = '';
-        medicineSearchResults.classList.add('hidden');
     }
-    
-    // Form submission handler
-    prescriptionForm.addEventListener('submit', function(e) {
-        e.preventDefault();
-        
-        // Validate form
-        const selectedMeds = document.querySelectorAll('[name^="medicines["]');
-        if (selectedMeds.length === 0) {
-            alert('Please select at least one medicine');
-            return;
-        }
-        
-        // Submit form
-        this.submit();
-    });
 });
 </script>

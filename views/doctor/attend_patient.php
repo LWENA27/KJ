@@ -16,8 +16,8 @@
         <div class="mb-6">
             <div class="flex items-center justify-between">
                 <h1 class="text-3xl font-bold text-gray-900">Patient Consultation</h1>
-                     <a href="<?php echo htmlspecialchars($BASE_PATH); ?>/doctor/view_patient/<?php echo $patient['id']; ?>" 
-                         class="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-md">
+                <a href="/KJ/doctor/view_patient/<?php echo $patient['id']; ?>" 
+                   class="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-md">
                     <i class="fas fa-arrow-left mr-2"></i>Back to Patient Record
                 </a>
             </div>
@@ -43,7 +43,7 @@
 
         <!-- Main Consultation Form -->
         <div class="bg-white rounded-lg shadow">
-        <form id="attendForm" method="POST" action="<?php echo htmlspecialchars($BASE_PATH); ?>/doctor/start_consultation" 
+            <form id="attendForm" method="POST" action="/KJ/doctor/start_consultation" 
                   onsubmit="console.log('🚀 FORM SUBMITTING NOW...'); return validateConsultationForm();" class="p-6 space-y-6">
                 
                 <input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars($csrf_token); ?>">

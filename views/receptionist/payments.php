@@ -4,6 +4,11 @@
 <style>
     /* Keep the amount-paid panel hidden regardless of JS changes */
     #modal_amount_paid_container { display: none !important; }
+
+    /* Ensure the payment modal overlays the page header and other content */
+    #paymentModal { z-index: 99999 !important; }
+    /* Ensure the modal dialog content creates its own stacking context above overlay */
+    #paymentModal > .bg-white { position: relative; z-index: 100000; }
 </style>
 
 <div class="max-w-7xl mx-auto">

@@ -480,6 +480,9 @@
 
 <!-- JavaScript for Enhanced Functionality -->
 <script>
+// Lab orders data for real-time updates
+const labOrders = <?php echo json_encode($lab_orders ?? []); ?>;
+
 // Medical form modal functionality
 function viewMedicalForm(consultationId, visitIndex) {
     showToast(`Loading medical form for Visit ${visitIndex + 1}...`, 'info');
@@ -587,6 +590,28 @@ function generateMedicalForm(consultationId, visitIndex) {
                     </div>
                 </div>
             </div>
+
+            ${labOrders && labOrders.length > 0 ? `
+            <!-- Requested Lab Tests Summary -->
+            <div class="mb-4 border border-blue-400 bg-blue-50 p-3">
+                <h4 class="font-bold mb-2 text-blue-800">Lab Tests Requested for This Visit:</h4>
+                <div class="grid grid-cols-3 gap-2 text-xs">
+                    ${labOrders.map(order => `
+                        <div class="flex items-center">
+                            ${order.result_completed_at ? 
+                                `<input type="checkbox" checked disabled class="mr-2">
+                                <span class="text-green-700 font-semibold">${order.test_name}</span>` :
+                                order.status === 'in_progress' ?
+                                `<input type="checkbox" disabled class="mr-2">
+                                <span class="text-blue-600">${order.test_name} (In Progress)</span>` :
+                                `<input type="checkbox" disabled class="mr-2">
+                                <span class="text-gray-600">${order.test_name} (Pending)</span>`
+                            }
+                        </div>
+                    `).join('')}
+                </div>
+            </div>
+            ` : ''}
 
             <!-- Note: Full medical form template would continue here -->
             <div class="text-center text-gray-500 py-8">

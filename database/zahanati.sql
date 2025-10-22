@@ -460,7 +460,7 @@ CREATE TABLE `patient_visits` (
   `id` int(11) NOT NULL,
   `patient_id` int(11) NOT NULL,
   `visit_number` int(11) NOT NULL COMMENT 'Sequential visit number for this patient',
-  `visit_date` date NOT NULL DEFAULT curdate(),
+  `visit_date` date NOT NULL,
   `visit_type` enum('consultation','lab_only','minor_service') NOT NULL,
   `assigned_doctor_id` int(11) DEFAULT NULL COMMENT 'Future: pre-assigned doctor',
   `registered_by` int(11) NOT NULL,

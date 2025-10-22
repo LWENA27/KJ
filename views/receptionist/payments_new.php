@@ -282,8 +282,8 @@
 </div>
 
 <!-- Payment Recording Modal -->
-<div id="paymentModal" class="fixed inset-0 bg-black bg-opacity-50 hidden items-center justify-center z-50">
-    <div class="bg-white rounded-lg shadow-xl max-w-md w-full m-4 transform transition-all">
+<div id="paymentModal" class="fixed inset-0 bg-black bg-opacity-50 hidden items-center justify-center" style="z-index:2147483646;">
+    <div class="bg-white rounded-lg shadow-xl max-w-md w-full m-4 transform transition-all" style="z-index:2147483647;">
         <div class="bg-gradient-to-r from-purple-600 to-indigo-600 px-6 py-4 rounded-t-lg">
             <h3 class="text-xl font-bold text-white flex items-center">
                 <i class="fas fa-cash-register mr-3"></i>
@@ -373,6 +373,15 @@ function openPaymentModal(patientId, visitId, paymentType, amount, patientName) 
     document.getElementById('modal_amount_display').textContent = 'Tsh ' + parseFloat(amount).toLocaleString('en-US');
     
     const modal = document.getElementById('paymentModal');
+
+    // Move modal to document.body to escape any stacking-context created by parent containers
+    if (modal.parentNode !== document.body) {
+        modal.__originalParent = modal.parentNode;
+        modal.__originalNextSibling = modal.nextSibling;
+        document.body.appendChild(modal);
+    }
+
+    // Ensure modal is visible and uses flex to center
     modal.classList.remove('hidden');
     modal.classList.add('flex');
 }
@@ -384,6 +393,17 @@ function closePaymentModal() {
     
     // Reset form
     document.getElementById('paymentForm').reset();
+
+    // If modal was moved to body, restore it to its original place in the DOM
+    if (modal.__originalParent) {
+        if (modal.__originalNextSibling) {
+            modal.__originalParent.insertBefore(modal, modal.__originalNextSibling);
+        } else {
+            modal.__originalParent.appendChild(modal);
+        }
+        delete modal.__originalParent;
+        delete modal.__originalNextSibling;
+    }
 }
 
 // Close modal on ESC key

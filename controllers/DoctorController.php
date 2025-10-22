@@ -238,10 +238,23 @@ class DoctorController extends BaseController {
         $stmt->execute([$patient_id]);
         $vital_signs = $stmt->fetch();
 
+        // Get lab test orders for this patient (for real-time medical record updates)
+        $stmt = $this->pdo->prepare("
+            SELECT lto.*, lt.test_name, lt.test_code, lr.result_value, lr.result_text, lr.completed_at as result_completed_at
+            FROM lab_test_orders lto
+            JOIN lab_tests lt ON lto.test_id = lt.id
+            LEFT JOIN lab_results lr ON lto.id = lr.order_id
+            WHERE lto.patient_id = ?
+            ORDER BY lto.created_at DESC
+        ");
+        $stmt->execute([$patient_id]);
+        $lab_orders = $stmt->fetchAll();
+
         $this->render('doctor/view_patient', [
             'patient' => $patient,
             'consultations' => $consultations,
             'vital_signs' => $vital_signs,
+            'lab_orders' => $lab_orders,
             'csrf_token' => $this->generateCSRF()
         ]);
     }
@@ -339,8 +352,8 @@ class DoctorController extends BaseController {
                     // Create lab test orders for each selected test
                     $stmtOrder = $this->pdo->prepare("
                         INSERT INTO lab_test_orders 
-                        (visit_id, patient_id, consultation_id, test_id, ordered_by, assigned_to, status, created_at) 
-                        VALUES (?, ?, ?, ?, ?, ?, 'pending', NOW())
+                        (visit_id, patient_id, consultation_id, test_id, ordered_by, assigned_to, priority, status, created_at) 
+                        VALUES (?, ?, ?, ?, ?, ?, 'normal', 'pending', NOW())
                     ");
                     
                     foreach ($selected_tests as $test_id) {
@@ -390,19 +403,30 @@ class DoctorController extends BaseController {
                 }
             }
 
-            // Final workflow update
-            if (empty($_POST['selected_tests']) && empty($_POST['selected_medicines'])) {
+            // Final workflow update and determine where to redirect
+            $has_lab_tests = !empty($_POST['selected_tests']);
+            $has_medicines = !empty($_POST['selected_medicines']);
+            
+            if (!$has_lab_tests && !$has_medicines) {
                 $this->updateWorkflowStatus($patient_id, 'completed');
             }
 
             $this->pdo->commit();
-            $_SESSION['success'] = 'Consultation completed successfully';
+            
+            // Redirect based on what was ordered
+            if ($has_lab_tests || $has_medicines) {
+                $_SESSION['success'] = 'Consultation completed successfully. Patient needs to make payment for lab tests/medicines.';
+                // Redirect to receptionist payments page so receptionist can process payment
+                $this->redirect('receptionist/payments');
+            } else {
+                $_SESSION['success'] = 'Consultation completed successfully';
+                $this->redirect('doctor/view_patient/' . $patient_id);
+            }
         } catch (Exception $e) {
             $this->pdo->rollBack();
             $_SESSION['error'] = 'Failed to complete consultation: ' . $e->getMessage();
+            $this->redirect('doctor/view_patient/' . $patient_id);
         }
-
-        $this->redirect('doctor/view_patient/' . $patient_id);
     }
 
     public function patient_journey($patient_id = null) {
@@ -915,69 +939,137 @@ class DoctorController extends BaseController {
         ]);
     }
 
-    public function prescribe_medicine() {
-        if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
-            $this->redirect('doctor/lab_results');
-            return;
+public function prescribe_medicine() {
+    if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+        $this->redirect('doctor/lab_results');
+        return;
+    }
+
+    $this->validateCSRF();
+    
+    $patient_id = filter_input(INPUT_POST, 'patient_id', FILTER_VALIDATE_INT);
+    
+    // FIXED: Check for 'selected_medicines' not 'medicines'
+    $medicines_json = $_POST['selected_medicines'] ?? '';
+    try {
+        $this->pdo->beginTransaction();
+
+        // Get latest visit
+        $stmt = $this->pdo->prepare("SELECT id FROM patient_visits WHERE patient_id = ? ORDER BY created_at DESC LIMIT 1");
+        $stmt->execute([$patient_id]);
+        $visit = $stmt->fetch();
+
+        if (!$visit) {
+            throw new Exception('No active visit found for patient');
         }
 
-        $this->validateCSRF();
-        
-        $patient_id = filter_input(INPUT_POST, 'patient_id', FILTER_VALIDATE_INT);
-        $medicines = $_POST['medicines'] ?? [];
-        $notes = trim($_POST['notes'] ?? '');
+        $visit_id = $visit['id'];
 
-        if (!$patient_id || empty($medicines)) {
-            $_SESSION['error'] = 'Invalid request - missing required fields';
-            $this->redirect('doctor/lab_results');
-            return;
+        // Try to find a consultation for this patient assigned to this doctor
+        $stmt = $this->pdo->prepare("SELECT id FROM consultations WHERE patient_id = ? AND doctor_id = ? AND status IN ('in_progress', 'completed') ORDER BY created_at DESC LIMIT 1");
+        $stmt->execute([$patient_id, $_SESSION['user_id']]);
+        $consultation = $stmt->fetch();
+
+        // If no consultation found for this doctor, try any consultation for patient
+        if (!$consultation) {
+            $stmtAny = $this->pdo->prepare("SELECT id FROM consultations WHERE patient_id = ? ORDER BY created_at DESC LIMIT 1");
+            $stmtAny->execute([$patient_id]);
+            $consultation_any = $stmtAny->fetch();
+            if ($consultation_any) {
+                $consultation_id = $consultation_any['id'];
+            } else {
+                // create a minimal consultation so we can attach prescriptions
+                $createStmt = $this->pdo->prepare("INSERT INTO consultations (patient_id, doctor_id, status, created_at) VALUES (?, ?, 'completed', NOW())");
+                $createStmt->execute([$patient_id, $_SESSION['user_id']]);
+                $consultation_id = $this->pdo->lastInsertId();
+            }
+        } else {
+            $consultation_id = $consultation['id'];
         }
 
-        try {
-            $this->pdo->beginTransaction();
+        // Server-side validation for medicines data (dosage/instructions length checks)
+        foreach ($medicines as $m) {
+            if (empty($m['id']) || !is_numeric($m['id'])) {
+                throw new Exception('Invalid medicine id provided');
+            }
+            $qty = intval($m['quantity'] ?? 1);
+            if ($qty < 1) {
+                throw new Exception('Invalid medicine quantity');
+            }
+            $dosage = trim($m['dosage'] ?? '');
+            $instr = trim($m['instructions'] ?? $notes);
+            if ($dosage === '' || $instr === '') {
+                throw new Exception('Dosage and instructions are required for each medicine');
+            }
+            if (strlen($dosage) > 200 || strlen($instr) > 500) {
+                throw new Exception('Dosage or instructions too long');
+            }
+        }
 
-            // Get latest visit and consultation
-            $stmt = $this->pdo->prepare("SELECT id FROM patient_visits WHERE patient_id = ? ORDER BY created_at DESC LIMIT 1");
-            $stmt->execute([$patient_id]);
-            $visit = $stmt->fetch();
-            
-            if (!$visit) {
-                throw new Exception('No active visit found for patient');
+        // Check stock and compute total using row-level locking to avoid races
+        $total_medicine_cost = 0;
+        $priceStmt = $this->pdo->prepare("SELECT id, unit_price, COALESCE((SELECT SUM(quantity_remaining) FROM medicine_batches mb WHERE mb.medicine_id = m.id AND mb.status = 'active'),0) AS stock_quantity FROM medicines m WHERE id = ? FOR UPDATE");
+
+        foreach ($medicines as $medicine_data) {
+            $medicine_id = intval($medicine_data['id']);
+            $quantity = intval($medicine_data['quantity'] ?? 1);
+
+            $priceStmt->execute([$medicine_id]);
+            $medicineRow = $priceStmt->fetch();
+            if (!$medicineRow) {
+                throw new Exception('Medicine not found: ' . $medicine_id);
             }
 
-            $visit_id = $visit['id'];
-
-            // Create prescriptions for each medicine
-            $stmt = $this->pdo->prepare("
-                INSERT INTO prescriptions 
-                (visit_id, patient_id, doctor_id, medicine_id, quantity_prescribed, dosage, notes, status, created_at)
-                VALUES (?, ?, ?, ?, ?, ?, ?, 'pending', NOW())
-            ");
-
-            foreach ($medicines as $medicine_id => $data) {
-                $stmt->execute([
-                    $visit_id,
-                    $patient_id, 
-                    $_SESSION['user_id'],
-                    $medicine_id,
-                    $data['quantity'],
-                    $data['dosage'],
-                    $notes
-                ]);
+            $stock = intval($medicineRow['stock_quantity'] ?? 0);
+            if ($quantity > $stock) {
+                throw new Exception('Insufficient stock for medicine id ' . $medicine_id);
             }
 
-            // Update workflow status
-            $this->updateWorkflowStatus($patient_id, 'medicine_dispensing');
-
-            $this->pdo->commit();
-            $_SESSION['success'] = 'Prescription created successfully';
-
-        } catch (Exception $e) {
-            $this->pdo->rollBack();
-            $_SESSION['error'] = 'Failed to create prescription: ' . $e->getMessage();
+            $unit_price = floatval($medicineRow['unit_price'] ?? 0);
+            $total_medicine_cost += $unit_price * $quantity;
         }
 
+        // Create payment record for medicines (pending)
+        if ($total_medicine_cost > 0) {
+            $paymentStmt = $this->pdo->prepare("INSERT INTO payments (visit_id, patient_id, payment_type, amount, payment_method, payment_status, created_at) VALUES (?, ?, 'medicine', ?, 'cash', 'pending', NOW())");
+            $paymentStmt->execute([
+                $visit_id,
+                $patient_id,
+                $total_medicine_cost
+            ]);
+        }
+
+        // Insert prescriptions (stock reduction happens on dispensing)
+        $insStmt = $this->pdo->prepare("INSERT INTO prescriptions (consultation_id, visit_id, patient_id, doctor_id, medicine_id, quantity_prescribed, dosage, frequency, duration, instructions, status, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending', NOW())");
+
+        foreach ($medicines as $medicine_data) {
+            $insStmt->execute([
+                $consultation_id,
+                $visit_id,
+                $patient_id,
+                $_SESSION['user_id'],
+                intval($medicine_data['id']),
+                intval($medicine_data['quantity'] ?? 1),
+                $medicine_data['dosage'] ?? '',
+                $medicine_data['frequency'] ?? 'as prescribed',
+                $medicine_data['duration'] ?? '',
+                $medicine_data['instructions'] ?? $notes
+            ]);
+        }
+
+        // Update workflow status to pending_payment
+        $this->updateWorkflowStatus($patient_id, 'pending_payment', ['medicine_prescribed' => true]);
+
+        $this->pdo->commit();
+
+        $_SESSION['success'] = 'Medicine prescribed successfully. Patient needs to make payment.';
+        $this->redirect('receptionist/payments');
+
+    } catch (Exception $e) {
+        $this->pdo->rollBack();
+        $_SESSION['error'] = 'Failed to create prescription: ' . $e->getMessage();
         $this->redirect('doctor/lab_results');
     }
+}
 }
 ?>

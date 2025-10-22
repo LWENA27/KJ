@@ -11,21 +11,41 @@ class LabController extends BaseController {
     public function dashboard() {
     $technician_id = $_SESSION['user_id'];
 
-    // Fetch patients ready for lab testing (compatible with both technician-assigned lab_results and patient-level lab visits)
+    // Fetch pending lab test orders (tests that need to be performed)
+    // Show all pending orders, not just those assigned to this technician
     $stmt = $this->pdo->prepare("
-        SELECT lr.*, lto.id as order_id, lto.status as order_status, lto.created_at, lt.test_name as test_name, lt.test_code as test_code, lt.category_id as category, p.first_name, p.last_name,
-               COALESCE(c.follow_up_date, pv.visit_date, DATE(c.created_at)) as appointment_date
-        FROM lab_results lr
-        JOIN lab_test_orders lto ON lr.order_id = lto.id
-        JOIN lab_tests lt ON lr.test_id = lt.id
-        JOIN consultations c ON lto.consultation_id = c.id
-        JOIN patients p ON c.patient_id = p.id
-        LEFT JOIN patient_visits pv ON c.visit_id = pv.id
-        WHERE (lr.technician_id = ? OR lr.technician_id IS NULL)
-          AND lto.status = 'pending'
-        ORDER BY lto.created_at ASC
+        SELECT 
+            lto.id, 
+            lto.id as order_id, 
+            lto.status as order_status, 
+            lto.created_at, 
+            lto.patient_id,
+            lto.priority,
+            lt.id as test_id,
+            lt.test_name, 
+            lt.test_code, 
+            lt.category_id as category, 
+            p.first_name, 
+            p.last_name,
+            p.registration_number,
+            pv.visit_date as appointment_date,
+            lr.id as result_id,
+            lr.completed_at
+        FROM lab_test_orders lto
+        JOIN lab_tests lt ON lto.test_id = lt.id
+        JOIN patients p ON lto.patient_id = p.id
+        LEFT JOIN patient_visits pv ON lto.visit_id = pv.id
+        LEFT JOIN lab_results lr ON lto.id = lr.order_id
+        WHERE lto.status IN ('pending', 'sample_collected', 'in_progress')
+        ORDER BY 
+            CASE 
+                WHEN lto.priority = 'urgent' THEN 1
+                WHEN lto.priority = 'high' THEN 2
+                ELSE 3
+            END,
+            lto.created_at ASC
     ");
-    $stmt->execute([$technician_id]);
+    $stmt->execute();
     $pending_tests = $stmt->fetchAll();
 
     // Today's completed tests

@@ -163,6 +163,7 @@ class ReceptionistController extends BaseController
             $visit_type = $post['visit_type'] ?? 'consultation';
             $consultation_fee = $post['consultation_fee'] ?? null;
             $payment_method = $post['payment_method'] ?? null;
+            $payment_method_lab = $post['payment_method_lab'] ?? null;
             $first_name = $post['first_name'] ?? null;
             $last_name = $post['last_name'] ?? null;
             $date_of_birth = $post['date_of_birth'] ?? null;
@@ -179,15 +180,26 @@ class ReceptionistController extends BaseController
             $height = $post['height'] ?? null;
 
             try {
-                $this->pdo->beginTransaction();
-
                 // Only process payment for consultation visits by default
                 if ($visit_type === 'consultation') {
                     // Validate consultation payment
                     if (empty($consultation_fee) || empty($payment_method)) {
                         throw new Exception('Consultation fee and payment method are required');
                     }
+
+                    // Require basic vital signs for consultation registrations
+                    // Expect blood_pressure in the form "systolic/diastolic"
+                    $bp_ok = !empty($blood_pressure) && is_string($blood_pressure) && strpos($blood_pressure, '/') !== false;
+                    if (empty($temperature) || !$bp_ok || empty($pulse_rate)) {
+                        throw new Exception('Temperature, blood pressure (systolic/diastolic) and pulse rate are required for consultation registration');
+                    }
+                    // Basic numeric validation
+                    if (!is_numeric($temperature) || !is_numeric($pulse_rate)) {
+                        throw new Exception('Temperature and pulse rate must be numeric');
+                    }
                 }
+
+                $this->pdo->beginTransaction();
 
                 // Insert patient basic info (only core fields that exist in all schemas)
                 $stmt = $this->pdo->prepare("
@@ -285,7 +297,7 @@ class ReceptionistController extends BaseController
                         }
 
                         // If a payment method and amount provided, record lab test payment
-                        $lab_payment_method = $post['payment_method'] ?? null;
+                        $lab_payment_method = $payment_method_lab;
                         $lab_payment_amount = $post['lab_total_amount'] ?? null;
                         if (empty($lab_payment_amount)) {
                             // If not explicitly provided, use the calculated total
@@ -341,7 +353,29 @@ class ReceptionistController extends BaseController
 
                 $this->pdo->commit();
                 $_SESSION['success'] = "Patient registered successfully! Registration Number: $registration_number";
-                $this->redirect('receptionist/patients');
+
+                // If no payment was recorded for this registration, redirect to payments page for processing
+                $payment_recorded = false;
+                if ($visit_type === 'consultation' && !empty($consultation_fee) && !empty($payment_method)) {
+                    $payment_recorded = true;
+                } else if ($visit_type === 'lab_test') {
+                    $selected_tests = $_POST['selected_tests'] ?? [];
+                    if (!is_array($selected_tests)) {
+                        $selected_tests = array_filter(array_map('trim', explode(',', (string)$selected_tests)));
+                    }
+                    $lab_payment_method = $post['payment_method_lab'] ?? null;
+                    $lab_payment_amount = $post['lab_total_amount'] ?? null;
+                    if (!empty($selected_tests) && !empty($lab_payment_method) && !empty($lab_payment_amount)) {
+                        $payment_recorded = true;
+                    }
+                }
+
+                if (!$payment_recorded) {
+                    // Redirect to payments page for receptionist to process payment
+                    $this->redirect('receptionist/payments');
+                } else {
+                    $this->redirect('receptionist/patients');
+                }
             } catch (Exception $e) {
                 $this->pdo->rollBack();
                 $_SESSION['error'] = 'Registration failed: ' . $e->getMessage();
@@ -414,10 +448,10 @@ class ReceptionistController extends BaseController
         $payments = $stmt->fetchAll();
 
         // Get pending lab test payments (tests ordered but not paid)
-        // This query needs to be more robust to calculate remaining amount
+        // Group by visit to show all tests for a patient together
         $stmt = $this->pdo->prepare("
             SELECT 
-                lto.id AS order_id,
+                MIN(lto.id) AS order_id,
                 lto.visit_id,
                 lto.patient_id,
                 p.first_name,
@@ -427,20 +461,21 @@ class ReceptionistController extends BaseController
                 GROUP_CONCAT(lt.test_name SEPARATOR ', ') AS test_names,
                 SUM(lt.price) AS total_amount,
                 COALESCE(SUM(pay.amount), 0) AS amount_already_paid,
-                (SUM(lt.price) - COALESCE(SUM(pay.amount), 0)) AS remaining_amount_to_pay
+                (SUM(lt.price) - COALESCE(SUM(pay.amount), 0)) AS remaining_amount_to_pay,
+                COUNT(lto.id) as test_count,
+                MAX(lto.created_at) AS last_order_created
             FROM lab_test_orders lto
             JOIN lab_tests lt ON lto.test_id = lt.id  
             JOIN patients p ON lto.patient_id = p.id
-            JOIN patient_visits pv ON lto.visit_id = pv.id
+            LEFT JOIN patient_visits pv ON lto.visit_id = pv.id
             LEFT JOIN payments pay ON lto.visit_id = pay.visit_id 
                                   AND lto.patient_id = pay.patient_id 
-                                  AND pay.item_type = 'lab_order' 
-                                  AND pay.item_id = lto.id
+                                  AND pay.payment_type = 'lab_test'
                                   AND pay.payment_status = 'paid'
-            WHERE lto.status = 'pending_payment' -- Assuming 'pending_payment' status for lab orders
-            GROUP BY lto.id, lto.visit_id, lto.patient_id, p.first_name, p.last_name, p.registration_number, pv.visit_date
+            WHERE lto.status = 'pending'
+            GROUP BY lto.visit_id, lto.patient_id, p.first_name, p.last_name, p.registration_number, pv.visit_date
             HAVING remaining_amount_to_pay > 0
-            ORDER BY lto.created_at DESC
+            ORDER BY pv.visit_date DESC, last_order_created DESC
         ");
         $stmt->execute();
         $pending_lab_payments = $stmt->fetchAll();
@@ -456,7 +491,7 @@ class ReceptionistController extends BaseController
                 p.last_name,
                 p.registration_number,
                 pv.visit_date,
-                GROUP_CONCAT(m.name || ' (' || pr.quantity_prescribed || ' ' || m.unit || ')' SEPARATOR ', ') AS medicine_names,
+                GROUP_CONCAT(CONCAT(m.name, ' (', pr.quantity_prescribed, ' ', m.unit, ')') SEPARATOR ', ') AS medicine_names,
                 SUM(pr.quantity_prescribed * m.unit_price) AS total_cost_of_prescription,
                 COALESCE(SUM(pay.amount), 0) AS amount_already_paid,
                 (SUM(pr.quantity_prescribed * m.unit_price) - COALESCE(SUM(pay.amount), 0)) AS remaining_amount_to_pay
@@ -513,26 +548,94 @@ class ReceptionistController extends BaseController
 
         // Build final query
         $where_sql = implode(' AND ', $where_clauses);
-        
-        $stmt = $this->pdo->prepare("
-            SELECT p.*, 
-                   CONCAT(pt.first_name, ' ', pt.last_name) as patient_name,
-                   pv.visit_date
-            FROM payments p
-            JOIN patients pt ON p.patient_id = pt.id
-            LEFT JOIN patient_visits pv ON p.visit_id = pv.id
-            WHERE $where_sql
-            ORDER BY p.payment_date DESC
-        ");
-        
+
+        // Check if caller asked for grouped view (by visit or by date)
+        $group_by = $_GET['group_by'] ?? '';
+
+        // If filtering by visit_id directly (from group links), add clause
+        if (!empty($_GET['visit_id'])) {
+            $where_clauses[] = 'p.visit_id = ?';
+            $params[] = $_GET['visit_id'];
+            $where_sql = implode(' AND ', $where_clauses);
+        }
+
+        if ($group_by === 'visit') {
+            // Group payments by visit (per patient visit)
+            $group_params = [];
+            $group_where = "payments.payment_status = 'paid'";
+            if (!empty($_GET['search'])) {
+                $group_where .= " AND (patients.first_name LIKE ? OR patients.last_name LIKE ? )";
+                $sterm = '%' . $_GET['search'] . '%';
+                $group_params[] = $sterm;
+                $group_params[] = $sterm;
+            }
+            if (!empty($_GET['payment_type'])) {
+                $group_where .= " AND payments.payment_type = ?";
+                $group_params[] = $_GET['payment_type'];
+            }
+            if (!empty($_GET['payment_method'])) {
+                $group_where .= " AND payments.payment_method = ?";
+                $group_params[] = $_GET['payment_method'];
+            }
+
+            $stmt = $this->pdo->prepare("\n                SELECT pv.id AS visit_id,\n                       pv.visit_date,\n                       patients.id AS patient_id,\n                       CONCAT(patients.first_name, ' ', patients.last_name) AS patient_name,\n                       SUM(payments.amount) AS total_paid,\n                       COUNT(payments.id) AS payments_count\n                FROM payments\n                JOIN patient_visits pv ON payments.visit_id = pv.id\n                JOIN patients ON payments.patient_id = patients.id\n                WHERE $group_where\n                GROUP BY pv.id, patients.id, pv.visit_date, patients.first_name, patients.last_name\n                ORDER BY pv.visit_date DESC\n            ");
+            $stmt->execute($group_params);
+            $grouped_results = $stmt->fetchAll();
+
+            $this->render('receptionist/payment_history', [
+                'group_by' => 'visit',
+                'grouped_results' => $grouped_results,
+                'payments' => [],
+                'sidebar_data' => $this->getSidebarData(),
+                'csrf_token' => $this->generateCSRF()
+            ]);
+            return;
+        } elseif ($group_by === 'date') {
+            // Group payments by payment date (per patient)
+            $group_params = [];
+            $group_where = "payments.payment_status = 'paid'";
+            if (!empty($_GET['search'])) {
+                $group_where .= " AND (patients.first_name LIKE ? OR patients.last_name LIKE ? )";
+                $sterm = '%' . $_GET['search'] . '%';
+                $group_params[] = $sterm;
+                $group_params[] = $sterm;
+            }
+            if (!empty($_GET['payment_type'])) {
+                $group_where .= " AND payments.payment_type = ?";
+                $group_params[] = $_GET['payment_type'];
+            }
+            if (!empty($_GET['payment_method'])) {
+                $group_where .= " AND payments.payment_method = ?";
+                $group_params[] = $_GET['payment_method'];
+            }
+
+            $stmt = $this->pdo->prepare("\n                SELECT DATE(payments.payment_date) AS payment_date,\n                       patients.id AS patient_id,\n                       CONCAT(patients.first_name, ' ', patients.last_name) AS patient_name,\n                       SUM(payments.amount) AS total_paid,\n                       COUNT(payments.id) AS payments_count\n                FROM payments\n                JOIN patients ON payments.patient_id = patients.id\n                WHERE $group_where\n                GROUP BY DATE(payments.payment_date), patients.id, patients.first_name, patients.last_name\n                ORDER BY payment_date DESC\n            ");
+            $stmt->execute($group_params);
+            $grouped_results = $stmt->fetchAll();
+
+            $this->render('receptionist/payment_history', [
+                'group_by' => 'date',
+                'grouped_results' => $grouped_results,
+                'payments' => [],
+                'sidebar_data' => $this->getSidebarData(),
+                'csrf_token' => $this->generateCSRF()
+            ]);
+            return;
+        }
+
+        // Default: return individual payment records
+        $stmt = $this->pdo->prepare("\n            SELECT p.*, \n                   CONCAT(pt.first_name, ' ', pt.last_name) as patient_name,\n                   pv.visit_date\n            FROM payments p\n            JOIN patients pt ON p.patient_id = pt.id\n            LEFT JOIN patient_visits pv ON p.visit_id = pv.id\n            WHERE $where_sql\n            ORDER BY p.payment_date DESC\n        ");
+
         $stmt->execute($params);
         $payments = $stmt->fetchAll();
 
         $this->render('receptionist/payment_history', [
             'payments' => $payments,
             'sidebar_data' => $this->getSidebarData(),
-            'csrf_token' => $this->generateCSRF()
+            'csrf_token' => $this->generateCSRF(),
+            'group_by' => ''
         ]);
+        return;
     }
 
     public function process_final_payment()
@@ -584,233 +687,72 @@ class ReceptionistController extends BaseController
         $this->redirect('receptionist/patients');
     }
 
-    public function record_payment()
-    {
-        if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
-            $_SESSION['error'] = 'Invalid request method';
-            $this->redirect('receptionist/payments');
-            return;
-        }
-
-        $this->validateCSRF();
-
-        $patient_id = $_POST['patient_id'] ?? null;
-        $visit_id = $_POST['visit_id'] ?? null;
-        $payment_type = $_POST['payment_type'] ?? null;
-        $amount = floatval($_POST['amount'] ?? 0);
-        $payment_method = $_POST['payment_method'] ?? 'cash';
-        $reference_number = $_POST['reference_number'] ?? null;
-        $item_id = $_POST['item_id'] ?? null; // This will be prescription_id for medicine payments
-        $item_type = $_POST['item_type'] ?? null; // This will be 'prescription' for medicine payments
-
-        if (!$patient_id || !$visit_id || !$payment_type || $amount <= 0) {
-            $_SESSION['error'] = 'Invalid payment details';
-            $this->redirect('receptionist/payments');
-            return;
-        }
-
-        try {
-            $this->pdo->beginTransaction();
-
-            // Check if payment already exists for this specific item (e.g., a full payment for a prescription)
-            // For partial payments, we allow multiple payments for the same item_id until total amount is covered.
-            // The check below is more for preventing duplicate full payments.
-            // We'll rely on the dispensing logic to check total paid vs total cost.
-
-            // Insert payment record
-            $stmt = $this->pdo->prepare("
-                INSERT INTO payments 
-                (visit_id, patient_id, payment_type, item_id, item_type, amount, payment_method, payment_status, 
-                 reference_number, collected_by, payment_date)
-                VALUES (?, ?, ?, ?, ?, ?, ?, 'paid', ?, ?, NOW())
-            ");
-            $stmt->execute([
-                $visit_id,
-                $patient_id,
-                $payment_type,
-                $item_id,
-                $item_type,
-                $amount,
-                $payment_method,
-                $reference_number,
-                $_SESSION['user_id']
-            ]);
-
-            // Update workflow status based on payment type
-            // For medicine, we keep it in 'medicine_dispensing' until all prescribed items are fully dispensed.
-            if ($payment_type === 'lab_test') {
-                $this->updateWorkflowStatus($patient_id, 'lab_testing', ['lab_tests_paid' => true]);
-            } elseif ($payment_type === 'medicine') {
-                // No change to workflow status here, as patient might still need to pay more or collect.
-                // The workflow status will be updated in process_medicine_dispensing when actual dispensing happens.
-            }
-
-            $this->pdo->commit();
-            $_SESSION['success'] = 'Payment recorded successfully';
-        } catch (Exception $e) {
-            $this->pdo->rollBack();
-            $_SESSION['error'] = 'Failed to record payment: ' . $e->getMessage();
-        }
-
+   public function record_payment()
+{
+    if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+        $_SESSION['error'] = 'Invalid request method';
         $this->redirect('receptionist/payments');
+        return;
     }
 
-    public function medicine()
-    {
-        // Get patients waiting for medicine dispensing (prescribed and paid, but not fully dispensed)
-        // This query identifies individual prescriptions that are still 'pending' or 'partial'.
-        // It also calculates payment status for each prescription.
+    $this->validateCSRF();
+
+    $patient_id = $_POST['patient_id'] ?? null;
+    $visit_id = $_POST['visit_id'] ?? null;
+    $payment_type = $_POST['payment_type'] ?? null;
+    $amount = floatval($_POST['amount'] ?? 0);
+    $payment_method = $_POST['payment_method'] ?? 'cash';
+    $reference_number = $_POST['reference_number'] ?? null;
+    $item_id = $_POST['item_id'] ?? null; // This will be prescription_id for medicine payments
+    $item_type = $_POST['item_type'] ?? null; // This will be 'prescription' for medicine payments
+
+    if (!$patient_id || !$visit_id || !$payment_type || $amount <= 0) {
+        $_SESSION['error'] = 'Invalid payment details';
+        $this->redirect('receptionist/payments');
+        return;
+    }
+
+    try {
+        $this->pdo->beginTransaction();
+
+        // Insert payment record
         $stmt = $this->pdo->prepare("
-            SELECT 
-                p.id AS patient_id, 
-                p.first_name, 
-                p.last_name,
-                p.registration_number,
-                pv.id as visit_id,
-                pv.visit_date,
-                pr.id AS prescription_id,
-                pr.medicine_id,
-                m.name AS medicine_name,
-                m.unit AS medicine_unit,
-                m.unit_price,
-                pr.quantity_prescribed,
-                pr.quantity_dispensed,
-                pr.dosage,
-                pr.frequency,
-                pr.duration,
-                pr.instructions,
-                pr.status AS prescription_status,
-                pr.created_at AS prescribed_at,
-                COALESCE(SUM(pay.amount), 0) AS amount_paid_for_this_prescription
-            FROM patients p
-            JOIN patient_visits pv ON p.id = pv.patient_id
-            JOIN prescriptions pr ON pv.id = pr.visit_id
-            JOIN medicines m ON pr.medicine_id = m.id
-            LEFT JOIN payments pay ON pr.visit_id = pay.visit_id 
-                                  AND pr.patient_id = pay.patient_id 
-                                  AND pay.item_type = 'prescription' 
-                                  AND pay.item_id = pr.id
-                                  AND pay.payment_status = 'paid'
-            WHERE pr.status IN ('pending', 'partial')
-            GROUP BY pr.id, p.id, p.first_name, p.last_name, p.registration_number, pv.id, pv.visit_date,
-                     pr.medicine_id, m.name, m.unit, m.unit_price, pr.quantity_prescribed, pr.quantity_dispensed,
-                     pr.dosage, pr.frequency, pr.duration, pr.instructions, pr.status, pr.created_at
-            ORDER BY p.first_name, p.last_name, pr.created_at DESC
+            INSERT INTO payments 
+            (visit_id, patient_id, payment_type, item_id, item_type, amount, payment_method, payment_status, 
+             reference_number, collected_by, payment_date)
+            VALUES (?, ?, ?, ?, ?, ?, ?, 'paid', ?, ?, NOW())
         ");
-        $stmt->execute();
-        $raw_pending_prescriptions = $stmt->fetchAll();
-
-        // Group prescriptions by patient for easier display in the view
-        $pending_patients_grouped = [];
-        foreach ($raw_pending_prescriptions as $prescription) {
-            $patient_id = $prescription['patient_id'];
-            if (!isset($pending_patients_grouped[$patient_id])) {
-                $pending_patients_grouped[$patient_id] = [
-                    'patient_id' => $patient_id,
-                    'first_name' => $prescription['first_name'],
-                    'last_name' => $prescription['last_name'],
-                    'registration_number' => $prescription['registration_number'],
-                    'visit_id' => $prescription['visit_id'],
-                    'visit_date' => $prescription['visit_date'],
-                    'prescribed_at' => $prescription['prescribed_at'], // Use the earliest prescription date for the patient's entry
-                    'total_prescribed_cost' => 0,
-                    'total_paid_for_patient' => 0,
-                    'prescriptions' => []
-                ];
-            }
-            $prescription_cost = $prescription['quantity_prescribed'] * $prescription['unit_price'];
-            $pending_patients_grouped[$patient_id]['total_prescribed_cost'] += $prescription_cost;
-            $pending_patients_grouped[$patient_id]['total_paid_for_patient'] += $prescription['amount_paid_for_this_prescription'];
-            $pending_patients_grouped[$patient_id]['prescriptions'][] = $prescription;
-        }
-
-        // Re-index to a simple array for the view
-        $pending_patients = array_values($pending_patients_grouped);
-
-        // Get all medicines for inventory management (use medicine_batches for stock)
-        $stmt = $this->pdo->prepare("
-            SELECT m.id, m.name, m.generic_name, 
-                   m.unit AS category, 
-                   m.unit_price,
-                   m.strength,
-                   COALESCE(SUM(mb.quantity_remaining), 0) as stock_quantity,
-                   MIN(mb.expiry_date) as expiry_date,
-                   COALESCE(SUM(pr.quantity_prescribed), 0) as total_prescribed,
-                   GROUP_CONCAT(DISTINCT mb.supplier SEPARATOR ', ') as suppliers
-            FROM medicines m
-            LEFT JOIN medicine_batches mb ON m.id = mb.medicine_id
-            LEFT JOIN prescriptions pr ON m.id = pr.medicine_id
-            GROUP BY m.id, m.name, m.generic_name, m.unit, m.unit_price, m.strength
-            ORDER BY m.name
-        ");
-        $stmt->execute();
-        $medicines = $stmt->fetchAll();
-
-        // Build expiry notifications (expired or within 60 days)
-        $notifications = [];
-        $today = new DateTime('today');
-        foreach ($medicines as $med) {
-            if (!empty($med['expiry_date'])) {
-                try {
-                    $exp = new DateTime($med['expiry_date']);
-                    $diff = (int)$today->diff($exp)->format('%r%a'); // negative if expired
-                    if ($diff < 0) {
-                        $notifications[] = [
-                            'type' => 'error',
-                            'icon' => 'fa-skull-crossbones',
-                            'title' => 'Medicine expired',
-                            'message' => $med['name'] . ' expired ' . abs($diff) . ' day(s) ago',
-                        ];
-                    } elseif ($diff <= 60) {
-                        // Near expiry tiers
-                        $tier = $diff <= 7 ? 'warning' : ($diff <= 30 ? 'warning' : 'info');
-                        $notifications[] = [
-                            'type' => $tier,
-                            'icon' => 'fa-exclamation-triangle',
-                            'title' => 'Medicine near expiry',
-                            'message' => $med['name'] . ' expires in ' . $diff . ' day(s)',
-                        ];
-                    }
-                } catch (Exception $e) {
-                    // ignore bad date
-                }
-            }
-        }
-
-        // Get medicine categories (using unit types as categories)
-        $categories = $this->pdo->query("SELECT DISTINCT unit FROM medicines WHERE unit IS NOT NULL ORDER BY unit")->fetchAll(PDO::FETCH_COLUMN);
-
-        // Get recent medicine transactions (recently dispensed prescriptions)
-        $stmt = $this->pdo->prepare("
-            SELECT p.first_name, p.last_name,
-                   CONCAT(p.first_name, ' ', p.last_name) as patient_name,
-                   m.name as medicine_name,
-                   pr.quantity_dispensed as quantity, /* Changed to 'quantity' for consistency with view */
-                   m.unit_price, /* Added unit_price for transaction history */
-                   (pr.quantity_dispensed * m.unit_price) as total_cost,
-                   pr.dispensed_at,
-                   u.first_name as dispensed_by
-            FROM prescriptions pr
-            JOIN patients p ON pr.patient_id = p.id
-            JOIN medicines m ON pr.medicine_id = m.id
-            LEFT JOIN users u ON pr.dispensed_by = u.id
-            WHERE pr.status = 'dispensed' AND pr.dispensed_at IS NOT NULL
-            ORDER BY pr.dispensed_at DESC
-            LIMIT 10
-        ");
-        $stmt->execute();
-        $recent_transactions = $stmt->fetchAll();
-
-        $this->render('receptionist/medicine', [
-            'pending_patients' => $pending_patients, // This now contains grouped data
-            'medicines' => $medicines, // Pass all medicines for stock lookup in JS
-            'categories' => $categories,
-            'recent_transactions' => $recent_transactions,
-            'csrf_token' => $this->generateCSRF(),
-            'notifications' => $notifications,
-            'sidebar_data' => $this->getSidebarData()
+        $stmt->execute([
+            $visit_id,
+            $patient_id,
+            $payment_type,
+            $item_id,
+            $item_type,
+            $amount,
+            $payment_method,
+            $reference_number,
+            $_SESSION['user_id']
         ]);
+
+        // Update workflow status based on payment type
+        if ($payment_type === 'lab_test') {
+            $this->updateWorkflowStatus($patient_id, 'lab_testing', ['lab_tests_paid' => true]);
+        } elseif ($payment_type === 'medicine') {
+            // Keep in medicine_dispensing status until actual dispensing happens
+            $this->updateWorkflowStatus($patient_id, 'medicine_dispensing', ['medicine_payment_received' => true]);
+        }
+
+        $this->pdo->commit();
+        $_SESSION['success'] = 'Payment recorded successfully';
+        
+    } catch (Exception $e) {
+        $this->pdo->rollBack();
+        $_SESSION['error'] = 'Failed to record payment: ' . $e->getMessage();
+        error_log('Payment recording error: ' . $e->getMessage());
     }
+
+    $this->redirect('receptionist/payments');
+}
 
     public function process_medicine_dispensing()
     {
@@ -1373,11 +1315,24 @@ class ReceptionistController extends BaseController
         $stmt->execute([$patient_id]);
         $payments = $stmt->fetchAll();
 
+        // Get lab test orders for this patient (for real-time tracking)
+        $stmt = $this->pdo->prepare("
+            SELECT lto.*, lt.test_name, lt.test_code, lr.result_value, lr.result_text, lr.completed_at as result_completed_at
+            FROM lab_test_orders lto
+            JOIN lab_tests lt ON lto.test_id = lt.id
+            LEFT JOIN lab_results lr ON lto.id = lr.order_id
+            WHERE lto.patient_id = ?
+            ORDER BY lto.created_at DESC
+        ");
+        $stmt->execute([$patient_id]);
+        $lab_orders = $stmt->fetchAll();
+
         $this->render('receptionist/view_patient', [
             'patient' => $patient,
             'consultations' => $consultations,
             'vital_signs' => $vital_signs,
             'payments' => $payments,
+            'lab_orders' => $lab_orders,
             'csrf_token' => $this->generateCSRF()
         ]);
     }
@@ -1646,5 +1601,95 @@ class ReceptionistController extends BaseController
             error_log("Error getting patient history: " . $e->getMessage());
             echo json_encode(['success' => false, 'message' => 'Error retrieving patient history']);
         }
+    }
+
+    /**
+     * Display medicine dispensing page (moved grouping logic here)
+     */
+    public function medicine()
+    {
+        // Query raw pending prescriptions with amounts paid per prescription
+        $stmt = $this->pdo->prepare("\n            SELECT pr.id as prescription_id, pr.visit_id, pr.patient_id, pr.quantity_prescribed, pr.quantity_dispensed, pr.created_at as prescribed_at,\n                   p.first_name, p.last_name, p.registration_number, pr.medicine_id, m.unit_price, m.name as medicine_name,\n                   COALESCE((SELECT SUM(pay.amount) FROM payments pay WHERE pay.visit_id = pr.visit_id AND pay.patient_id = pr.patient_id AND pay.payment_type = 'medicine' AND pay.item_id = pr.id AND pay.item_type = 'prescription' AND pay.payment_status = 'paid'), 0) as amount_paid_for_this_prescription\n            FROM prescriptions pr\n            JOIN patients p ON pr.patient_id = p.id\n            JOIN medicines m ON pr.medicine_id = m.id\n            WHERE pr.status IN ('pending', 'partial')\n            ORDER BY pr.created_at ASC\n        ");
+        $stmt->execute();
+        $raw_pending_prescriptions = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+        // Group prescriptions by patient for easier display in the view
+        $pending_patients_grouped = [];
+        foreach ($raw_pending_prescriptions as $prescription) {
+            $patient_id = $prescription['patient_id'];
+            if (!isset($pending_patients_grouped[$patient_id])) {
+                $pending_patients_grouped[$patient_id] = [
+                    'patient_id' => $patient_id,
+                    'first_name' => $prescription['first_name'],
+                    'last_name' => $prescription['last_name'],
+                    'registration_number' => $prescription['registration_number'],
+                    'visit_id' => $prescription['visit_id'],
+                    'visit_date' => null,
+                    'prescribed_at' => $prescription['prescribed_at'],
+                    'total_prescribed_cost' => 0,
+                    'total_paid_for_patient' => 0,
+                    'prescriptions' => []
+                ];
+            }
+            $prescription_cost = $prescription['quantity_prescribed'] * $prescription['unit_price'];
+            $pending_patients_grouped[$patient_id]['total_prescribed_cost'] += $prescription_cost;
+            $pending_patients_grouped[$patient_id]['total_paid_for_patient'] += $prescription['amount_paid_for_this_prescription'];
+            $pending_patients_grouped[$patient_id]['prescriptions'][] = $prescription;
+        }
+
+        $pending_patients = array_values($pending_patients_grouped);
+
+        // Get all medicines for inventory management (use medicine_batches for stock)
+        $stmt = $this->pdo->prepare("\n            SELECT m.id, m.name, m.generic_name, \n                   m.unit AS category, \n                   m.unit_price,\n                   m.strength,\n                   COALESCE(SUM(mb.quantity_remaining), 0) as stock_quantity,\n                   MIN(mb.expiry_date) as expiry_date,\n                   COALESCE(SUM(pr.quantity_prescribed), 0) as total_prescribed,\n                   GROUP_CONCAT(DISTINCT mb.supplier SEPARATOR ', ') as suppliers\n            FROM medicines m\n            LEFT JOIN medicine_batches mb ON m.id = mb.medicine_id\n            LEFT JOIN prescriptions pr ON m.id = pr.medicine_id\n            GROUP BY m.id, m.name, m.generic_name, m.unit, m.unit_price, m.strength\n            ORDER BY m.name\n        ");
+        $stmt->execute();
+        $medicines = $stmt->fetchAll();
+
+        // Build expiry notifications (expired or within 60 days)
+        $notifications = [];
+        $today = new DateTime('today');
+        foreach ($medicines as $med) {
+            if (!empty($med['expiry_date'])) {
+                try {
+                    $exp = new DateTime($med['expiry_date']);
+                    $diff = (int)$today->diff($exp)->format('%r%a'); // negative if expired
+                    if ($diff < 0) {
+                        $notifications[] = [
+                            'type' => 'error',
+                            'icon' => 'fa-skull-crossbones',
+                            'title' => 'Medicine expired',
+                            'message' => $med['name'] . ' expired ' . abs($diff) . ' day(s) ago',
+                        ];
+                    } elseif ($diff <= 60) {
+                        $tier = $diff <= 7 ? 'warning' : ($diff <= 30 ? 'warning' : 'info');
+                        $notifications[] = [
+                            'type' => $tier,
+                            'icon' => 'fa-exclamation-triangle',
+                            'title' => 'Medicine near expiry',
+                            'message' => $med['name'] . ' expires in ' . $diff . ' day(s)',
+                        ];
+                    }
+                } catch (Exception $e) {
+                    // ignore bad date
+                }
+            }
+        }
+
+        // Get medicine categories (using unit types as categories)
+        $categories = $this->pdo->query("SELECT DISTINCT unit FROM medicines WHERE unit IS NOT NULL ORDER BY unit")->fetchAll(PDO::FETCH_COLUMN);
+
+        // Get recent medicine transactions (recently dispensed prescriptions)
+        $stmt = $this->pdo->prepare("\n            SELECT p.first_name, p.last_name,\n                   CONCAT(p.first_name, ' ', p.last_name) as patient_name,\n                   m.name as medicine_name,\n                   pr.quantity_dispensed as quantity,\n                   m.unit_price,\n                   (pr.quantity_dispensed * m.unit_price) as total_cost,\n                   pr.dispensed_at,\n                   u.first_name as dispensed_by\n            FROM prescriptions pr\n            JOIN patients p ON pr.patient_id = p.id\n            JOIN medicines m ON pr.medicine_id = m.id\n            LEFT JOIN users u ON pr.dispensed_by = u.id\n            WHERE pr.status = 'dispensed' AND pr.dispensed_at IS NOT NULL\n            ORDER BY pr.dispensed_at DESC\n            LIMIT 10\n        ");
+        $stmt->execute();
+        $recent_transactions = $stmt->fetchAll();
+
+        $this->render('receptionist/medicine', [
+            'pending_patients' => $pending_patients,
+            'medicines' => $medicines,
+            'categories' => $categories,
+            'recent_transactions' => $recent_transactions,
+            'csrf_token' => $this->generateCSRF(),
+            'notifications' => $notifications,
+            'sidebar_data' => $this->getSidebarData()
+        ]);
     }
 }

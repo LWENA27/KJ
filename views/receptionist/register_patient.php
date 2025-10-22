@@ -137,10 +137,10 @@
                         <select id="visit_type" name="visit_type" required
                                 class="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-colors">
                             <option value="">Select Visit Type</option>
-                            <option value="consultation">Doctor Consultation</option>
-                            <option value="lab_test">Laboratory Test Only</option>
-                            <option value="medicine_pickup">Medicine Collection</option>
-                            <option value="minor_service">Minor Service (Injection, etc.)</option>
+                            <option value="consultation" <?php echo (isset($_POST['visit_type']) && $_POST['visit_type']==='consultation') ? 'selected' : ''; ?>>Doctor Consultation</option>
+                            <option value="lab_test" <?php echo (isset($_POST['visit_type']) && $_POST['visit_type']==='lab_test') ? 'selected' : ''; ?>>Laboratory Test Only</option>
+                            <option value="medicine_pickup" <?php echo (isset($_POST['visit_type']) && $_POST['visit_type']==='medicine_pickup') ? 'selected' : ''; ?>>Medicine Collection</option>
+                            <option value="minor_service" <?php echo (isset($_POST['visit_type']) && $_POST['visit_type']==='minor_service') ? 'selected' : ''; ?>>Minor Service (Injection, etc.)</option>
                         </select>
                         <span class="error-message text-red-500 text-xs mt-1 hidden"></span>
                     </div>
@@ -176,9 +176,10 @@
                         <label for="temperature" class="block text-sm font-medium text-gray-700 mb-1">
                             Temperature (°C)
                         </label>
-                        <input type="number" id="temperature" name="temperature" 
-                               step="0.1" min="35" max="42"
-                               class="w-full px-3 py-2 border border-gray-300 rounded-md">
+               <input type="number" id="temperature" name="temperature" 
+                   step="0.1" min="35" max="42"
+                   value="<?php echo htmlspecialchars($_POST['temperature'] ?? ''); ?>"
+                   class="w-full px-3 py-2 border border-gray-300 rounded-md">
                     </div>
 
                     <!-- Blood Pressure -->
@@ -186,9 +187,10 @@
                         <label for="blood_pressure" class="block text-sm font-medium text-gray-700 mb-1">
                             Blood Pressure (mmHg)
                         </label>
-                        <input type="text" id="blood_pressure" name="blood_pressure" 
-                               placeholder="120/80"
-                               class="w-full px-3 py-2 border border-gray-300 rounded-md">
+               <input type="text" id="blood_pressure" name="blood_pressure" 
+                   placeholder="120/80"
+                   value="<?php echo htmlspecialchars($_POST['blood_pressure'] ?? ''); ?>"
+                   class="w-full px-3 py-2 border border-gray-300 rounded-md">
                     </div>
 
                     <!-- Pulse Rate -->
@@ -196,9 +198,10 @@
                         <label for="pulse_rate" class="block text-sm font-medium text-gray-700 mb-1">
                             Pulse Rate (bpm)
                         </label>
-                        <input type="number" id="pulse_rate" name="pulse_rate" 
-                               min="40" max="200"
-                               class="w-full px-3 py-2 border border-gray-300 rounded-md">
+               <input type="number" id="pulse_rate" name="pulse_rate" 
+                   min="40" max="200"
+                   value="<?php echo htmlspecialchars($_POST['pulse_rate'] ?? ''); ?>"
+                   class="w-full px-3 py-2 border border-gray-300 rounded-md">
                     </div>
 
                     <!-- Weight -->
@@ -206,9 +209,10 @@
                         <label for="body_weight" class="block text-sm font-medium text-gray-700 mb-1">
                             Weight (kg)
                         </label>
-                        <input type="number" id="body_weight" name="body_weight" 
-                               step="0.1" min="0" max="300"
-                               class="w-full px-3 py-2 border border-gray-300 rounded-md">
+               <input type="number" id="body_weight" name="body_weight" 
+                   step="0.1" min="0" max="300"
+                   value="<?php echo htmlspecialchars($_POST['body_weight'] ?? ''); ?>"
+                   class="w-full px-3 py-2 border border-gray-300 rounded-md">
                     </div>
 
                     <!-- Height -->
@@ -216,9 +220,10 @@
                         <label for="height" class="block text-sm font-medium text-gray-700 mb-1">
                             Height (cm)
                         </label>
-                        <input type="number" id="height" name="height" 
-                               step="0.1" min="0" max="300"
-                               class="w-full px-3 py-2 border border-gray-300 rounded-md">
+               <input type="number" id="height" name="height" 
+                   step="0.1" min="0" max="300"
+                   value="<?php echo htmlspecialchars($_POST['height'] ?? ''); ?>"
+                   class="w-full px-3 py-2 border border-gray-300 rounded-md">
                     </div>
                 </div>
             </div>
@@ -243,9 +248,10 @@
                         <label for="consultation_fee" class="block text-sm font-medium text-gray-700 mb-1">
                             Consultation Fee (TZS) <span class="text-red-500">*</span>
                         </label>
-                        <input type="number" id="consultation_fee" name="consultation_fee" 
+               <input type="number" id="consultation_fee" name="consultation_fee" 
                                min="0" step="100" value="3000"
-                               class="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-colors">
+                   class="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-colors"
+                   value="<?php echo htmlspecialchars($_POST['consultation_fee'] ?? '3000'); ?>">
                         <span class="error-message text-red-500 text-xs mt-1 hidden"></span>
                     </div>
 
@@ -256,10 +262,10 @@
                         <select id="payment_method" name="payment_method"
                                 class="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-colors">
                             <option value="">Select Payment Method</option>
-                            <option value="cash">Cash Payment</option>
-                            <option value="card">Credit/Debit Card</option>
-                            <option value="mobile_money">Mobile Money (M-Pesa, Tigo Pesa, etc.)</option>
-                            <option value="insurance">Insurance Coverage</option>
+                            <option value="cash" <?php echo (isset($_POST['payment_method']) && $_POST['payment_method']==='cash') ? 'selected' : ''; ?>>Cash Payment</option>
+                            <option value="card" <?php echo (isset($_POST['payment_method']) && $_POST['payment_method']==='card') ? 'selected' : ''; ?>>Credit/Debit Card</option>
+                            <option value="mobile_money" <?php echo (isset($_POST['payment_method']) && $_POST['payment_method']==='mobile_money') ? 'selected' : ''; ?>>Mobile Money (M-Pesa, Tigo Pesa, etc.)</option>
+                            <option value="insurance" <?php echo (isset($_POST['payment_method']) && $_POST['payment_method']==='insurance') ? 'selected' : ''; ?>>Insurance Coverage</option>
                         </select>
                         <span class="error-message text-red-500 text-xs mt-1 hidden"></span>
                     </div>
@@ -308,7 +314,7 @@
 
                     <div>
                         <label for="payment_method_lab" class="block text-sm font-medium text-gray-700 mb-1">Payment Method</label>
-                        <select id="payment_method_lab" name="payment_method" class="w-full px-3 py-2 border border-gray-300 rounded-md">
+                        <select id="payment_method_lab" name="payment_method_lab" class="w-full px-3 py-2 border border-gray-300 rounded-md">
                             <option value="">Select Payment Method</option>
                             <option value="cash">Cash</option>
                             <option value="card">Card</option>
@@ -386,6 +392,13 @@
         // Clear required attributes
         if (elements.consultationFee) elements.consultationFee.removeAttribute('required');
         if (elements.paymentMethod) elements.paymentMethod.removeAttribute('required');
+        // Remove required from vital signs by default
+        const tempField = document.getElementById('temperature');
+        const bpField = document.getElementById('blood_pressure');
+        const pulseField = document.getElementById('pulse_rate');
+        if (tempField) tempField.removeAttribute('required');
+        if (bpField) bpField.removeAttribute('required');
+        if (pulseField) pulseField.removeAttribute('required');
 
         // Show relevant sections based on visit type
         switch(visitType) {
@@ -410,6 +423,10 @@
                     elements.visitBadge.classList.remove('hidden');
                     elements.visitBadgeText.textContent = 'Payment required for consultation';
                 }
+                // Make vital signs required for consultations
+                if (tempField) tempField.setAttribute('required', 'required');
+                if (bpField) bpField.setAttribute('required', 'required');
+                if (pulseField) pulseField.setAttribute('required', 'required');
                 updateTotalAmount();
                 break;
                 

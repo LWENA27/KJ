@@ -198,6 +198,32 @@
                     <?php echo htmlspecialchars($latest_consultation['lab_investigation'] ?? ''); ?>
                 </div>
             </div>
+
+            <!-- Lab Tests Requested (Real-time) -->
+            <?php if (!empty($lab_orders)): ?>
+            <div>
+                <div class="font-medium mb-1">Lab Tests Requested:</div>
+                <div class="border border-gray-400 p-2">
+                    <div class="grid grid-cols-2 gap-2 text-xs">
+                        <?php foreach ($lab_orders as $order): ?>
+                            <div class="flex items-center">
+                                <?php if (!empty($order['result_completed_at'])): ?>
+                                    <i class="fas fa-check-circle text-green-600 mr-1"></i>
+                                <?php elseif ($order['status'] === 'in_progress'): ?>
+                                    <i class="fas fa-spinner fa-spin text-blue-600 mr-1"></i>
+                                <?php else: ?>
+                                    <i class="far fa-circle text-gray-400 mr-1"></i>
+                                <?php endif; ?>
+                                <span><?php echo htmlspecialchars($order['test_name']); ?></span>
+                                <?php if (!empty($order['result_value'])): ?>
+                                    <span class="ml-2 text-blue-600 font-semibold">(<?php echo htmlspecialchars($order['result_value']); ?>)</span>
+                                <?php endif; ?>
+                            </div>
+                        <?php endforeach; ?>
+                    </div>
+                </div>
+            </div>
+            <?php endif; ?>
             
             <div>
                 <div class="font-medium mb-1">RX</div>
@@ -223,6 +249,29 @@
 
     <!-- Laboratory Results Grid -->
     <div class="mb-6 text-xs">
+        <?php if (!empty($lab_orders)): ?>
+        <!-- Requested Lab Tests Summary -->
+        <div class="mb-4 border border-blue-400 bg-blue-50 p-3">
+            <h4 class="font-bold mb-2 text-blue-800">Lab Tests Requested for This Visit:</h4>
+            <div class="grid grid-cols-3 gap-2">
+                <?php foreach ($lab_orders as $order): ?>
+                    <div class="flex items-center">
+                        <?php if (!empty($order['result_completed_at'])): ?>
+                            <input type="checkbox" checked disabled class="mr-2">
+                            <span class="text-green-700 font-semibold"><?php echo htmlspecialchars($order['test_name']); ?></span>
+                        <?php elseif ($order['status'] === 'in_progress'): ?>
+                            <input type="checkbox" disabled class="mr-2">
+                            <span class="text-blue-600"><?php echo htmlspecialchars($order['test_name']); ?> (In Progress)</span>
+                        <?php else: ?>
+                            <input type="checkbox" disabled class="mr-2">
+                            <span class="text-gray-600"><?php echo htmlspecialchars($order['test_name']); ?> (Pending)</span>
+                        <?php endif; ?>
+                    </div>
+                <?php endforeach; ?>
+            </div>
+        </div>
+        <?php endif; ?>
+        
         <div class="grid grid-cols-2 gap-6">
             <!-- Left Column -->
             <div class="space-y-4">

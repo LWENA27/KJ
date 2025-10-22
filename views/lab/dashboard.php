@@ -171,17 +171,21 @@
                     <?php else: ?>
                         <div class="space-y-4">
                             <?php foreach ($pending_tests as $index => $patient): ?>
-                                <div class="group border-l-4 <?php echo $patient['priority'] === 'urgent' ? 'border-red-400' : 'border-yellow-400'; ?> 
+                                <?php 
+                                    $priority = $patient['priority'] ?? 'normal';
+                                    $isUrgent = ($priority === 'urgent');
+                                ?>
+                                <div class="group border-l-4 <?php echo $isUrgent ? 'border-red-400' : 'border-yellow-400'; ?> 
                                   bg-white hover:bg-gray-50 rounded-lg p-4 transition-all duration-200 hover:shadow-md">
                                     <div class="flex items-center justify-between">
                                         <!-- Queue Number -->
                                         <div class="flex flex-col items-center">
-                                            <div class="w-8 h-8 <?php echo $patient['priority'] === 'urgent' ? 'bg-red-500' : 'bg-yellow-500'; ?> 
+                                            <div class="w-8 h-8 <?php echo $isUrgent ? 'bg-red-500' : 'bg-yellow-500'; ?> 
                                           text-white rounded-full flex items-center justify-center text-sm font-bold">
                                                 <?php echo $index + 1; ?>
                                             </div>
-                                            <span class="text-xs <?php echo $patient['priority'] === 'urgent' ? 'text-red-600' : 'text-yellow-600'; ?> mt-1">
-                                                <?php echo $patient['priority'] === 'urgent' ? 'URGENT' : 'Queue'; ?>
+                                            <span class="text-xs <?php echo $isUrgent ? 'text-red-600' : 'text-yellow-600'; ?> mt-1">
+                                                <?php echo $isUrgent ? 'URGENT' : 'Queue'; ?>
                                             </span>
                                         </div>
 
@@ -192,7 +196,7 @@
                                                     <?php echo htmlspecialchars($patient['first_name'] . ' ' . $patient['last_name']); ?>
                                                 </h4>
                                                 <span class="bg-gray-100 text-gray-600 px-2 py-1 rounded text-xs">
-                                                    <?php echo htmlspecialchars($patient['registration_number'] ?? str_pad($patient['registration_number'], STR_PAD_LEFT)); ?>
+                                                    <?php echo htmlspecialchars($patient['registration_number'] ?? 'N/A'); ?>
                                                 </span>
                                                
                                             </div>

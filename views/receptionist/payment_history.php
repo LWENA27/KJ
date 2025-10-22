@@ -140,6 +140,22 @@
         </form>
     </div>
 
+    <!-- Grouping Selector -->
+    <div class="mb-4">
+        <form method="GET" action="<?php echo htmlspecialchars($BASE_PATH); ?>/receptionist/payment_history" class="flex items-center space-x-3">
+            <input type="hidden" name="search" value="<?php echo htmlspecialchars($_GET['search'] ?? ''); ?>">
+            <input type="hidden" name="payment_type" value="<?php echo htmlspecialchars($_GET['payment_type'] ?? ''); ?>">
+            <input type="hidden" name="payment_method" value="<?php echo htmlspecialchars($_GET['payment_method'] ?? ''); ?>">
+            <label class="text-sm font-medium text-gray-700">Group by:</label>
+            <select name="group_by" onchange="this.form.submit()" class="px-3 py-2 border rounded-md">
+                <option value="" <?php echo empty($_GET['group_by']) ? 'selected' : ''; ?>>No Grouping</option>
+                <option value="visit" <?php echo ($_GET['group_by'] ?? '') === 'visit' ? 'selected' : ''; ?>>Visit</option>
+                <option value="date" <?php echo ($_GET['group_by'] ?? '') === 'date' ? 'selected' : ''; ?>>Payment Date</option>
+            </select>
+            <a href="<?php echo htmlspecialchars($BASE_PATH); ?>/receptionist/payment_history" class="px-3 py-2 bg-gray-100 rounded">Reset</a>
+        </form>
+    </div>
+
     <!-- Payment Records Table -->
     <div class="bg-white rounded-lg shadow overflow-hidden">
         <div class="px-6 py-4 border-b border-gray-200">
@@ -152,7 +168,48 @@
             </div>
         </div>
 
-        <?php if (empty($payments)): ?>
+        <?php if (!empty($group_by) && !empty($grouped_results)): ?>
+            <div class="p-4">
+                <table class="min-w-full divide-y divide-gray-200">
+                    <thead class="bg-gray-50">
+                        <tr>
+                            <?php if ($group_by === 'visit'): ?>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Visit Date</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Patient</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Total Paid</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Payments</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                            <?php else: ?>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Patient</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Total Paid</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Payments</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                            <?php endif; ?>
+                        </tr>
+                    </thead>
+                    <tbody class="bg-white divide-y divide-gray-200">
+                        <?php foreach ($grouped_results as $row): ?>
+                            <tr class="hover:bg-gray-50">
+                                <td class="px-6 py-4 whitespace-nowrap">
+                                    <?php echo $group_by === 'visit' ? safe_date('M d, Y', $row['visit_date']) : safe_date('M d, Y', $row['payment_date']); ?>
+                                </td>
+                                <td class="px-6 py-4 whitespace-nowrap"><?php echo htmlspecialchars($row['patient_name']); ?></td>
+                                <td class="px-6 py-4 whitespace-nowrap text-green-600 font-semibold">Tsh <?php echo number_format($row['total_paid'], 0); ?></td>
+                                <td class="px-6 py-4 whitespace-nowrap"><?php echo intval($row['payments_count']); ?></td>
+                                <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                                    <?php if ($group_by === 'visit'): ?>
+                                        <a href="<?php echo htmlspecialchars($BASE_PATH); ?>/receptionist/payment_history?visit_id=<?php echo $row['visit_id']; ?>" class="text-blue-600">View</a>
+                                    <?php else: ?>
+                                        <a href="<?php echo htmlspecialchars($BASE_PATH); ?>/receptionist/payment_history?group_by=date&search=<?php echo urlencode($_GET['search'] ?? ''); ?>&payment_method=<?php echo urlencode($_GET['payment_method'] ?? ''); ?>&payment_type=<?php echo urlencode($_GET['payment_type'] ?? ''); ?>&date=<?php echo $row['payment_date']; ?>" class="text-blue-600">View</a>
+                                    <?php endif; ?>
+                                </td>
+                            </tr>
+                        <?php endforeach; ?>
+                    </tbody>
+                </table>
+            </div>
+        <?php elseif (empty($payments)): ?>
             <div class="p-8 text-center">
                 <i class="fas fa-inbox text-gray-400 text-4xl mb-3"></i>
                 <p class="text-gray-600">No payment records found</p>

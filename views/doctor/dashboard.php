@@ -457,9 +457,12 @@ document.getElementById('medicineModal')?.addEventListener('click', function(e) 
             </button>
         </div>
 
-        <form method="POST" action="<?php echo htmlspecialchars($BASE_PATH); ?>/doctor/send_to_medicine" class="space-y-6">
+        <form id="medicineModalForm" method="POST" action="<?php echo htmlspecialchars($BASE_PATH); ?>/doctor/prescribe_medicine" class="space-y-6">
             <input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars($csrf_token); ?>">
             <input type="hidden" id="medicinePatientId" name="patient_id">
+            <input type="hidden" id="medicinesJson" name="medicines" value="[]">
+            <input type="hidden" id="selectedTestsJson" name="selected_tests" value="[]">
+            <input type="hidden" name="next_step" value="medicine">
 
             <div>
                 <label class="form-label">Patient</label>
@@ -504,7 +507,7 @@ document.getElementById('medicineModal')?.addEventListener('click', function(e) 
                           placeholder="Special instructions..."></textarea>
             </div>
 
-            <div class="modal-footer">
+                <div class="modal-footer">
                 <button type="button" onclick="closeMedicineModal()" class="btn btn-secondary">Cancel</button>
                 <button type="submit" class="btn btn-medical">
                     <i class="fas fa-pills mr-2"></i>Prescribe Medicine
@@ -535,4 +538,32 @@ function addMedicine() {
     medicineList.appendChild(medicineItem);
     medicineCounter++;
 }
+
+    // Serialize medicines in medicineList into JSON before submit
+    document.getElementById('medicineModalForm')?.addEventListener('submit', function(e) {
+    const meds = [];
+    const medicineList = document.getElementById('medicineList');
+    if (medicineList) {
+        // For each .medicine-item collect selected medicine_id, quantity, dosage
+        medicineList.querySelectorAll('.medicine-item').forEach(item => {
+            const select = item.querySelector('select[name^="medicines["][name$="[medicine_id]"]');
+            const qty = item.querySelector('input[name$="[quantity]"]');
+            const dosage = item.querySelector('input[name$="[dosage]"]');
+            if (!select) return;
+            const medId = parseInt(select.value, 10);
+            if (!medId) return;
+            meds.push({ id: medId, quantity: parseInt(qty.value, 10) || 1, dosage: (dosage.value || '').trim() });
+        });
+    }
+
+    if (meds.length === 0) {
+        e.preventDefault();
+        alert('Please select at least one medicine');
+        return false;
+    }
+
+    const medsInput = document.getElementById('medicinesJson');
+    if (medsInput) medsInput.value = JSON.stringify(meds);
+    // allow submit
+});
 </script>
