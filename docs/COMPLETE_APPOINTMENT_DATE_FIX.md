@@ -80,7 +80,7 @@ COALESCE(c.follow_up_date, pv.visit_date, DATE(c.created_at))
 | 17 | dashboard() | Pending lab tests |
 | 63 | tests() | All tests with appointment dates |
 
-### 4. ✅ PatientHistoryController.php
+### 4. ✅ PatienthistoryController.php
 **Instances Fixed:** 5
 
 | Line | Method | Query Purpose |
@@ -114,7 +114,7 @@ COALESCE(c.follow_up_date, pv.visit_date, DATE(c.created_at))
 ✅ ReceptionistController.php - No syntax errors
 ✅ DoctorController.php - No syntax errors
 ✅ LabController.php - No syntax errors
-✅ PatientHistoryController.php - No syntax errors
+✅ PatienthistoryController.php - No syntax errors
 ```
 
 ### All Files Valid ✅

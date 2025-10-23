@@ -183,15 +183,7 @@ Receptionist processes payment
 if ($visit_type === 'consultation' && !empty($consultation_fee)) {
     // 1. Record payment
     // 2. Create consultation record
-    // 3. Track workflow status ← NEW!
-    
-    try {
-        $stmt->prepare("INSERT INTO patient_workflow_status (...) 
-                       VALUES (..., 'consultation', 'pending', ...)");
-        $stmt->execute([...]);
-    } catch (Exception $e) {
-        // Non-blocking: continues if table doesn't exist
-    }
+    // 3. Workflow status tracked via existing tables (consultations.status, payments.payment_status, etc.)
 }
 ```
 
@@ -199,31 +191,29 @@ if ($visit_type === 'consultation' && !empty($consultation_fee)) {
 ```sql
 CASE
     -- NO payment → Registration (yellow)
-    WHEN payment_count = 0 
+    WHEN payment_count = 0
     THEN 'registration'
-    
+
     -- Payment made + Consultation pending → Consultation (blue)
-    WHEN consultation_status IN ('pending','in_progress') 
+    WHEN consultation_status IN ('pending','in_progress')
     THEN 'consultation_registration'
-    
+
     -- Lab tests pending → Lab Tests (yellow)
-    WHEN lab_test_orders > 0 
+    WHEN lab_test_orders > 0
     THEN 'lab_tests'
-    
+
     -- Prescriptions pending → Medicine Dispensing (purple)
-    WHEN prescriptions_pending > 0 
+    WHEN prescriptions_pending > 0
     THEN 'medicine_dispensing'
-    
+
     -- Active but nothing pending → Results Review (purple)
-    WHEN visit_status = 'active' 
+    WHEN visit_status = 'active'
     THEN 'results_review'
-    
+
     -- Visit completed → Completed (green)
     ELSE 'completed'
 END
-```
-
----
+```---
 
 ## Summary Table
 
@@ -267,7 +257,7 @@ END
 2. Show time in current status (e.g., "Consultation for 15 min")
 3. Add workflow timeline view
 4. Create workflow analytics dashboard
-5. Add `patient_workflow_status` table for detailed tracking
+5. Enhanced workflow tracking using existing table relationships
 
 ---
 

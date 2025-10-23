@@ -88,7 +88,7 @@ This is the **5th instance** of the `appointment_date` error fixed across the sy
 1. ✅ ReceptionistController (5 instances) - Fixed
 2. ✅ DoctorController (5 instances) - Fixed  
 3. ✅ LabController (2 instances) - Fixed
-4. ✅ PatientHistoryController (5 instances) - Fixed
+4. ✅ PatienthistoryController (5 instances) - Fixed
 5. ✅ AdminController (1 instance) - **Just fixed!**
 
 **Total**: 18 occurrences fixed system-wide

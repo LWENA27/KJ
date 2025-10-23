@@ -205,7 +205,7 @@ Based on previous fixes, these files correctly use `consultations`:
 - ✅ `ReceptionistController::patients()` - Uses `consultations` in workflow status
 - ✅ `DoctorController` - All methods use `consultations`
 - ✅ `LabController` - References `consultations` correctly
-- ✅ `PatientHistoryController` - Uses `consultations` throughout
+- ✅ `PatienthistoryController` - Uses `consultations` throughout
 
 ### System-Wide Table Naming Convention
 **Appointments = Consultations** throughout the system:

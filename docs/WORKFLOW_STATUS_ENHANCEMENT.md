@@ -53,24 +53,16 @@ The system now intelligently determines workflow status based on:
 
 #### Change 1: Registration Payment Recording (Lines 217-243)
 
-**Added workflow tracking:**
+**Workflow tracking via existing tables:**
 ```php
-// Try to record workflow status (non-blocking if table doesn't exist)
-try {
-    $stmt = $this->pdo->prepare(
-        "INSERT INTO patient_workflow_status 
-        (patient_id, visit_id, workflow_step, status, started_at, notes, created_at, updated_at) 
-        VALUES (?, ?, 'consultation', 'pending', NOW(), 
-        'Consultation payment received - waiting for doctor', NOW(), NOW())"
-    );
-    $stmt->execute([$patient_id, $visit_id]);
-} catch (Exception $e) {
-    // Non-fatal: if patient_workflow_status doesn't exist, continue
-    error_log('Workflow status tracking not available: ' . $e->getMessage());
-}
-```
-
-**Why this matters:**
+// Workflow status calculated dynamically from existing tables
+// No additional INSERT statements needed - status derived from:
+// - payments.payment_status
+// - consultations.status
+// - lab_test_orders.status
+// - prescriptions.status
+// - patient_visits.status
+```**Why this matters:**
 - Creates audit trail of patient journey
 - Allows advanced workflow analytics
 - Non-blocking (continues if table doesn't exist)
@@ -279,11 +271,13 @@ The system also displays **Payment Status** alongside **Workflow Status**:
 
 ---
 
-## Workflow Status Tracking Table (Optional)
+## Workflow Status Tracking Table (Optional - Not Currently Used)
 
 ### Table: `patient_workflow_status`
 
-**Purpose:** Audit trail of patient journey through workflow steps
+**Purpose:** Audit trail of patient journey through workflow steps (optional enhancement)
+
+**Current System:** Workflow status calculated from existing tables - no additional table needed!
 
 ```sql
 CREATE TABLE `patient_workflow_status` (
@@ -308,37 +302,34 @@ CREATE TABLE `patient_workflow_status` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 ```
 
-**Benefits:**
+**Benefits (if implemented):**
 - ✅ Complete audit trail of patient journey
 - ✅ Time tracking for each workflow step
 - ✅ Assignment tracking (who handled each step)
 - ✅ Analytics: average time per step, bottleneck identification
 - ✅ Historical reporting
 
-**Note:** This table is **optional**. The system works without it using derived workflow status from existing tables.
+**Current Status:** System works perfectly with existing tables - optional enhancement only!
 
 ---
 
 ## Database Compatibility
 
-### Works with MINIMAL Schema
-The enhanced workflow logic uses **non-blocking try-catch** for workflow status table:
+### Works with CURRENT Schema ✅
+The enhanced workflow logic uses **existing tables only** - no additional tables required:
 
-```php
-try {
-    // Insert into patient_workflow_status
-    $stmt->execute([...]);
-} catch (Exception $e) {
-    // Non-fatal: continue if table doesn't exist
-    error_log('Workflow status tracking not available');
-}
-```
+**Workflow Status Calculated From:**
+- `payments.payment_status` - Check if consultation paid
+- `consultations.status` - Check if pending/in-progress  
+- `lab_test_orders.status` - Check if tests pending
+- `prescriptions.status` - Check if medicine pending
+- `patient_visits.status` - Check visit status
 
 **Result:**
 - ✅ System works with current database (no schema changes required)
-- ✅ Workflow status calculated from existing tables (payments, consultations, lab_test_orders, prescriptions)
-- ✅ If workflow table added later, enhanced tracking automatically activates
+- ✅ Workflow status calculated dynamically from existing data
 - ✅ Zero downtime, zero migration required
+- ✅ All workflow tracking handled by existing table relationships
 
 ---
 

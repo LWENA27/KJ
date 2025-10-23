@@ -184,7 +184,7 @@ All blocking issues resolved.
 - ✅ `controllers/DoctorController.php` - Consultations, prescriptions
 - ✅ `controllers/LabController.php` - Lab tests, samples, results
 - ✅ `controllers/AdminController.php` - User/medicine/test management
-- ✅ `controllers/PatientHistoryController.php` - Medical history, analytics
+- ✅ `controllers/PatienthistoryController.php` - Medical history, analytics
 
 ### Includes (4 files)
 - ✅ `includes/BaseController.php` - Base controller with workflow helpers

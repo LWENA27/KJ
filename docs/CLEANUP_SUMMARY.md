@@ -99,7 +99,7 @@ KJ/
 │   ├── AuthController.php
 │   ├── DoctorController.php
 │   ├── LabController.php
-│   ├── PatientHistoryController.php
+│   ├── PatienthistoryController.php
 │   └── ReceptionistController.php
 ├── database/                # Schema and migrations
 │   ├── zahanati.sql         # Complete schema with demo data

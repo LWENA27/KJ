@@ -808,14 +808,6 @@ class DoctorController extends BaseController {
                 throw new Exception('Patient must complete consultation payment first');
             }
 
-            // Record a patient_workflow_status entry marking lab_tests started (non-fatal)
-            try {
-                $stmt = $this->pdo->prepare("INSERT INTO patient_workflow_status (patient_id, workflow_step, status, started_at, created_at, updated_at) VALUES (?, 'lab_tests', 'pending', NOW(), NOW(), NOW())");
-                $stmt->execute([$patient_id]);
-            } catch (Exception $e) {
-                error_log('Failed to insert patient_workflow_status: ' . $e->getMessage());
-            }
-
             // Find consultation in progress (if any) to associate orders
             $stmt = $this->pdo->prepare("SELECT id FROM consultations WHERE patient_id = ? AND doctor_id = ? AND status = 'in_progress' ORDER BY created_at DESC LIMIT 1");
             $stmt->execute([$patient_id, $_SESSION['user_id']]);
@@ -861,14 +853,6 @@ class DoctorController extends BaseController {
             }
 
             $this->pdo->beginTransaction();
-
-            // Record workflow step for medicine prescribing
-            try {
-                $stmt = $this->pdo->prepare("INSERT INTO patient_workflow_status (patient_id, workflow_step, status, started_at, created_at, updated_at) VALUES (?, 'medicine_dispensing', 'pending', NOW(), NOW(), NOW())");
-                $stmt->execute([$patient_id]);
-            } catch (Exception $e) {
-                error_log('Failed to insert patient_workflow_status: ' . $e->getMessage());
-            }
 
             // Find latest visit and consultation in progress to attach prescriptions
             $stmt = $this->pdo->prepare("SELECT id FROM patient_visits WHERE patient_id = ? ORDER BY created_at DESC LIMIT 1");

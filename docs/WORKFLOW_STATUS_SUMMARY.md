@@ -48,25 +48,10 @@ if ($visit_type === 'consultation' && !empty($consultation_fee)) {
     // Record payment
     // Create consultation
     
-    // NEW: Track workflow status
-    try {
-        $stmt = $this->pdo->prepare(
-            "INSERT INTO patient_workflow_status 
-            (patient_id, visit_id, workflow_step, status, 
-             started_at, notes, created_at, updated_at) 
-            VALUES (?, ?, 'consultation', 'pending', NOW(), 
-            'Consultation payment received - waiting for doctor', 
-            NOW(), NOW())"
-        );
-        $stmt->execute([$patient_id, $visit_id]);
-    } catch (Exception $e) {
-        // Non-blocking: continues if table doesn't exist
-        error_log('Workflow status tracking not available');
-    }
+    // Workflow status tracked via existing tables (consultations.status, payments.payment_status, etc.)
+    // No additional INSERT statements needed - status calculated dynamically
 }
-```
-
-#### Change 2: Smart Workflow Status Query (Lines 76-91)
+```#### Change 2: Smart Workflow Status Query (Lines 76-91)
 ```sql
 CASE
     -- No payment → Registration (yellow)
@@ -272,8 +257,8 @@ END AS current_step
   - `prescriptions` (check if medicine pending)
   - `patient_visits` (check visit status)
 
-### Optional Enhancement Table
-If you want detailed workflow tracking, you can add:
+### Optional Enhancement Table (Not Required)
+If you want detailed workflow tracking beyond the current system, you can add:
 
 ```sql
 CREATE TABLE `patient_workflow_status` (
@@ -292,7 +277,7 @@ CREATE TABLE `patient_workflow_status` (
 );
 ```
 
-**But it's optional!** System works without it.
+**Current System:** Works perfectly with existing tables - no additional table needed!
 
 ---
 

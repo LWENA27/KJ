@@ -261,15 +261,6 @@ class ReceptionistController extends BaseController
                     $default_doctor_id = 1;
                     $stmt = $this->pdo->prepare("INSERT INTO consultations (visit_id, patient_id, doctor_id, consultation_type, status, created_at) VALUES (?, ?, ?, 'new', 'pending', NOW())");
                     $stmt->execute([$visit_id, $patient_id, $default_doctor_id]);
-
-                    // Try to record workflow status (non-blocking if table doesn't exist)
-                    try {
-                        $stmt = $this->pdo->prepare("INSERT INTO patient_workflow_status (patient_id, visit_id, workflow_step, status, started_at, notes, created_at, updated_at) VALUES (?, ?, 'consultation', 'pending', NOW(), 'Consultation payment received - waiting for doctor', NOW(), NOW())");
-                        $stmt->execute([$patient_id, $visit_id]);
-                    } catch (Exception $e) {
-                        // Non-fatal: if patient_workflow_status doesn't exist, continue
-                        error_log('Workflow status tracking not available: ' . $e->getMessage());
-                    }
                 }
 
                 // Handle lab-only visit: create lab_test_orders and optional payment

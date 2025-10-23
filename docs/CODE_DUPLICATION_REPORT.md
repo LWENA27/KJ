@@ -31,7 +31,7 @@ $patient = $stmt->fetch();
 
 **Locations:**
 - `DoctorController.php`: lines 194, 365, 482, 816
-- `PatientHistoryController.php`: line 252
+- `PatienthistoryController.php`: line 252
 
 **✅ Solution Added:**
 ```php
@@ -362,7 +362,7 @@ if (!$this->deductMedicineStock($medicine_id, $quantity)) {
 
 **Files:**
 - `DoctorController.php`: lines 194, 365, 482, 816
-- `PatientHistoryController.php`: line 252
+- `PatienthistoryController.php`: line 252
 
 **Action:** Replace all with `$this->getPatientById($patient_id)`
 
@@ -486,7 +486,7 @@ After refactoring, test these workflows:
    - Replace medicine query (1 place)
    - Replace low stock query (1 place)
 
-5. **PatientHistoryController**
+5. **PatienthistoryController**
    - Replace patient fetch (1 place)
 
 ### Phase 3: Final Optimization
