@@ -134,18 +134,40 @@ class LabController extends BaseController {
             $this->redirect('lab/tests');
         }
 
-     // Fix test details query
+     // Fix test details query - get test order information with lab results
      $stmt = $this->pdo->prepare("
-         SELECT lr.*, lto.id as order_id, lto.status as order_status, lt.test_name as test_name, lt.test_code as test_code, lt.category_id as category, lt.normal_range, p.first_name, p.last_name,
-             (SELECT IF(EXISTS(SELECT 1 FROM payments pay WHERE pay.visit_id = (SELECT id FROM patient_visits pv WHERE pv.patient_id = p.id ORDER BY pv.created_at DESC LIMIT 1) AND pay.payment_type = 'registration' AND pay.payment_status = 'paid'),1,0)) AS consultation_registration_paid,
-             (SELECT IF(EXISTS(SELECT 1 FROM payments pay2 WHERE pay2.visit_id = (SELECT id FROM patient_visits pv2 WHERE pv2.patient_id = p.id ORDER BY pv2.created_at DESC LIMIT 1) AND pay2.payment_type = 'lab_test' AND pay2.payment_status = 'paid'),1,0)) AS lab_tests_paid
-         FROM lab_results lr
-         JOIN lab_test_orders lto ON lr.order_id = lto.id
-         JOIN lab_tests lt ON lr.test_id = lt.id
-         JOIN consultations c ON lto.consultation_id = c.id
-         JOIN patients p ON c.patient_id = p.id
-         LEFT JOIN patient_visits pv ON c.visit_id = pv.id
-         WHERE lr.id = ?
+         SELECT
+             lto.id,
+             lto.visit_id,
+             lto.patient_id,
+             lto.test_id,
+             lto.status,
+             lto.priority,
+             lto.created_at,
+             lto.sample_collected_at as sample_date,
+             lto.instructions,
+             lt.test_name,
+             lt.test_code,
+             lt.category_id as category,
+             lt.normal_range,
+             lt.unit,
+             p.first_name,
+             p.last_name,
+             lr.id as result_id,
+             lr.result_value,
+             lr.result_text,
+             lr.result_unit,
+             lr.is_normal,
+             lr.completed_at as result_date,
+             lr.technician_notes,
+             lr.review_notes,
+             (SELECT IF(EXISTS(SELECT 1 FROM payments pay WHERE pay.visit_id = lto.visit_id AND pay.payment_type = 'registration' AND pay.payment_status = 'paid'),1,0)) AS consultation_registration_paid,
+             (SELECT IF(EXISTS(SELECT 1 FROM payments pay2 WHERE pay2.visit_id = lto.visit_id AND pay2.payment_type = 'lab_test' AND pay2.payment_status = 'paid'),1,0)) AS lab_tests_paid
+         FROM lab_test_orders lto
+         JOIN lab_tests lt ON lto.test_id = lt.id
+         JOIN patients p ON lto.patient_id = p.id
+         LEFT JOIN lab_results lr ON lto.id = lr.order_id
+         WHERE lto.id = ?
      ");
         $stmt->execute([$test_id]);
         $test = $stmt->fetch();
@@ -488,6 +510,46 @@ class LabController extends BaseController {
         ]);
     }
 
+    public function equipment_inventory() {
+        $this->render('lab/equipment_inventory', [
+            'csrf_token' => $this->generateCSRF()
+        ]);
+    }
+
+    public function test_management() {
+        // Get all lab tests with their categories and required items
+        $stmt = $this->pdo->prepare("
+            SELECT lt.*, ltc.category_name,
+                   GROUP_CONCAT(DISTINCT li.item_name SEPARATOR ', ') as required_items
+            FROM lab_tests lt
+            LEFT JOIN lab_test_categories ltc ON lt.category_id = ltc.id
+            LEFT JOIN lab_test_items lti ON lt.id = lti.test_id
+            LEFT JOIN lab_inventory li ON lti.item_id = li.id
+            WHERE lt.is_active = 1
+            GROUP BY lt.id
+            ORDER BY ltc.category_name, lt.test_name
+        ");
+        $stmt->execute();
+        $tests = $stmt->fetchAll();
+
+        // Get test categories for the form
+        $stmt = $this->pdo->prepare("SELECT * FROM lab_test_categories ORDER BY category_name");
+        $stmt->execute();
+        $categories = $stmt->fetchAll();
+
+        // Get available inventory items for linking
+        $stmt = $this->pdo->prepare("SELECT * FROM lab_inventory WHERE is_active = 1 ORDER BY item_name");
+        $stmt->execute();
+        $inventory_items = $stmt->fetchAll();
+
+        $this->render('lab/test_management', [
+            'tests' => $tests,
+            'categories' => $categories,
+            'inventory_items' => $inventory_items,
+            'csrf_token' => $this->generateCSRF()
+        ]);
+    }
+
     public function quality() {
         $this->render('lab/quality', [
             'csrf_token' => $this->generateCSRF()
@@ -759,6 +821,222 @@ class LabController extends BaseController {
         } catch (Exception $e) {
             echo json_encode([]);
         }
+    }
+
+    public function get_test($test_id) {
+        header('Content-Type: application/json');
+
+        try {
+            $stmt = $this->pdo->prepare("
+                SELECT lt.*, GROUP_CONCAT(lti.item_id) as required_items
+                FROM lab_tests lt
+                LEFT JOIN lab_test_items lti ON lt.id = lti.test_id
+                WHERE lt.id = ?
+                GROUP BY lt.id
+            ");
+            $stmt->execute([$test_id]);
+            $test = $stmt->fetch();
+
+            if (!$test) {
+                echo json_encode(['success' => false, 'message' => 'Test not found']);
+                return;
+            }
+
+            // Convert required_items string to array
+            $test['required_items'] = $test['required_items'] ? explode(',', $test['required_items']) : [];
+
+            echo json_encode($test);
+        } catch (Exception $e) {
+            echo json_encode(['success' => false, 'message' => $e->getMessage()]);
+        }
+    }
+
+    public function save_test() {
+        if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+            $this->jsonResponse(['success' => false, 'message' => 'Invalid request method']);
+        }
+
+        $this->validateCSRF();
+
+        try {
+            $test_id = $_POST['test_id'] ?? null;
+            $test_name = trim($_POST['test_name'] ?? '');
+            $test_code = trim($_POST['test_code'] ?? '');
+            $category_id = intval($_POST['category_id'] ?? 0);
+            $price = floatval($_POST['price'] ?? 0);
+            $normal_range = trim($_POST['normal_range'] ?? '');
+            $unit = trim($_POST['unit'] ?? '');
+            $description = trim($_POST['description'] ?? '');
+            $is_active = isset($_POST['is_active']) ? 1 : 0;
+
+            if (empty($test_name) || empty($test_code) || $category_id <= 0 || $price <= 0) {
+                throw new Exception('All required fields must be filled');
+            }
+
+            if ($test_id) {
+                // Update existing test
+                $stmt = $this->pdo->prepare("
+                    UPDATE lab_tests
+                    SET test_name = ?, test_code = ?, category_id = ?, price = ?,
+                        normal_range = ?, unit = ?, description = ?, is_active = ?,
+                        updated_at = NOW()
+                    WHERE id = ?
+                ");
+                $stmt->execute([$test_name, $test_code, $category_id, $price, $normal_range, $unit, $description, $is_active, $test_id]);
+            } else {
+                // Insert new test
+                $stmt = $this->pdo->prepare("
+                    INSERT INTO lab_tests
+                    (test_name, test_code, category_id, price, normal_range, unit, description, is_active, created_at, updated_at)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, NOW(), NOW())
+                ");
+                $stmt->execute([$test_name, $test_code, $category_id, $price, $normal_range, $unit, $description, $is_active]);
+            }
+
+            $this->jsonResponse(['success' => true, 'message' => 'Test saved successfully']);
+        } catch (Exception $e) {
+            $this->jsonResponse(['success' => false, 'message' => $e->getMessage()]);
+        }
+    }
+
+    public function save_test_items() {
+        if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+            $this->jsonResponse(['success' => false, 'message' => 'Invalid request method']);
+        }
+
+        $this->validateCSRF();
+
+        try {
+            $test_id = intval($_POST['test_id'] ?? 0);
+            $required_items = $_POST['required_items'] ?? [];
+
+            if ($test_id <= 0) {
+                throw new Exception('Invalid test ID');
+            }
+
+            $this->pdo->beginTransaction();
+
+            // Delete existing items for this test
+            $stmt = $this->pdo->prepare("DELETE FROM lab_test_items WHERE test_id = ?");
+            $stmt->execute([$test_id]);
+
+            // Insert new required items
+            if (!empty($required_items)) {
+                $stmt = $this->pdo->prepare("INSERT INTO lab_test_items (test_id, item_id) VALUES (?, ?)");
+                foreach ($required_items as $item_id) {
+                    $stmt->execute([$test_id, intval($item_id)]);
+                }
+            }
+
+            $this->pdo->commit();
+            $this->jsonResponse(['success' => true, 'message' => 'Test items updated successfully']);
+        } catch (Exception $e) {
+            $this->pdo->rollBack();
+            $this->jsonResponse(['success' => false, 'message' => $e->getMessage()]);
+        }
+    }
+
+    public function toggle_test_status() {
+        if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+            $this->jsonResponse(['success' => false, 'message' => 'Invalid request method']);
+        }
+
+        $this->validateCSRF();
+
+        try {
+            $test_id = intval($_POST['test_id'] ?? 0);
+            $is_active = intval($_POST['is_active'] ?? 0);
+
+            if ($test_id <= 0) {
+                throw new Exception('Invalid test ID');
+            }
+
+            $stmt = $this->pdo->prepare("UPDATE lab_tests SET is_active = ?, updated_at = NOW() WHERE id = ?");
+            $stmt->execute([$is_active, $test_id]);
+
+            $this->jsonResponse(['success' => true, 'message' => 'Test status updated successfully']);
+        } catch (Exception $e) {
+            $this->jsonResponse(['success' => false, 'message' => $e->getMessage()]);
+        }
+    }
+
+    public function delete_test() {
+        if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+            $this->jsonResponse(['success' => false, 'message' => 'Invalid request method']);
+        }
+
+        $this->validateCSRF();
+
+        try {
+            $test_id = intval($_POST['test_id'] ?? 0);
+
+            if ($test_id <= 0) {
+                throw new Exception('Invalid test ID');
+            }
+
+            // Check if test is being used in any orders
+            $stmt = $this->pdo->prepare("SELECT COUNT(*) as count FROM lab_test_orders WHERE test_id = ?");
+            $stmt->execute([$test_id]);
+            $usage = $stmt->fetch();
+
+            if ($usage['count'] > 0) {
+                throw new Exception('Cannot delete test that has been ordered. Deactivate it instead.');
+            }
+
+            $this->pdo->beginTransaction();
+
+            // Delete test items first
+            $stmt = $this->pdo->prepare("DELETE FROM lab_test_items WHERE test_id = ?");
+            $stmt->execute([$test_id]);
+
+            // Delete the test
+            $stmt = $this->pdo->prepare("DELETE FROM lab_tests WHERE id = ?");
+            $stmt->execute([$test_id]);
+
+            $this->pdo->commit();
+            $this->jsonResponse(['success' => true, 'message' => 'Test deleted successfully']);
+        } catch (Exception $e) {
+            $this->pdo->rollBack();
+            $this->jsonResponse(['success' => false, 'message' => $e->getMessage()]);
+        }
+    }
+
+    public function export_tests() {
+        header('Content-Type: text/csv');
+        header('Content-Disposition: attachment; filename="lab_tests_' . date('Y-m-d') . '.csv"');
+
+        $stmt = $this->pdo->prepare("
+            SELECT lt.test_name, lt.test_code, ltc.category_name, lt.price, lt.normal_range, lt.unit,
+                   lt.description, lt.is_active, lt.created_at,
+                   GROUP_CONCAT(li.item_name SEPARATOR '; ') as required_items
+            FROM lab_tests lt
+            LEFT JOIN lab_test_categories ltc ON lt.category_id = ltc.id
+            LEFT JOIN lab_test_items lti ON lt.id = lti.test_id
+            LEFT JOIN lab_inventory li ON lti.item_id = li.id
+            GROUP BY lt.id
+            ORDER BY ltc.category_name, lt.test_name
+        ");
+        $stmt->execute();
+        $tests = $stmt->fetchAll();
+
+        // Output CSV headers
+        echo "Test Name,Test Code,Category,Price (TSh),Normal Range,Unit,Description,Required Items,Status,Created Date\n";
+
+        // Output data
+        foreach ($tests as $test) {
+            echo '"' . str_replace('"', '""', $test['test_name']) . '",';
+            echo '"' . str_replace('"', '""', $test['test_code']) . '",';
+            echo '"' . str_replace('"', '""', $test['category_name']) . '",';
+            echo '"' . $test['price'] . '",';
+            echo '"' . str_replace('"', '""', $test['normal_range']) . '",';
+            echo '"' . str_replace('"', '""', $test['unit']) . '",';
+            echo '"' . str_replace('"', '""', $test['description']) . '",';
+            echo '"' . str_replace('"', '""', $test['required_items']) . '",';
+            echo '"' . ($test['is_active'] ? 'Active' : 'Inactive') . '",';
+            echo '"' . $test['created_at'] . "\"\n";
+        }
+
+        exit;
     }
 }
 ?>

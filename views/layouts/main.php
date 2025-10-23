@@ -1005,6 +1005,7 @@
                                 ['url' => 'lab/tests', 'icon' => 'fas fa-vial', 'text' => 'Test Queue', 'badge' => '3', 'color' => 'yellow'],
                                 ['url' => 'lab/results', 'icon' => 'fas fa-clipboard-check', 'text' => 'Record Results', 'badge' => '', 'color' => 'green'],
                                 ['url' => 'lab/samples', 'icon' => 'fas fa-test-tube', 'text' => 'Sample Collection', 'badge' => '2', 'color' => 'purple'],
+                                ['url' => 'lab/test_management', 'icon' => 'fas fa-cogs', 'text' => 'Test Management', 'badge' => '', 'color' => 'indigo'],
                                 ['url' => 'lab/equipment', 'icon' => 'fas fa-microscope', 'text' => 'Equipment', 'badge' => '1', 'color' => 'indigo'],
                                 ['url' => 'lab/inventory', 'icon' => 'fas fa-boxes', 'text' => 'Inventory', 'badge' => '!', 'color' => 'orange'],
                                 ['url' => 'lab/quality', 'icon' => 'fas fa-check-double', 'text' => 'Quality Control', 'badge' => '', 'color' => 'emerald'],
@@ -1012,19 +1013,6 @@
                             ];
                         }
                         ?>
-
-                        <!-- Role badge -->
-                        <div class="mb-6 p-3 bg-gradient-to-r from-neutral-50 to-neutral-100 rounded-lg">
-                            <div class="flex items-center space-x-2">
-                                <div class="w-8 h-8 bg-gradient-to-br from-medical-accent to-medical-secondary rounded-lg flex items-center justify-center">
-                                    <i class="fas fa-user text-white text-sm"></i>
-                                </div>
-                                <div>
-                                    <div class="text-sm font-medium text-neutral-800"><?php echo htmlspecialchars($_SESSION['user_name']); ?></div>
-                                    <div class="text-xs text-neutral-500 capitalize"><?php echo htmlspecialchars($role); ?></div>
-                                </div>
-                            </div>
-                        </div>
 
                         <?php foreach ($menu_items as $item):
                             $is_active = (strpos($current_path, $item['url']) !== false);

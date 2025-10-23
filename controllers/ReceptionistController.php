@@ -790,7 +790,7 @@ class ReceptionistController extends BaseController
                     LEFT JOIN medicine_batches mb ON m.id = mb.medicine_id
                     WHERE pr.id = ?
                     GROUP BY pr.id, pr.patient_id, pr.visit_id, pr.medicine_id, pr.quantity_prescribed, pr.quantity_dispensed, m.name, m.unit_price
-                    FOR UPDATE // Lock the row to prevent race conditions during dispensing
+                    FOR UPDATE
                 ");
                 $stmt->execute([$prescription_id]);
                 $prescription = $stmt->fetch();
@@ -1423,7 +1423,7 @@ class ReceptionistController extends BaseController
 
                     // Create consultation record for doctor queue
                     $default_doctor_id = 1;
-                    $stmt = $this->pdo->prepare("INSERT INTO consultations (visit_id, patient_id, doctor_id, consultation_type, status, created_at) VALUES (?, ?, ?, 'revisit', 'pending', NOW())");
+                    $stmt = $this->pdo->prepare("INSERT INTO consultations (visit_id, patient_id, doctor_id, consultation_type, status, created_at) VALUES (?, ?, ?, 'new', 'pending', NOW())");
                     $stmt->execute([$visit_id, $patient_id, $default_doctor_id]);
                 }
 
@@ -1599,6 +1599,33 @@ class ReceptionistController extends BaseController
      */
     public function medicine()
     {
+        // Handle POST requests for medicine actions
+        if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+            $this->validateCSRF();
+
+            $action = $_POST['action'] ?? '';
+
+            switch ($action) {
+                case 'dispense_patient_medicine':
+                    $this->handleDispensePatientMedicine();
+                    return;
+
+                case 'add_medicine':
+                    $this->add_medicine();
+                    return;
+
+                case 'update_medicine_stock':
+                    $this->update_medicine_stock();
+                    return;
+
+                default:
+                    $_SESSION['error'] = 'Unknown action';
+                    $this->redirect('receptionist/medicine');
+                    return;
+            }
+        }
+
+        // GET request - display the medicine page
         // Query raw pending prescriptions with amounts paid per prescription
         $stmt = $this->pdo->prepare("\n            SELECT pr.id as prescription_id, pr.visit_id, pr.patient_id, pr.quantity_prescribed, pr.quantity_dispensed, pr.created_at as prescribed_at,\n                   p.first_name, p.last_name, p.registration_number, pr.medicine_id, m.unit_price, m.name as medicine_name,\n                   COALESCE((SELECT SUM(pay.amount) FROM payments pay WHERE pay.visit_id = pr.visit_id AND pay.patient_id = pr.patient_id AND pay.payment_type = 'medicine' AND pay.item_id = pr.id AND pay.item_type = 'prescription' AND pay.payment_status = 'paid'), 0) as amount_paid_for_this_prescription\n            FROM prescriptions pr\n            JOIN patients p ON pr.patient_id = p.id\n            JOIN medicines m ON pr.medicine_id = m.id\n            WHERE pr.status IN ('pending', 'partial')\n            ORDER BY pr.created_at ASC\n        ");
         $stmt->execute();
@@ -1610,6 +1637,7 @@ class ReceptionistController extends BaseController
             $patient_id = $prescription['patient_id'];
             if (!isset($pending_patients_grouped[$patient_id])) {
                 $pending_patients_grouped[$patient_id] = [
+                    'id' => $patient_id, // Add 'id' key for view compatibility
                     'patient_id' => $patient_id,
                     'first_name' => $prescription['first_name'],
                     'last_name' => $prescription['last_name'],
@@ -1619,6 +1647,7 @@ class ReceptionistController extends BaseController
                     'prescribed_at' => $prescription['prescribed_at'],
                     'total_prescribed_cost' => 0,
                     'total_paid_for_patient' => 0,
+                    'medicine_count' => 0, // Initialize medicine count
                     'prescriptions' => []
                 ];
             }
@@ -1626,6 +1655,7 @@ class ReceptionistController extends BaseController
             $pending_patients_grouped[$patient_id]['total_prescribed_cost'] += $prescription_cost;
             $pending_patients_grouped[$patient_id]['total_paid_for_patient'] += $prescription['amount_paid_for_this_prescription'];
             $pending_patients_grouped[$patient_id]['prescriptions'][] = $prescription;
+            $pending_patients_grouped[$patient_id]['medicine_count'] = count($pending_patients_grouped[$patient_id]['prescriptions']); // Update count
         }
 
         $pending_patients = array_values($pending_patients_grouped);
@@ -1682,5 +1712,55 @@ class ReceptionistController extends BaseController
             'notifications' => $notifications,
             'sidebar_data' => $this->getSidebarData()
         ]);
+    }
+
+    /**
+     * Handle dispensing all medicines for a patient
+     */
+    private function handleDispensePatientMedicine()
+    {
+        $patient_id = $_POST['patient_id'] ?? null;
+
+        if (!$patient_id) {
+            $_SESSION['error'] = 'Patient ID is required';
+            $this->redirect('receptionist/medicine');
+            return;
+        }
+
+        // Get all pending prescriptions for this patient
+        $stmt = $this->pdo->prepare("
+            SELECT pr.id, pr.quantity_prescribed, pr.quantity_dispensed
+            FROM prescriptions pr
+            WHERE pr.patient_id = ? AND pr.status IN ('pending', 'partial')
+        ");
+        $stmt->execute([$patient_id]);
+        $prescriptions = $stmt->fetchAll();
+
+        if (empty($prescriptions)) {
+            $_SESSION['error'] = 'No pending prescriptions found for this patient';
+            $this->redirect('receptionist/medicine');
+            return;
+        }
+
+        // Build dispensed_items array with remaining quantities to dispense
+        $dispensed_items = [];
+        foreach ($prescriptions as $prescription) {
+            $remaining = $prescription['quantity_prescribed'] - $prescription['quantity_dispensed'];
+            if ($remaining > 0) {
+                $dispensed_items[$prescription['id']] = $remaining;
+            }
+        }
+
+        if (empty($dispensed_items)) {
+            $_SESSION['error'] = 'No medicines remaining to dispense for this patient';
+            $this->redirect('receptionist/medicine');
+            return;
+        }
+
+        // Set the POST data for process_medicine_dispensing
+        $_POST['dispensed_items'] = $dispensed_items;
+
+        // Call the existing dispensing method
+        $this->process_medicine_dispensing();
     }
 }

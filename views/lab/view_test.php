@@ -95,7 +95,7 @@
                             break;
                     }
                     ?>">
-                    <?php echo ucfirst($test['status']); ?>
+                    <?php echo ucfirst($test['status'] ?? 'unknown'); ?>
                 </span>
             </div>
             <div>

@@ -2,10 +2,16 @@
 // Base Controller Class
 class BaseController {
     protected $pdo;
+    protected $layout = 'layouts/main';
 
     public function __construct() {
         global $pdo;
         $this->pdo = $pdo;
+    }
+
+    // Set custom layout
+    protected function layout($layout) {
+        $this->layout = $layout;
     }
 
     // Render view with layout
@@ -25,7 +31,7 @@ class BaseController {
 
         // Include layout
         $BASE_PATH = defined('BASE_PATH') ? BASE_PATH : (rtrim(str_replace('\\', '/', dirname($_SERVER['SCRIPT_NAME'] ?? '/')), '/') ?: '');
-        include __DIR__ . '/../views/layouts/main.php';
+        include __DIR__ . '/../views/' . $this->layout . '.php';
     }
 
     // Redirect to another page
