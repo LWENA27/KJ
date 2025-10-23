@@ -27,3 +27,13 @@
 [22-Oct-2025 07:48:12 UTC] PHP Warning:  foreach() argument must be of type array|object, null given in /var/www/html/KJ/controllers/DoctorController.php on line 1013
 [22-Oct-2025 07:48:12 UTC] PHP Warning:  Undefined variable $medicines in /var/www/html/KJ/controllers/DoctorController.php on line 1045
 [22-Oct-2025 07:48:12 UTC] PHP Warning:  foreach() argument must be of type array|object, null given in /var/www/html/KJ/controllers/DoctorController.php on line 1045
+[22-Oct-2025 07:57:57 UTC] Workflow status tracking not available: SQLSTATE[42S02]: Base table or view not found: 1146 Table 'zahanati.patient_workflow_status' doesn't exist
+[22-Oct-2025 08:17:18 UTC] Workflow status tracking not available: SQLSTATE[42S02]: Base table or view not found: 1146 Table 'zahanati.patient_workflow_status' doesn't exist
+[22-Oct-2025 08:21:17 UTC] SQL execution successful for lab_results insert
+[22-Oct-2025 09:05:56 UTC] Prescription error: SQLSTATE[42S22]: Column not found: 1054 Unknown column 'created_at' in 'field list'
+[23-Oct-2025 11:01:32 UTC] Workflow status tracking not available: SQLSTATE[42S02]: Base table or view not found: 1146 Table 'zahanati.patient_workflow_status' doesn't exist
+[23-Oct-2025 18:35:31 UTC] Prescription error: SQLSTATE[42S22]: Column not found: 1054 Unknown column 'created_at' in 'field list'
+[23-Oct-2025 18:58:38 UTC] Prescription error: SQLSTATE[42S22]: Column not found: 1054 Unknown column 'created_at' in 'field list'
+[23-Oct-2025 19:00:43 UTC] Prescription error: SQLSTATE[42S22]: Column not found: 1054 Unknown column 'created_at' in 'field list'
+[23-Oct-2025 19:04:29 UTC] Prescription error: SQLSTATE[42S22]: Column not found: 1054 Unknown column 'created_at' in 'field list'
+[23-Oct-2025 19:09:37 UTC] Prescription error: SQLSTATE[42S22]: Column not found: 1054 Unknown column 'created_at' in 'field list'

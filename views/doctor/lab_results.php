@@ -1,7 +1,7 @@
 <div class="space-y-6">
     <div class="flex items-center justify-between">
         <h1 class="text-3xl font-bold text-gray-900">Lab Results</h1>
-    <a href="<?= $BASE_PATH ?>/doctor/lab_results" class="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-md">
+        <a href="<?= $BASE_PATH ?>/doctor/lab_results" class="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-md">
             <i class="fas fa-search mr-2"></i>Search Results
         </a>
     </div>
@@ -32,7 +32,7 @@
                                     <i class="fas fa-user text-green-600"></i>
                                 </div>
                                 <div>
-                                        <div class="text-sm font-medium text-gray-900">
+                                    <div class="text-sm font-medium text-gray-900">
                                         <?php echo htmlspecialchars($result['first_name'] . ' ' . $result['last_name']); ?>
                                     </div>
                                     <div class="text-sm text-gray-500">
@@ -169,11 +169,11 @@
             
             <!-- Footer -->
             <div class="px-6 py-4 bg-gray-50 rounded-b-xl flex justify-end space-x-3">
-              <button type="button" id="openPrescriptionBtn"
-                        class="px-4 py-2 bg-white border border-gray-300 rounded-lg text-gray-700 shadow-sm hover:bg-gray-50">
-                    Prescribe Medicine
+                <button type="button" id="openPrescriptionFromDetails"
+                        class="px-4 py-2 bg-green-600 text-white rounded-lg shadow-sm hover:bg-green-700">
+                    <i class="fas fa-prescription mr-2"></i>Prescribe Medicine
                 </button>
-            <button type="button" id="closeModalBtn"
+                <button type="button" id="closeModalBtn"
                         class="px-4 py-2 bg-white border border-gray-300 rounded-lg text-gray-700 shadow-sm hover:bg-gray-50">
                     Close
                 </button>
@@ -206,7 +206,7 @@
             </div>
             
             <!-- Body -->
-            <form id="prescriptionForm" method="POST" action="<?= $BASE_PATH ?>/doctor/prescribe_medicine" onsubmit="syncSelectedMedicinesFromDOM(); return validatePrescriptionForm();">
+            <form id="prescriptionForm" method="POST" action="<?= $BASE_PATH ?>/doctor/prescribe_medicine" onsubmit="return handlePrescriptionSubmit();">
                 <input type="hidden" name="csrf_token" value="<?= $csrf_token ?>">
                 <input type="hidden" name="patient_id" id="prescriptionPatientId">
                 <input type="hidden" name="selected_medicines" id="selectedMedicinesJson" value="[]">
@@ -290,7 +290,9 @@ function validatePrescriptionForm() {
         if (!medicine) return;
 
         const qtyInput = div.querySelector('input[name$="[quantity]"]');
-        const dosageInput = div.querySelector('input[name$="[dosage]"]');
+    const dosageInput = div.querySelector('input[name$="[dosage]"]');
+    const frequencyInput = div.querySelector('input[name$="[frequency]"]');
+    const durationInput = div.querySelector('input[name$="[duration]"]');
         const instrInput = div.querySelector('input[name$="[instructions]"]');
 
         const qty = Number(qtyInput?.value);
@@ -306,6 +308,20 @@ function validatePrescriptionForm() {
 
         if (!dosage) {
             alert(`Please specify dosage for ${medicine.name}`);
+            validationPassed = false;
+            return;
+        }
+
+        // Frequency & duration validation (new required fields)
+        const frequency = frequencyInput?.value?.trim();
+        const duration = durationInput?.value?.trim();
+        if (!frequency) {
+            alert(`Please specify frequency for ${medicine.name}`);
+            validationPassed = false;
+            return;
+        }
+        if (!duration || isNaN(Number(duration)) || Number(duration) <= 0) {
+            alert(`Please specify valid duration (days) for ${medicine.name}`);
             validationPassed = false;
             return;
         }
@@ -328,6 +344,8 @@ function validatePrescriptionForm() {
             name: medicine.name,
             quantity: qty,
             dosage: dosage,
+            frequency: frequency,
+            duration: Number(duration),
             instructions: instructions,
             unit_price: medicine.unit_price
         });
@@ -339,6 +357,27 @@ function validatePrescriptionForm() {
 
     // Update hidden input with validated data
     document.getElementById('selectedMedicinesJson').value = JSON.stringify(medicineData);
+    return true;
+}
+
+// Handle prescription form submission
+function handlePrescriptionSubmit() {
+    // Sync data from DOM first
+    syncSelectedMedicinesFromDOM();
+    
+    // Validate the form
+    if (!validatePrescriptionForm()) {
+        return false; // Stop submission if validation fails
+    }
+    
+    // Disable submit button and show loading state
+    const submitBtn = document.querySelector('#prescriptionForm button[type="submit"]');
+    if (submitBtn) {
+        submitBtn.disabled = true;
+        submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>Submitting...';
+    }
+    
+    // Allow the form to submit normally
     return true;
 }
 
@@ -354,12 +393,16 @@ function syncSelectedMedicinesFromDOM() {
 
             const qtyInput = div.querySelector('input[name$="[quantity]"]');
             const dosageInput = div.querySelector('input[name$="[dosage]"]');
+            const frequencyInput = div.querySelector('input[name$="[frequency]"]');
+            const durationInput = div.querySelector('input[name$="[duration]"]');
             const instrInput = div.querySelector('input[name$="[instructions]"]');
 
             return {
                 ...m,
                 quantity: qtyInput ? Number(qtyInput.value) : m.quantity,
                 dosage: dosageInput ? dosageInput.value : m.dosage,
+                frequency: frequencyInput ? frequencyInput.value : (m.frequency || 'Once daily'),
+                duration: durationInput ? Number(durationInput.value) : (m.duration || 1),
                 instructions: instrInput ? instrInput.value : m.instructions
             };
         });
@@ -533,7 +576,7 @@ function updateSelectedMedicinesList() {
                     <i class="fas fa-times"></i>
                 </button>
             </div>
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-2">
+            <div class="grid grid-cols-1 md:grid-cols-4 gap-2">
                 <div>
                     <label class="block text-xs text-gray-600">Quantity</label>
                     <input type="number" name="medicines[${medicine.id}][quantity]" 
@@ -549,6 +592,21 @@ function updateSelectedMedicinesList() {
                            class="w-full px-2 py-1 border border-gray-300 rounded text-sm"
                            onchange="updateMedicineDetails(${medicine.id}, 'dosage', this.value)">
                 </div>
+                    <div>
+                        <label class="block text-xs text-gray-600">Frequency</label>
+                        <input type="text" name="medicines[${medicine.id}][frequency]" 
+                               value="${medicine.frequency || 'Once daily'}"
+                               placeholder="e.g., Twice daily"
+                               class="w-full px-2 py-1 border border-gray-300 rounded text-sm"
+                               onchange="updateMedicineDetails(${medicine.id}, 'frequency', this.value)">
+                    </div>
+                    <div>
+                        <label class="block text-xs text-gray-600">Duration (days)</label>
+                        <input type="number" name="medicines[${medicine.id}][duration]" 
+                               min="1" value="${medicine.duration || 1}"
+                               class="w-full px-2 py-1 border border-gray-300 rounded text-sm"
+                               onchange="updateMedicineDetails(${medicine.id}, 'duration', this.value)">
+                    </div>
                 <div>
                     <label class="block text-xs text-gray-600">Instructions</label>
                     <input type="text" name="medicines[${medicine.id}][instructions]" 
@@ -570,13 +628,37 @@ function clearMedicineSearch() {
     document.getElementById('medicineResults').classList.add('hidden');
 }
 
+// Reset prescription form completely
+function resetPrescriptionForm() {
+    selectedMedicines = [];
+    updateSelectedMedicinesList();
+    
+    const form = document.getElementById('prescriptionForm');
+    form.reset();
+    document.getElementById('selectedMedicinesJson').value = '[]';
+    
+    // Clear search field and hide results
+    document.getElementById('medicineSearch').value = '';
+    document.getElementById('medicineResults').classList.add('hidden');
+    document.getElementById('clearMedicineSearch').classList.add('hidden');
+    
+    // Reset submit button state
+    const submitBtn = form.querySelector('button[type="submit"]');
+    if (submitBtn) {
+        submitBtn.disabled = false;
+        submitBtn.innerHTML = '<i class="fas fa-check mr-2"></i>Submit Prescription';
+    }
+}
+
 // Close modal handlers
 document.getElementById('closePrescriptionModal').addEventListener('click', () => {
     document.getElementById('prescriptionModal').classList.add('hidden');
+    resetPrescriptionForm();
 });
 
 document.getElementById('cancelPrescription').addEventListener('click', () => {
     document.getElementById('prescriptionModal').classList.add('hidden');
+    resetPrescriptionForm();
 });
 
 // Hide search results when clicking outside
@@ -593,9 +675,75 @@ document.querySelectorAll('.prescribe-btn').forEach(button => {
         document.getElementById('prescriptionPatientId').value = patientId;
         selectedMedicines = []; // Reset selected medicines
         updateSelectedMedicinesList();
+        
+        // Reset the entire form
+        const form = document.getElementById('prescriptionForm');
+        form.reset();
+        document.getElementById('selectedMedicinesJson').value = '[]';
+        
+        // Clear search field and hide results
+        document.getElementById('medicineSearch').value = '';
+        document.getElementById('medicineResults').classList.add('hidden');
+        document.getElementById('clearMedicineSearch').classList.add('hidden');
+        
+        // Reset submit button state (in case it was stuck loading)
+        const submitBtn = form.querySelector('button[type="submit"]');
+        if (submitBtn) {
+            submitBtn.disabled = false;
+            submitBtn.innerHTML = '<i class="fas fa-check mr-2"></i>Submit Prescription';
+        }
+        
         document.getElementById('prescriptionModal').classList.remove('hidden');
     });
 });
+
+// Open prescription modal from details modal button
+const openPrescriptionFromDetails = document.getElementById('openPrescriptionFromDetails');
+if (openPrescriptionFromDetails) {
+    openPrescriptionFromDetails.addEventListener('click', function() {
+        // Try to read patient id from the details modal data (set when opening details)
+        const patientNameElem = document.getElementById('patientName');
+        const patientName = patientNameElem ? patientNameElem.textContent : '';
+        // Try to locate first matching row in the table to get patient id via data attribute
+        // Fallback: read from hidden prescriptionPatientId
+        let pid = document.getElementById('prescriptionPatientId').value || '';
+        if (!pid) {
+            // look through view-details buttons for a matching patient name
+            const btn = Array.from(document.querySelectorAll('.view-details-btn')).find(b => b.getAttribute('data-patient-name') === patientName);
+            if (btn) pid = btn.getAttribute('data-patient-id');
+        }
+
+        if (!pid) {
+            alert('Unable to determine patient for prescription. Please open Prescribe from the patient row.');
+            return;
+        }
+
+        document.getElementById('prescriptionPatientId').value = pid;
+        selectedMedicines = [];
+        updateSelectedMedicinesList();
+        
+        // Reset the entire form
+        const form = document.getElementById('prescriptionForm');
+        form.reset();
+        document.getElementById('selectedMedicinesJson').value = '[]';
+        
+        // Clear search field and hide results
+        document.getElementById('medicineSearch').value = '';
+        document.getElementById('medicineResults').classList.add('hidden');
+        document.getElementById('clearMedicineSearch').classList.add('hidden');
+        
+        // Reset submit button state
+        const submitBtn = form.querySelector('button[type="submit"]');
+        if (submitBtn) {
+            submitBtn.disabled = false;
+            submitBtn.innerHTML = '<i class="fas fa-check mr-2"></i>Submit Prescription';
+        }
+        
+        document.getElementById('prescriptionModal').classList.remove('hidden');
+        // Close the details modal
+        document.getElementById('testDetailsModal').classList.add('hidden');
+    });
+}
 </script>
 
 <script>
@@ -641,12 +789,6 @@ document.addEventListener('DOMContentLoaded', function() {
         // Show the modal
         testDetailsModal.classList.remove('hidden');
         document.body.classList.add('overflow-hidden');
-        // store patient id on the modal for other actions (e.g., open prescription)
-        if (testData.patientId) {
-            testDetailsModal.dataset.patientId = testData.patientId;
-        } else {
-            delete testDetailsModal.dataset.patientId;
-        }
         
         // Animate in
         setTimeout(() => {
@@ -666,7 +808,6 @@ document.addEventListener('DOMContentLoaded', function() {
         button.addEventListener('click', function() {
             const testData = {
                 testId: this.getAttribute('data-test-id'),
-                patientId: this.getAttribute('data-patient-id'),
                 patientName: this.getAttribute('data-patient-name'),
                 testName: this.getAttribute('data-test-name'),
                 resultValue: this.getAttribute('data-result-value'),
@@ -750,26 +891,5 @@ document.addEventListener('DOMContentLoaded', function() {
             printWindow.print();
         }, 500);
     });
-
-    // Open prescription modal from within the test details modal
-    const openPrescriptionBtn = document.getElementById('openPrescriptionBtn');
-    if (openPrescriptionBtn) {
-        openPrescriptionBtn.addEventListener('click', function() {
-            const pid = testDetailsModal.dataset.patientId;
-            if (!pid) {
-                alert('Patient not found for prescription');
-                return;
-            }
-            // Set patient id on prescription form and reset selection
-            const presPatientInput = document.getElementById('prescriptionPatientId');
-            if (presPatientInput) presPatientInput.value = pid;
-            selectedMedicines = [];
-            updateSelectedMedicinesList();
-
-            // Hide details modal and show prescription modal
-            testDetailsModal.classList.add('hidden');
-            document.getElementById('prescriptionModal').classList.remove('hidden');
-        });
-    }
 });
 </script>
