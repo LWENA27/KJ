@@ -1,3 +1,24 @@
+<style>
+/* Users table responsive fixes: ensure table fits available space and allow wrapping on smaller screens */
+.users-table { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+.users-table table { box-sizing: border-box; width: 100%; min-width: 100%; table-layout: fixed; }
+.users-table th, .users-table td { overflow-wrap: anywhere; word-break: break-word; }
+
+@media (max-width: 1024px) {
+    /* Allow table cells to wrap on tablets and smaller so page doesn't overflow */
+    .users-table table, .users-table thead, .users-table tbody, .users-table tr, .users-table th, .users-table td {
+        display: table; /* preserve table layout for accessibility but allow cell wrapping */
+    }
+
+    .users-table th, .users-table td {
+        white-space: normal !important;
+        word-break: break-word;
+    }
+
+    .users-table table { min-width: 0 !important; }
+}
+</style>
+
 <div class="space-y-6">
     <div class="flex items-center justify-between">
         <h1 class="text-3xl font-bold text-gray-900">User Management</h1>
@@ -11,7 +32,7 @@
         <div class="px-6 py-4 border-b border-gray-200">
             <h3 class="text-lg font-medium text-gray-900">System Users</h3>
         </div>
-        <div class="overflow-x-auto">
+    <div class="overflow-x-auto users-table">
             <table class="min-w-full divide-y divide-gray-200">
                 <thead class="bg-gray-50">
                     <tr>

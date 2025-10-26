@@ -542,6 +542,41 @@
             }
         }
 
+        /* Desktop: make sidebar fixed (static while page scrolls) and allow collapsing */
+        @media (min-width: 769px) {
+            .sidebar {
+                position: fixed;
+                left: 0;
+                top: 0;
+                height: 100vh;
+                width: 16rem; /* matches w-64 */
+                transform: translateX(0);
+                transition: transform 0.25s ease-in-out;
+            }
+
+            /* When collapsed, move sidebar out of view */
+            .sidebar.collapsed {
+                transform: translateX(-100%);
+            }
+
+            /* Shift the entire right column (header + content) to account for fixed sidebar */
+            #contentWrapper {
+                margin-left: 16rem !important;
+                transition: margin-left 0.25s ease-in-out;
+                overflow-x: hidden; /* prevent page-level horizontal overflow */
+            }
+
+            /* When the sidebar is collapsed, allow content to use full width */
+            #contentWrapper.fullwidth {
+                margin-left: 0 !important;
+            }
+
+            /* No overlay on desktop */
+            .sidebar-overlay {
+                display: none;
+            }
+        }
+
         /* High DPI displays */
         @media (-webkit-min-device-pixel-ratio: 2),
         (min-resolution: 192dpi) {
@@ -1051,7 +1086,7 @@
             </div>
 
             <!-- Main Content -->
-            <div class="flex-1 flex flex-col min-h-screen">
+            <div id="contentWrapper" class="flex-1 flex flex-col min-h-screen">
                 <!-- Top Header Bar -->
                 <div class="top-header">
                     <div class="px-4 md:px-6 py-3">
@@ -1118,6 +1153,8 @@
                                         <i id="themeIcon" class="fas fa-moon text-lg"></i>
                                     </button>
                                 </div>
+
+                                <!-- (desktop toggle removed to avoid duplicate toggle buttons) -->
 
                                 <!-- Search (Enhanced) -->
                                 <div class="relative hidden md:flex" id="globalSearch">
@@ -1262,10 +1299,25 @@
         function toggleSidebar() {
             const sidebar = document.getElementById('sidebar');
             const overlay = document.getElementById('sidebarOverlay');
+            const mainContent = document.getElementById('contentWrapper');
 
-            if (sidebar && overlay) {
-                sidebar.classList.toggle('open');
-                overlay.classList.toggle('show');
+            if (!sidebar) return;
+
+            // Mobile behaviour (slide-in with overlay)
+            if (window.innerWidth <= 768) {
+                if (overlay) {
+                    sidebar.classList.toggle('open');
+                    overlay.classList.toggle('show');
+                } else {
+                    sidebar.classList.toggle('open');
+                }
+                return;
+            }
+
+            // Desktop behaviour: collapse/expand sidebar (fixed)
+            sidebar.classList.toggle('collapsed');
+            if (mainContent) {
+                mainContent.classList.toggle('fullwidth');
             }
         }
 
@@ -1296,14 +1348,27 @@
 
         // Handle window resize
         window.addEventListener('resize', function() {
-            if (window.innerWidth > 768) {
-                const sidebar = document.getElementById('sidebar');
-                const overlay = document.getElementById('sidebarOverlay');
+            const sidebar = document.getElementById('sidebar');
+            const overlay = document.getElementById('sidebarOverlay');
+            const mainContent = document.getElementById('contentWrapper');
 
-                if (sidebar && overlay) {
-                    sidebar.classList.remove('open');
-                    overlay.classList.remove('show');
+            if (!sidebar) return;
+
+            if (window.innerWidth > 768) {
+                // Remove mobile-only classes
+                sidebar.classList.remove('open');
+                if (overlay) overlay.classList.remove('show');
+
+                // Ensure desktop layout margin reflects collapsed state
+                if (sidebar.classList.contains('collapsed')) {
+                    if (mainContent) mainContent.classList.add('fullwidth');
+                } else {
+                    if (mainContent) mainContent.classList.remove('fullwidth');
                 }
+            } else {
+                // On small screens always ensure sidebar isn't stuck collapsed (desktop-only)
+                sidebar.classList.remove('collapsed');
+                if (mainContent) mainContent.classList.remove('fullwidth');
             }
         });
 
