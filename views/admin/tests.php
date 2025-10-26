@@ -1,15 +1,63 @@
 <div class="space-y-6">
     <div class="flex items-center justify-between">
-        <h1 class="text-3xl font-bold text-gray-900">Lab Tests Management</h1>
-    <a href="<?= $BASE_PATH ?>/admin/tests" class="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-md">
-            <i class="fas fa-plus mr-2"></i>Add New Test
-        </a>
+        <h1 class="text-3xl font-bold text-gray-900" >Lab Tests Management</h1>
     </div>
+
+      <!-- Test Categories Summary -->
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <div class="bg-white rounded-lg shadow p-6">
+            <div class="flex items-center">
+                <div class="p-2 bg-blue-100 rounded-lg">
+                    <i class="fas fa-heartbeat text-blue-600 text-2xl"></i>
+                </div>
+                <div class="ml-4">
+                    <p class="text-sm font-medium text-gray-600">Hematology Tests</p>
+                    <p class="text-2xl font-bold text-gray-900">
+                        <?php echo count(array_filter($tests, function($test) { return $test['category'] === 'Hematology'; })); ?>
+                    </p>
+                </div>
+            </div>
+        </div>
+
+        <div class="bg-white rounded-lg shadow p-6">
+            <div class="flex items-center">
+                <div class="p-2 bg-green-100 rounded-lg">
+                    <i class="fas fa-vial text-green-600 text-2xl"></i>
+                </div>
+                <div class="ml-4">
+                    <p class="text-sm font-medium text-gray-600">Biochemistry Tests</p>
+                    <p class="text-2xl font-bold text-gray-900">
+                        <?php echo count(array_filter($tests, function($test) { return $test['category'] === 'Biochemistry'; })); ?>
+                    </p>
+                </div>
+            </div>
+        </div>
+
+        <div class="bg-white rounded-lg shadow p-6">
+            <div class="flex items-center">
+                <div class="p-2 bg-purple-100 rounded-lg">
+                    <i class="fas fa-microscope text-purple-600 text-2xl"></i>
+                </div>
+                <div class="ml-4">
+                    <p class="text-sm font-medium text-gray-600">Urinalysis Tests</p>
+                    <p class="text-2xl font-bold text-gray-900">
+                        <?php echo count(array_filter($tests, function($test) { return $test['category'] === 'Urinalysis'; })); ?>
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+
 
     <!-- Tests Table -->
     <div class="bg-white rounded-lg shadow overflow-hidden">
-        <div class="px-6 py-4 border-b border-gray-200">
+        <div class="px-6 py-4 border-b border-gray-200" style="display: flex; justify-content: space-between;">
             <h3 class="text-lg font-medium text-gray-900">Available Lab Tests</h3>
+            <h3>
+                 <a href="<?= $BASE_PATH ?>/admin/tests" class="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-md">
+            <i class="fas fa-plus mr-2"></i>Add New Test
+        </a>
+            </h3>
         </div>
         <div class="overflow-x-auto">
             <table class="min-w-full divide-y divide-gray-200">
@@ -67,48 +115,4 @@
         </div>
     </div>
 
-    <!-- Test Categories Summary -->
-    <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <div class="bg-white rounded-lg shadow p-6">
-            <div class="flex items-center">
-                <div class="p-2 bg-blue-100 rounded-lg">
-                    <i class="fas fa-heartbeat text-blue-600 text-2xl"></i>
-                </div>
-                <div class="ml-4">
-                    <p class="text-sm font-medium text-gray-600">Hematology Tests</p>
-                    <p class="text-2xl font-bold text-gray-900">
-                        <?php echo count(array_filter($tests, function($test) { return $test['category'] === 'Hematology'; })); ?>
-                    </p>
-                </div>
-            </div>
-        </div>
-
-        <div class="bg-white rounded-lg shadow p-6">
-            <div class="flex items-center">
-                <div class="p-2 bg-green-100 rounded-lg">
-                    <i class="fas fa-vial text-green-600 text-2xl"></i>
-                </div>
-                <div class="ml-4">
-                    <p class="text-sm font-medium text-gray-600">Biochemistry Tests</p>
-                    <p class="text-2xl font-bold text-gray-900">
-                        <?php echo count(array_filter($tests, function($test) { return $test['category'] === 'Biochemistry'; })); ?>
-                    </p>
-                </div>
-            </div>
-        </div>
-
-        <div class="bg-white rounded-lg shadow p-6">
-            <div class="flex items-center">
-                <div class="p-2 bg-purple-100 rounded-lg">
-                    <i class="fas fa-microscope text-purple-600 text-2xl"></i>
-                </div>
-                <div class="ml-4">
-                    <p class="text-sm font-medium text-gray-600">Urinalysis Tests</p>
-                    <p class="text-2xl font-bold text-gray-900">
-                        <?php echo count(array_filter($tests, function($test) { return $test['category'] === 'Urinalysis'; })); ?>
-                    </p>
-                </div>
-            </div>
-        </div>
-    </div>
-</div>
+  </div>
