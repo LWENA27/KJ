@@ -1,0 +1,1 @@
+[2025-10-26 11:26:43] ERROR: syntax error, unexpected token "private", expecting end of file | Context: {"file":"\/var\/www\/html\/KJ\/controllers\/AdminController.php","line":337,"trace":"#0 {main}"}

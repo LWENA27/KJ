@@ -249,6 +249,89 @@ class AdminController extends BaseController {
         ]);
     }
 
+    public function view_patient($patient_id = null) {
+        // Accept either path param or ?id= fallback
+        if ($patient_id === null) {
+            $patient_id = filter_input(INPUT_GET, 'id', FILTER_VALIDATE_INT) ?: null;
+        }
+        if (!$patient_id) {
+            $this->redirect('admin/patients');
+        }
+
+        // Get patient details
+        $stmt = $this->pdo->prepare("SELECT * FROM patients WHERE id = ?");
+        $stmt->execute([$patient_id]);
+        $patient = $stmt->fetch();
+
+        if (!$patient) {
+            $this->redirect('admin/patients');
+        }
+
+        // Get existing consultations (basic info for admin)
+        $stmt = $this->pdo->prepare("
+            SELECT c.*, pv.visit_date, u.first_name as doctor_first, u.last_name as doctor_last
+            FROM consultations c
+            LEFT JOIN patient_visits pv ON c.visit_id = pv.id
+            LEFT JOIN users u ON c.doctor_id = u.id
+            WHERE c.patient_id = ? 
+            ORDER BY COALESCE(c.follow_up_date, pv.visit_date, c.created_at) DESC
+            LIMIT 5
+        ");
+        $stmt->execute([$patient_id]);
+        $consultations = $stmt->fetchAll();
+
+        // Get all vital signs for this patient (for each consultation/visit)
+        $stmt = $this->pdo->prepare("
+            SELECT DISTINCT vs.*, 
+                   pv.visit_date, 
+                   c.id as consultation_id,
+                   vs.visit_id
+            FROM vital_signs vs
+            LEFT JOIN patient_visits pv ON vs.visit_id = pv.id
+            LEFT JOIN consultations c ON (
+                (vs.visit_id = c.visit_id AND vs.patient_id = c.patient_id) OR
+                (vs.patient_id = c.patient_id AND DATE(vs.recorded_at) = DATE(c.created_at))
+            )
+            WHERE vs.patient_id = ?
+            ORDER BY vs.recorded_at DESC
+        ");
+        $stmt->execute([$patient_id]);
+        $vital_signs = $stmt->fetchAll();
+
+        // Get payment history for this patient
+        $stmt = $this->pdo->prepare("
+            SELECT p.*, pv.visit_date
+            FROM payments p
+            LEFT JOIN patient_visits pv ON p.visit_id = pv.id
+            WHERE p.patient_id = ?
+            ORDER BY p.payment_date DESC
+            LIMIT 10
+        ");
+        $stmt->execute([$patient_id]);
+        $payments = $stmt->fetchAll();
+
+        // Get lab test orders for this patient (for real-time tracking)
+        $stmt = $this->pdo->prepare("
+            SELECT lto.*, lt.test_name, lt.test_code, lr.result_value, lr.result_text, lr.completed_at as result_completed_at
+            FROM lab_test_orders lto
+            JOIN lab_tests lt ON lto.test_id = lt.id
+            LEFT JOIN lab_results lr ON lto.id = lr.order_id
+            WHERE lto.patient_id = ?
+            ORDER BY lto.created_at DESC
+        ");
+        $stmt->execute([$patient_id]);
+        $lab_orders = $stmt->fetchAll();
+
+        $this->render('admin/view_patient', [
+            'patient' => $patient,
+            'consultations' => $consultations,
+            'vital_signs' => $vital_signs,
+            'payments' => $payments,
+            'lab_orders' => $lab_orders,
+            'csrf_token' => $this->generateCSRF()
+        ]);
+    }
+
     private function getDashboardStats() {
         $stats = [];
 
