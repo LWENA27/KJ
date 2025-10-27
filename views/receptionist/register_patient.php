@@ -187,10 +187,13 @@
                         <label for="blood_pressure" class="block text-sm font-medium text-gray-700 mb-1">
                             Blood Pressure (mmHg)
                         </label>
-               <input type="text" id="blood_pressure" name="blood_pressure" 
-                   placeholder="120/80"
-                   value="<?php echo htmlspecialchars($_POST['blood_pressure'] ?? ''); ?>"
-                   class="w-full px-3 py-2 border border-gray-300 rounded-md">
+                        <input type="text" id="blood_pressure" name="blood_pressure" 
+                               placeholder="120/80"
+                               pattern="\d{2,3}\/\d{2,3}"
+                               title="Please enter blood pressure in the format '120/80'"
+                               maxlength="7"
+                               value="<?php echo htmlspecialchars($_POST['blood_pressure'] ?? ''); ?>"
+                               class="w-full px-3 py-2 border border-gray-300 rounded-md">
                     </div>
 
                     <!-- Pulse Rate -->
