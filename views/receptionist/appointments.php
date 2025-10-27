@@ -1,12 +1,12 @@
 <!-- Page Header with Professional Gradient -->
-<div class="bg-gradient-to-r from-green-600 via-green-700 to-emerald-800 rounded-lg shadow-xl p-6 mb-6">
+<div class="bg-green rounded-lg shadow-xl p-6 mb-6">
     <div class="flex items-center justify-between">
-        <div class="text-white">
+        <div class="text-green">
             <h1 class="text-3xl font-bold flex items-center">
-                <i class="fas fa-calendar-check mr-3 text-green-200"></i>
+                <i class="fas fa-calendar-check mr-3 text-green"></i>
                 Appointments Management
             </h1>
-            <p class="text-green-100 mt-2 text-lg">Schedule and manage patient appointments</p>
+            <p class="text-green mt-2 text-lg">Schedule and manage patient appointments</p>
         </div>
         <a href="/KJ/receptionist/appointments" class="bg-white text-green-700 hover:bg-green-50 px-6 py-3 rounded-lg font-medium transition-all duration-300 transform hover:scale-105 shadow-lg">
             <i class="fas fa-plus mr-2"></i>New Appointment

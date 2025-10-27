@@ -25,11 +25,11 @@
                         $lastVisit = !empty($consultations) ? $consultations[0]['created_at'] : null;
                         $visitCount = count($consultations ?? []);
                         ?>
-                        <span class="bg-white bg-opacity-20 px-3 py-1 rounded-full text-sm">
+                        <span class="bg-black bg-opacity-20 px-3 py-1 rounded-full text-sm">
                             <i class="fas fa-calendar mr-1"></i>
                             Last Visit: <?php echo $lastVisit ? date('d/m/Y', strtotime($lastVisit)) : 'First Visit'; ?>
                         </span>
-                        <span class="bg-white bg-opacity-20 px-3 py-1 rounded-full text-sm">
+                        <span class="bg-black bg-opacity-20 px-3 py-1 rounded-full text-sm">
                             <i class="fas fa-history mr-1"></i>
                             Total Visits: <?php echo $visitCount; ?>
                         </span>
@@ -38,7 +38,7 @@
                             <i class="fas fa-star mr-1"></i>Returning Patient
                         </span>
                         <?php else: ?>
-                        <span class="bg-yellow-500 bg-opacity-80 px-3 py-1 rounded-full text-sm font-medium">
+                        <span class="bg-black-500 bg-opacity-80 px-3 py-1 rounded-full text-sm font-medium">
                             <i class="fas fa-user-plus mr-1"></i>New Patient
                         </span>
                         <?php endif; ?>

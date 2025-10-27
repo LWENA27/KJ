@@ -13,14 +13,14 @@
 
 <div class="max-w-7xl mx-auto">
     <!-- Page Header -->
-    <div class="bg-gradient-to-r from-purple-600 via-purple-700 to-indigo-800 rounded-lg shadow-xl p-6 mb-6">
+    <div class="bg-black rounded-lg shadow-xl p-6 mb-6">
         <div class="flex items-center justify-between">
-            <div class="text-white">
+            <div class="text-black">
                 <h1 class="text-3xl font-bold flex items-center">
-                    <i class="fas fa-exclamation-circle mr-3 text-purple-200"></i>
+                    <i class="fas fa-exclamation-circle mr-3 text-black-200"></i>
                     Pending Payments
                 </h1>
-                <p class="text-purple-100 mt-2 text-lg">Process payments for lab tests and medicines</p>
+                <p class="text-black-100 mt-2 text-lg">Process payments for lab tests and medicines</p>
             </div>
             <div class="flex space-x-3">
                 <a href="/KJ/receptionist/payment_history" 
@@ -29,7 +29,7 @@
                     Payment History
                 </a>
                 <a href="/KJ/receptionist/dashboard" 
-                   class="bg-purple-800 text-white hover:bg-purple-900 px-6 py-3 rounded-lg font-medium transition-all duration-300 shadow-lg flex items-center">
+                   class="bg-black-800 text-black hover:bg-purple-900 px-6 py-3 rounded-lg font-medium transition-all duration-300 shadow-lg flex items-center">
                     <i class="fas fa-arrow-left mr-2"></i>
                     Dashboard
                 </a>
