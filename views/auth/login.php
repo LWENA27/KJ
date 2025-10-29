@@ -42,13 +42,7 @@
         </button>
     </form>
 
-    <div class="mt-6 text-center text-sm text-gray-600">
-        <p>Demo Accounts:</p>
-        <p>Admin: admin / password</p>
-        <p>Receptionist: receptionist1 / password</p>
-        <p>Doctor: doctor1 / password</p>
-        <p>Lab Tech: lab1 / password</p>
-    </div>
+
 </div>
 
 <script>
