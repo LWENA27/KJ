@@ -241,9 +241,12 @@ function isTestRequested($testName, $requested) {
     <div class="mb-6">
         <div class="grid grid-cols-1 gap-4 text-sm">
             <?php
-            $latest_consultation = null;
-            if (!empty($consultations)) {
-                $latest_consultation = $consultations[0];
+            // Use controller-provided $latest_consultation (scoped to latest visit) when available.
+            if (!isset($latest_consultation)) {
+                $latest_consultation = null;
+                if (!empty($consultations)) {
+                    $latest_consultation = $consultations[0];
+                }
             }
             ?>
             

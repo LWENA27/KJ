@@ -1,0 +1,17 @@
+# Railway Configuration for KJ Medical System
+
+# Build settings
+[build]
+builder = "NIXPACKS"
+
+[build.env]
+NODE_VERSION = "18"
+PHP_VERSION = "8.2"
+
+# Deploy settings
+[deploy]
+startCommand = "bash railway-deploy.sh && php -S 0.0.0.0:$PORT -t /app"
+healthcheckPath = "/"
+healthcheckTimeout = 100
+restartPolicyType = "ON_FAILURE"
+restartPolicyMaxRetries = 10

@@ -1429,6 +1429,31 @@ class ReceptionistController extends BaseController
                     $stmt->execute([$visit_id, $patient_id, $default_doctor_id]);
                 }
 
+                // Record vital signs if provided (optional) - tie to this visit
+                $temperature = isset($_POST['temperature']) && $_POST['temperature'] !== '' ? floatval($_POST['temperature']) : null;
+                $bp_systolic = isset($_POST['blood_pressure_systolic']) && $_POST['blood_pressure_systolic'] !== '' ? intval($_POST['blood_pressure_systolic']) : null;
+                $bp_diastolic = isset($_POST['blood_pressure_diastolic']) && $_POST['blood_pressure_diastolic'] !== '' ? intval($_POST['blood_pressure_diastolic']) : null;
+                $pulse_rate = isset($_POST['pulse_rate']) && $_POST['pulse_rate'] !== '' ? intval($_POST['pulse_rate']) : null;
+                $respiratory_rate = isset($_POST['respiratory_rate']) && $_POST['respiratory_rate'] !== '' ? intval($_POST['respiratory_rate']) : null;
+                $weight = isset($_POST['weight']) && $_POST['weight'] !== '' ? floatval($_POST['weight']) : null;
+                $height = isset($_POST['height']) && $_POST['height'] !== '' ? floatval($_POST['height']) : null;
+
+                if ($temperature !== null || $bp_systolic !== null || $bp_diastolic !== null || $pulse_rate !== null || $respiratory_rate !== null || $weight !== null || $height !== null) {
+                    $stmt = $this->pdo->prepare("INSERT INTO vital_signs (visit_id, patient_id, temperature, blood_pressure_systolic, blood_pressure_diastolic, pulse_rate, respiratory_rate, weight, height, recorded_by, recorded_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())");
+                    $stmt->execute([
+                        $visit_id,
+                        $patient_id,
+                        $temperature,
+                        $bp_systolic,
+                        $bp_diastolic,
+                        $pulse_rate,
+                        $respiratory_rate,
+                        $weight,
+                        $height,
+                        $_SESSION['user_id']
+                    ]);
+                }
+
                 $this->pdo->commit();
                 
                 // Determine next step message based on visit type and payment

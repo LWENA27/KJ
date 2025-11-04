@@ -226,34 +226,47 @@ class DoctorController extends BaseController {
         $stmt->execute([$patient_id]);
         $consultations = $stmt->fetchAll();
 
+        // Find latest visit for this patient (to scope consultation/lab orders to the new visit)
+        $stmt = $this->pdo->prepare("SELECT * FROM patient_visits WHERE patient_id = ? ORDER BY created_at DESC LIMIT 1");
+        $stmt->execute([$patient_id]);
+        $latest_visit = $stmt->fetch();
+        $latest_visit_id = $latest_visit['id'] ?? null;
+
         // Get latest vital signs for this patient
-        $stmt = $this->pdo->prepare("
-            SELECT vs.*, pv.visit_date
-            FROM vital_signs vs
-            LEFT JOIN patient_visits pv ON vs.visit_id = pv.id
-            WHERE vs.patient_id = ?
-            ORDER BY vs.recorded_at DESC
-            LIMIT 1
-        ");
-        $stmt->execute([$patient_id]);
-        $vital_signs = $stmt->fetch();
+        if (!empty($latest_visit_id)) {
+            $stmt = $this->pdo->prepare("\n                SELECT vs.*, pv.visit_date\n                FROM vital_signs vs\n                LEFT JOIN patient_visits pv ON vs.visit_id = pv.id\n                WHERE vs.visit_id = ?\n                ORDER BY vs.recorded_at DESC\n                LIMIT 1\n            ");
+            $stmt->execute([$latest_visit_id]);
+            $vital_signs = $stmt->fetch();
+            // fallback to patient-level latest if visit-level not present
+            if (!$vital_signs) {
+                $stmt = $this->pdo->prepare("\n                    SELECT vs.*, pv.visit_date\n                    FROM vital_signs vs\n                    LEFT JOIN patient_visits pv ON vs.visit_id = pv.id\n                    WHERE vs.patient_id = ?\n                    ORDER BY vs.recorded_at DESC\n                    LIMIT 1\n                ");
+                $stmt->execute([$patient_id]);
+                $vital_signs = $stmt->fetch();
+            }
+        } else {
+            $stmt = $this->pdo->prepare("\n                SELECT vs.*, pv.visit_date\n                FROM vital_signs vs\n                LEFT JOIN patient_visits pv ON vs.visit_id = pv.id\n                WHERE vs.patient_id = ?\n                ORDER BY vs.recorded_at DESC\n                LIMIT 1\n            ");
+            $stmt->execute([$patient_id]);
+            $vital_signs = $stmt->fetch();
+        }
 
-        // Get lab test orders for this patient (for real-time medical record updates)
-        $stmt = $this->pdo->prepare("
-            SELECT lto.*, lt.test_name, lt.test_code, lr.result_value, lr.result_text, lr.completed_at as result_completed_at
-            FROM lab_test_orders lto
-            JOIN lab_tests lt ON lto.test_id = lt.id
-            LEFT JOIN lab_results lr ON lto.id = lr.order_id
-            WHERE lto.patient_id = ?
-            ORDER BY lto.created_at DESC
-        ");
-        $stmt->execute([$patient_id]);
-        $lab_orders = $stmt->fetchAll();
+        // Get lab test orders for the latest visit (for real-time medical record updates)
+        if ($latest_visit_id) {
+            $stmt = $this->pdo->prepare("\n                SELECT lto.*, lt.test_name, lt.test_code, lr.result_value, lr.result_text, lr.completed_at as result_completed_at\n                FROM lab_test_orders lto\n                JOIN lab_tests lt ON lto.test_id = lt.id\n                LEFT JOIN lab_results lr ON lto.id = lr.order_id\n                WHERE lto.patient_id = ? AND lto.visit_id = ?\n                ORDER BY lto.created_at DESC\n            ");
+            $stmt->execute([$patient_id, $latest_visit_id]);
+            $lab_orders = $stmt->fetchAll();
+        } else {
+            $lab_orders = [];
+        }
 
-        // Build a map of latest lab results by test name for this patient
+        // Build a map of latest lab results by test name for this visit (if available), otherwise patient-level
         $lab_results_map = [];
-        $stmt = $this->pdo->prepare("\n            SELECT lr.*, lt.test_name\n            FROM lab_results lr\n            JOIN lab_test_orders lto ON lr.order_id = lto.id\n            JOIN lab_tests lt ON lr.test_id = lt.id\n            WHERE lto.patient_id = ?\n            ORDER BY lt.test_name ASC, lr.completed_at DESC\n        ");
-        $stmt->execute([$patient_id]);
+        if ($latest_visit_id) {
+            $stmt = $this->pdo->prepare("\n                SELECT lr.*, lt.test_name\n                FROM lab_results lr\n                JOIN lab_test_orders lto ON lr.order_id = lto.id\n                JOIN lab_tests lt ON lr.test_id = lt.id\n                WHERE lto.patient_id = ? AND lto.visit_id = ?\n                ORDER BY lt.test_name ASC, lr.completed_at DESC\n            ");
+            $stmt->execute([$patient_id, $latest_visit_id]);
+        } else {
+            $stmt = $this->pdo->prepare("\n                SELECT lr.*, lt.test_name\n                FROM lab_results lr\n                JOIN lab_test_orders lto ON lr.order_id = lto.id\n                JOIN lab_tests lt ON lr.test_id = lt.id\n                WHERE lto.patient_id = ?\n                ORDER BY lt.test_name ASC, lr.completed_at DESC\n            ");
+            $stmt->execute([$patient_id]);
+        }
         $all_lab_results = $stmt->fetchAll();
         foreach ($all_lab_results as $r) {
             $name = $r['test_name'] ?? '';
@@ -350,11 +363,12 @@ class DoctorController extends BaseController {
             $this->pdo->beginTransaction();
 
             // Update the consultation record with submitted data
-            $stmt = $this->pdo->prepare("UPDATE consultations SET main_complaint = ?, on_examination = ?, diagnosis = ?, treatment_plan = ?, status = 'completed', completed_at = NOW(), updated_at = NOW() WHERE id = ?");
+            $stmt = $this->pdo->prepare("UPDATE consultations SET main_complaint = ?, on_examination = ?, preliminary_diagnosis = ?, final_diagnosis = ?, treatment_plan = ?, status = 'completed', completed_at = NOW(), updated_at = NOW() WHERE id = ?");
             $stmt->execute([
                 $_POST['main_complaint'] ?? '',
                 $_POST['on_examination'] ?? '',
-                $_POST['diagnosis'] ?? ($_POST['final_diagnosis'] ?? ''),
+                $_POST['preliminary_diagnosis'] ?? '',
+                $_POST['final_diagnosis'] ?? ($_POST['diagnosis'] ?? ''),
                 $_POST['treatment_plan'] ?? '',
                 $consultation_id
             ]);

@@ -15,16 +15,16 @@ $BASE_PATH = '/KJ';
     <!-- Header -->
     <div class="bg-gradient-to-r from-green-600 via-green-700 to-emerald-800 rounded-lg shadow-xl p-6 mb-6">
         <div class="flex items-center justify-between">
-            <div class="text-white">
+            <div class="text-gray-900 dark:text-white">
                 <h1 class="text-3xl font-bold flex items-center">
-                    <i class="fas fa-user-check mr-3 text-green-200"></i>
+                    <i class="fas fa-user-check mr-3 text-green-600 dark:text-green-200"></i>
                     Patient Revisit
                 </h1>
-                <p class="text-green-100 mt-2 text-lg">Create a new visit for existing patient</p>
+                <p class="text-green-700 dark:text-green-100 mt-2 text-lg">Create a new visit for existing patient</p>
             </div>
-            <div class="text-right text-white">
-                <div class="text-sm text-green-200">
-                    <i class="fas fa-calendar text-green-300"></i>
+            <div class="text-right text-gray-900 dark:text-white">
+                <div class="text-sm text-green-800 dark:text-green-200">
+                    <i class="fas fa-calendar text-green-800 dark:text-green-300"></i>
                     <?php echo date('F j, Y'); ?>
                 </div>
                 <div class="text-lg font-semibold mt-1">
@@ -173,6 +173,65 @@ $BASE_PATH = '/KJ';
             </div>
 
             <!-- Payment Information -->
+            <!-- Vital Signs (optional) -->
+            <div id="vitalsSection" class="space-y-4">
+                <h3 class="text-lg font-semibold text-gray-900 flex items-center">
+                    <i class="fas fa-heartbeat text-red-600 mr-2"></i>
+                    Vital Signs (optional)
+                </h3>
+
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Temperature (°C)</label>
+                        <input type="number" name="temperature" step="0.1" min="30" max="45"
+                               placeholder="e.g. 36.6"
+                               class="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-green-500 focus:border-green-500">
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Blood Pressure (Systolic)</label>
+                        <input type="number" name="blood_pressure_systolic" step="1" min="40" max="250"
+                               placeholder="e.g. 120"
+                               class="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-green-500 focus:border-green-500">
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Blood Pressure (Diastolic)</label>
+                        <input type="number" name="blood_pressure_diastolic" step="1" min="30" max="150"
+                               placeholder="e.g. 80"
+                               class="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-green-500 focus:border-green-500">
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Pulse Rate (bpm)</label>
+                        <input type="number" name="pulse_rate" step="1" min="20" max="220"
+                               placeholder="e.g. 72"
+                               class="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-green-500 focus:border-green-500">
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Respiratory Rate (breaths/min)</label>
+                        <input type="number" name="respiratory_rate" step="1" min="5" max="60"
+                               placeholder="e.g. 16"
+                               class="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-green-500 focus:border-green-500">
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Weight (kg)</label>
+                        <input type="number" name="weight" step="0.1" min="1" max="500"
+                               placeholder="e.g. 70.5"
+                               class="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-green-500 focus:border-green-500">
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Height (cm)</label>
+                        <input type="number" name="height" step="0.1" min="20" max="300"
+                               placeholder="e.g. 175"
+                               class="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-green-500 focus:border-green-500">
+                    </div>
+                </div>
+            </div>
+
             <div id="paymentSection" class="space-y-4">
                 <h3 class="text-lg font-semibold text-gray-900 flex items-center">
                     <i class="fas fa-credit-card text-green-600 mr-2"></i>
