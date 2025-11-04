@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: localhost:3306
--- Generation Time: Oct 23, 2025 at 07:54 PM
+-- Generation Time: Nov 04, 2025 at 12:44 PM
 -- Server version: 8.0.43-0ubuntu0.24.04.2
 -- PHP Version: 8.3.6
 
@@ -28,28 +28,28 @@ SET time_zone = "+00:00";
 -- (See below for the actual view)
 --
 CREATE TABLE `active_patient_queue` (
-`age` bigint
-,`blood_pressure_diastolic` int
+`visit_id` int
+,`visit_type` enum('consultation','lab_only','minor_service')
+,`visit_date` date
+,`patient_id` int
+,`registration_number` varchar(20)
+,`patient_name` varchar(101)
+,`phone` varchar(20)
+,`gender` enum('male','female','other')
+,`age` bigint
+,`temperature` decimal(4,1)
+,`pulse_rate` int
 ,`blood_pressure_systolic` int
-,`completed_lab_tests` bigint
+,`blood_pressure_diastolic` int
 ,`consultation_id` int
 ,`consultation_status` enum('pending','in_progress','completed','cancelled')
 ,`doctor_name` varchar(101)
-,`gender` enum('male','female','other')
-,`partial_prescriptions` bigint
-,`patient_id` int
-,`patient_name` varchar(101)
-,`pending_lab_tests` bigint
-,`pending_prescriptions` bigint
-,`phone` varchar(20)
-,`pulse_rate` int
-,`registration_number` varchar(20)
 ,`registration_paid` decimal(32,2)
+,`pending_lab_tests` bigint
+,`completed_lab_tests` bigint
+,`pending_prescriptions` bigint
+,`partial_prescriptions` bigint
 ,`registration_time` timestamp
-,`temperature` decimal(4,1)
-,`visit_date` date
-,`visit_id` int
-,`visit_type` enum('consultation','lab_only','minor_service')
 );
 
 -- --------------------------------------------------------
@@ -115,7 +115,15 @@ INSERT INTO `consultations` (`id`, `visit_id`, `patient_id`, `doctor_id`, `consu
 (13, 13, 10, 3, 1, 'new', 'null', NULL, 'null', 'null', 'fhjgsf', NULL, 0, NULL, NULL, NULL, NULL, 'completed', NULL, '2025-10-22 06:52:41', '2025-10-22 06:52:41', '2025-10-22 06:51:49', '2025-10-22 06:52:41'),
 (14, 14, 11, 1, 1, 'new', NULL, NULL, NULL, NULL, NULL, NULL, 0, NULL, NULL, NULL, NULL, 'pending', NULL, NULL, NULL, '2025-10-22 07:57:57', '2025-10-22 07:57:57'),
 (15, 15, 12, 3, 1, 'new', 'null', NULL, 'null', 'null', 'null', NULL, 0, NULL, NULL, NULL, NULL, 'completed', NULL, '2025-10-22 08:20:21', '2025-10-22 08:20:21', '2025-10-22 08:17:18', '2025-10-22 08:20:21'),
-(16, 16, 13, 3, 1, 'new', 'null', NULL, 'null', 'null', 'null', NULL, 0, NULL, NULL, NULL, NULL, 'completed', NULL, '2025-10-23 19:24:30', '2025-10-23 19:24:30', '2025-10-23 11:01:32', '2025-10-23 19:24:30');
+(16, 16, 13, 3, 1, 'new', 'null', NULL, 'null', 'null', 'null', NULL, 0, NULL, NULL, NULL, NULL, 'completed', NULL, '2025-10-23 19:24:30', '2025-10-23 19:24:30', '2025-10-23 11:01:32', '2025-10-23 19:24:30'),
+(17, 17, 14, 3, 1, 'new', 'null', NULL, 'null', 'null', 'null', NULL, 0, NULL, NULL, NULL, NULL, 'completed', NULL, '2025-10-23 21:21:22', '2025-10-23 21:21:22', '2025-10-23 21:18:45', '2025-10-23 21:21:22'),
+(18, 18, 15, 3, 1, 'new', 'null', NULL, 'null', 'null', 'null', NULL, 0, NULL, NULL, NULL, NULL, 'completed', NULL, '2025-10-23 22:52:39', '2025-10-23 22:52:39', '2025-10-23 22:47:21', '2025-10-23 22:52:39'),
+(19, 29, 16, 1, 1, 'new', NULL, NULL, NULL, NULL, NULL, NULL, 0, NULL, NULL, NULL, NULL, 'pending', NULL, NULL, NULL, '2025-10-25 08:16:24', '2025-10-25 08:16:24'),
+(20, 30, 17, 1, 1, 'new', NULL, NULL, NULL, NULL, NULL, NULL, 0, NULL, NULL, NULL, NULL, 'pending', NULL, NULL, NULL, '2025-10-26 20:48:31', '2025-10-26 20:48:31'),
+(21, 31, 18, 1, 1, 'new', NULL, NULL, NULL, NULL, NULL, NULL, 0, NULL, NULL, NULL, NULL, 'pending', NULL, NULL, NULL, '2025-10-29 09:12:35', '2025-10-29 09:12:35'),
+(22, 32, 19, 1, 1, 'new', NULL, NULL, NULL, NULL, NULL, NULL, 0, NULL, NULL, NULL, NULL, 'pending', NULL, NULL, NULL, '2025-10-29 09:42:34', '2025-10-29 09:42:34'),
+(23, 33, 2, 1, 1, 'new', NULL, NULL, NULL, NULL, NULL, NULL, 0, NULL, NULL, NULL, NULL, 'pending', NULL, NULL, NULL, '2025-11-01 13:38:30', '2025-11-01 13:38:30'),
+(24, 34, 20, 1, 1, 'new', NULL, NULL, NULL, NULL, NULL, NULL, 0, NULL, NULL, NULL, NULL, 'pending', NULL, NULL, NULL, '2025-11-01 13:44:54', '2025-11-01 13:44:54');
 
 -- --------------------------------------------------------
 
@@ -124,13 +132,89 @@ INSERT INTO `consultations` (`id`, `visit_id`, `patient_id`, `doctor_id`, `consu
 -- (See below for the actual view)
 --
 CREATE TABLE `daily_revenue_summary` (
-`collected_by_name` varchar(101)
-,`payment_method` enum('cash','card','mobile_money','insurance')
+`revenue_date` date
 ,`payment_type` enum('registration','lab_test','medicine','minor_service')
-,`revenue_date` date
-,`total_amount` decimal(32,2)
+,`payment_method` enum('cash','card','mobile_money','insurance')
 ,`transaction_count` bigint
+,`total_amount` decimal(32,2)
+,`collected_by_name` varchar(101)
 );
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `lab_equipment`
+--
+
+CREATE TABLE `lab_equipment` (
+  `id` int NOT NULL,
+  `equipment_name` varchar(200) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL,
+  `equipment_code` varchar(50) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL,
+  `model` varchar(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `serial_number` varchar(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `manufacturer` varchar(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `purchase_date` date DEFAULT NULL,
+  `warranty_expiry` date DEFAULT NULL,
+  `last_calibration` date DEFAULT NULL,
+  `next_calibration` date DEFAULT NULL,
+  `calibration_interval_months` int DEFAULT '12',
+  `status` enum('operational','maintenance','out_of_service','calibration_due') CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci DEFAULT 'operational',
+  `location` varchar(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `managed_by` int DEFAULT NULL COMMENT 'Lab tech responsible',
+  `notes` text CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci,
+  `is_active` tinyint(1) DEFAULT '1',
+  `created_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
+  `updated_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+--
+-- Dumping data for table `lab_equipment`
+--
+
+INSERT INTO `lab_equipment` (`id`, `equipment_name`, `equipment_code`, `model`, `serial_number`, `manufacturer`, `purchase_date`, `warranty_expiry`, `last_calibration`, `next_calibration`, `calibration_interval_months`, `status`, `location`, `managed_by`, `notes`, `is_active`, `created_at`, `updated_at`) VALUES
+(1, 'Microscope', 'MICRO-001', 'Olympus CX23', 'OLY2024001', 'Olympus', '2024-01-15', NULL, NULL, NULL, 12, 'operational', 'Lab Room 1', NULL, NULL, 1, '2025-10-23 22:19:40', '2025-10-23 22:19:40'),
+(2, 'Chemistry Analyzer', 'CHEM-001', 'Mindray BS-200', 'MDR2024001', 'Mindray', '2024-02-20', NULL, NULL, NULL, 12, 'operational', 'Lab Room 2', NULL, NULL, 1, '2025-10-23 22:19:40', '2025-10-23 22:19:40'),
+(3, 'Hematology Analyzer', 'HEMA-001', 'Sysmex XP-300', 'SYS2024001', 'Sysmex', '2024-03-10', NULL, NULL, NULL, 12, 'maintenance', 'Lab Room 1', NULL, NULL, 1, '2025-10-23 22:19:40', '2025-10-23 22:19:40'),
+(4, 'Centrifuge', 'CENT-001', 'Eppendorf 5810R', 'EPP2024001', 'Eppendorf', '2024-01-25', NULL, NULL, NULL, 12, 'operational', 'Lab Room 2', NULL, NULL, 1, '2025-10-23 22:19:40', '2025-10-23 22:19:40'),
+(5, 'Incubator', 'INCUB-001', 'Thermo Fisher 3110', 'THM2024001', 'Thermo Fisher', '2024-04-05', NULL, NULL, NULL, 12, 'operational', 'Lab Room 3', NULL, NULL, 1, '2025-10-23 22:19:40', '2025-10-23 22:19:40'),
+(6, 'Autoclave', 'AUTO-001', 'Tuttnauer 2540M', 'TUT2024001', 'Tuttnauer', '2024-05-12', NULL, NULL, NULL, 12, 'calibration_due', 'Sterilization Room', NULL, NULL, 1, '2025-10-23 22:19:40', '2025-10-23 22:19:40');
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `lab_inventory`
+--
+
+CREATE TABLE `lab_inventory` (
+  `id` int NOT NULL,
+  `item_name` varchar(200) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL,
+  `item_code` varchar(50) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL,
+  `category` enum('reagent','consumable','supply','equipment') CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci DEFAULT 'consumable',
+  `unit` varchar(20) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `current_stock` int DEFAULT '0',
+  `minimum_stock` int DEFAULT '10',
+  `unit_cost` decimal(10,2) DEFAULT NULL,
+  `supplier` varchar(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `expiry_date` date DEFAULT NULL,
+  `location` varchar(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `is_active` tinyint(1) DEFAULT '1',
+  `created_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
+  `updated_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+--
+-- Dumping data for table `lab_inventory`
+--
+
+INSERT INTO `lab_inventory` (`id`, `item_name`, `item_code`, `category`, `unit`, `current_stock`, `minimum_stock`, `unit_cost`, `supplier`, `expiry_date`, `location`, `is_active`, `created_at`, `updated_at`) VALUES
+(1, 'Blood Sugar Reagent Strips', 'BSR-001', 'reagent', 'strips', 500, 100, 25.00, 'MedLab Supplies', NULL, NULL, 1, '2025-10-23 22:19:40', '2025-10-23 22:19:40'),
+(2, 'Hemoglobin Reagent', 'HGB-001', 'reagent', 'bottles', 50, 10, 150.00, 'LabChem Corp', NULL, NULL, 1, '2025-10-23 22:19:40', '2025-10-23 22:19:40'),
+(3, 'Cholesterol Test Kit', 'CHOL-001', 'reagent', 'kits', 30, 5, 200.00, 'BioTest Labs', NULL, NULL, 1, '2025-10-23 22:19:40', '2025-10-23 22:19:40'),
+(4, 'Protein Reagent', 'PROT-001', 'reagent', 'bottles', 40, 8, 120.00, 'MedLab Supplies', NULL, NULL, 1, '2025-10-23 22:19:40', '2025-10-23 22:19:40'),
+(5, 'Gloves (Nitrile)', 'GLOVE-001', 'supply', 'pairs', 1000, 200, 5.00, 'MediSupplies', NULL, NULL, 1, '2025-10-23 22:19:40', '2025-10-23 22:19:40'),
+(6, 'Test Tubes (10ml)', 'TUBE-001', 'consumable', 'pieces', 500, 100, 2.00, 'LabWare Inc', NULL, NULL, 1, '2025-10-23 22:19:40', '2025-10-23 22:19:40'),
+(7, 'Microscope Slides', 'SLIDE-001', 'consumable', 'pieces', 1000, 200, 1.50, 'LabWare Inc', NULL, NULL, 1, '2025-10-23 22:19:40', '2025-10-23 22:19:40'),
+(8, 'Blood Collection Tubes', 'BCT-001', 'consumable', 'pieces', 300, 50, 8.00, 'MediSupplies', NULL, NULL, 1, '2025-10-23 22:19:40', '2025-10-23 22:19:40');
 
 -- --------------------------------------------------------
 
@@ -166,7 +250,9 @@ INSERT INTO `lab_results` (`id`, `order_id`, `patient_id`, `test_id`, `result_va
 (2, 3, 8, 4, '1.0', 'Test completed successfully.', 'mg/dL', 1, 0, NULL, 6, NULL, '2025-10-21 17:13:00', NULL, NULL, NULL),
 (3, 2, 6, 4, '1.0', 'Test completed successfully.', 'mg/dL', 1, 0, NULL, 6, NULL, '2025-10-22 03:32:00', NULL, NULL, NULL),
 (4, 5, 10, 14, '1.5', 'condition good', 'mg/dL', 0, 0, NULL, 6, NULL, '2025-10-22 03:53:00', NULL, NULL, NULL),
-(5, 6, 12, 3, '1.0', 'Test completed ', 'mg/dL', 1, 0, NULL, 6, NULL, '2025-10-22 05:21:00', NULL, NULL, NULL);
+(5, 6, 12, 3, '1.0', 'Test completed ', 'mg/dL', 1, 0, NULL, 6, NULL, '2025-10-22 05:21:00', NULL, NULL, NULL),
+(6, 9, 15, 4, '1.0', 'null', 'mg/dL', 0, 0, NULL, 6, NULL, '2025-10-23 19:56:00', NULL, NULL, NULL),
+(7, 7, 14, 4, '1.2', 'null', 'mg/dl', 0, 0, NULL, 6, NULL, '2025-11-03 06:09:00', NULL, NULL, NULL);
 
 -- --------------------------------------------------------
 
@@ -197,7 +283,7 @@ INSERT INTO `lab_tests` (`id`, `test_name`, `test_code`, `category_id`, `price`,
 (1, 'Complete Blood Count', 'CBC', 1, 15000.00, 'RBC: 4.5-5.5, WBC: 4-11, Hb: 12-16', 'cells/mcL', 'Full blood count analysis', NULL, 1, '2025-10-11 03:12:35', '2025-10-11 03:12:35'),
 (2, 'Blood Sugar (Random)', 'BS-R', 2, 5000.00, '70-140', 'mg/dL', 'Random blood glucose test', NULL, 1, '2025-10-11 03:12:35', '2025-10-11 03:12:35'),
 (3, 'Blood Sugar (Fasting)', 'BS-F', 2, 5000.00, '70-100', 'mg/dL', 'Fasting blood glucose test', NULL, 1, '2025-10-11 03:12:35', '2025-10-11 03:12:35'),
-(4, 'Malaria Test', 'MAL', 3, 8000.00, 'Negative', '', 'Malaria parasite detection', NULL, 1, '2025-10-11 03:12:35', '2025-10-11 03:12:35'),
+(4, 'Malaria Test', 'MAL', 3, 5000.00, 'Negative', '', 'Malaria parasite detection', NULL, 1, '2025-10-11 03:12:35', '2025-10-23 22:51:56'),
 (5, 'Urinalysis', 'URINE', 5, 6000.00, 'Normal', '', 'Complete urine examination', NULL, 1, '2025-10-11 03:12:35', '2025-10-11 03:12:35'),
 (6, 'Stool Examination', 'STOOL', 3, 7000.00, 'Normal', '', 'Stool microscopy and culture', NULL, 1, '2025-10-11 03:12:35', '2025-10-11 03:12:35'),
 (7, 'Liver Function Test', 'LFT', 2, 25000.00, 'ALT: 7-56, AST: 10-40', 'U/L', 'Complete liver function panel', NULL, 1, '2025-10-11 03:12:35', '2025-10-11 03:12:35'),
@@ -240,6 +326,33 @@ INSERT INTO `lab_test_categories` (`id`, `category_name`, `category_code`, `desc
 -- --------------------------------------------------------
 
 --
+-- Table structure for table `lab_test_items`
+--
+
+CREATE TABLE `lab_test_items` (
+  `id` int NOT NULL,
+  `test_id` int NOT NULL,
+  `item_id` int NOT NULL,
+  `quantity_required` decimal(8,2) NOT NULL DEFAULT '1.00',
+  `is_mandatory` tinyint(1) DEFAULT '1',
+  `created_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+--
+-- Dumping data for table `lab_test_items`
+--
+
+INSERT INTO `lab_test_items` (`id`, `test_id`, `item_id`, `quantity_required`, `is_mandatory`, `created_at`) VALUES
+(1, 2, 1, 1.00, 1, '2025-10-23 22:19:40'),
+(2, 3, 1, 1.00, 1, '2025-10-23 22:19:40'),
+(3, 7, 2, 2.00, 1, '2025-10-23 22:19:40'),
+(4, 7, 4, 1.00, 1, '2025-10-23 22:19:40'),
+(5, 8, 3, 1.00, 1, '2025-10-23 22:19:40'),
+(6, 8, 4, 1.00, 1, '2025-10-23 22:19:40');
+
+-- --------------------------------------------------------
+
+--
 -- Table structure for table `lab_test_orders`
 --
 
@@ -271,7 +384,10 @@ INSERT INTO `lab_test_orders` (`id`, `visit_id`, `patient_id`, `consultation_id`
 (3, 11, 8, 11, 4, 3, 4, 'normal', 'completed', NULL, NULL, NULL, NULL, '2025-10-21 19:21:27', '2025-10-21 20:13:15'),
 (4, 11, 8, 11, 2, 3, 4, 'normal', 'pending', NULL, NULL, NULL, NULL, '2025-10-21 19:21:27', '2025-10-21 19:21:27'),
 (5, 13, 10, 13, 14, 3, 4, 'normal', 'completed', NULL, NULL, NULL, NULL, '2025-10-22 06:52:41', '2025-10-22 06:54:06'),
-(6, 15, 12, 15, 3, 3, 4, 'normal', 'completed', NULL, NULL, NULL, NULL, '2025-10-22 08:20:21', '2025-10-22 08:21:17');
+(6, 15, 12, 15, 3, 3, 4, 'normal', 'completed', NULL, NULL, NULL, NULL, '2025-10-22 08:20:21', '2025-10-22 08:21:17'),
+(7, 17, 14, 17, 4, 3, 4, 'normal', 'completed', NULL, NULL, NULL, NULL, '2025-10-23 21:21:22', '2025-11-03 09:09:57'),
+(8, 17, 14, 17, 5, 3, 4, 'normal', 'pending', NULL, NULL, NULL, NULL, '2025-10-23 21:21:22', '2025-10-23 21:21:22'),
+(9, 18, 15, 18, 4, 3, 4, 'normal', 'completed', NULL, NULL, NULL, NULL, '2025-10-23 22:52:39', '2025-10-23 22:56:54');
 
 -- --------------------------------------------------------
 
@@ -342,15 +458,15 @@ CREATE TABLE `medicine_batches` (
 --
 
 INSERT INTO `medicine_batches` (`id`, `medicine_id`, `batch_number`, `quantity_received`, `quantity_remaining`, `expiry_date`, `supplier`, `cost_price`, `received_date`, `received_by`, `status`, `notes`, `created_at`, `updated_at`) VALUES
-(1, 1, 'PARA-2024-001', 1000, 1000, '2026-12-31', 'MedSupply Ltd', 40.00, '2024-01-15', 1, 'active', NULL, '2025-10-11 03:12:35', '2025-10-11 03:12:35'),
+(1, 1, 'PARA-2024-001', 1000, 950, '2026-12-31', 'MedSupply Ltd', 40.00, '2024-01-15', 1, 'active', NULL, '2025-10-11 03:12:35', '2025-11-03 09:01:59'),
 (2, 2, 'AMOX-2024-001', 500, 500, '2026-06-30', 'MedSupply Ltd', 150.00, '2024-01-15', 1, 'active', NULL, '2025-10-11 03:12:35', '2025-10-11 03:12:35'),
 (3, 3, 'METRO-2024-001', 500, 500, '2026-08-31', 'PharmaDistrib', 120.00, '2024-01-15', 1, 'active', NULL, '2025-10-11 03:12:35', '2025-10-11 03:12:35'),
 (4, 4, 'IBU-2024-001', 800, 800, '2027-03-31', 'MedSupply Ltd', 80.00, '2024-01-15', 1, 'active', NULL, '2025-10-11 03:12:35', '2025-10-11 03:12:35'),
 (5, 5, 'CIPRO-2024-001', 300, 300, '2026-10-31', 'PharmaDistrib', 250.00, '2024-01-15', 1, 'active', NULL, '2025-10-11 03:12:35', '2025-10-11 03:12:35'),
 (6, 6, 'OMEP-2024-001', 400, 400, '2026-09-30', 'MedSupply Ltd', 200.00, '2024-01-15', 1, 'active', NULL, '2025-10-11 03:12:35', '2025-10-11 03:12:35'),
-(7, 7, 'CHL-2024-001', 1000, 1000, '2027-12-31', 'PharmaDistrib', 80.00, '2024-01-15', 1, 'active', NULL, '2025-10-11 03:12:35', '2025-10-11 03:12:35'),
+(7, 7, 'CHL-2024-001', 1000, 990, '2027-12-31', 'PharmaDistrib', 80.00, '2024-01-15', 1, 'active', NULL, '2025-10-11 03:12:35', '2025-10-23 23:13:08'),
 (8, 8, 'AL-2024-001', 600, 600, '2026-11-30', 'Global Health', 400.00, '2024-01-15', 1, 'active', NULL, '2025-10-11 03:12:35', '2025-10-11 03:12:35'),
-(9, 9, 'MET-2024-001', 800, 800, '2027-06-30', 'MedSupply Ltd', 80.00, '2024-01-15', 1, 'active', NULL, '2025-10-11 03:12:35', '2025-10-11 03:12:35'),
+(9, 9, 'MET-2024-001', 800, 790, '2027-06-30', 'MedSupply Ltd', 80.00, '2024-01-15', 1, 'active', NULL, '2025-10-11 03:12:35', '2025-10-23 23:13:12'),
 (10, 10, 'AML-2024-001', 500, 500, '2026-12-31', 'PharmaDistrib', 120.00, '2024-01-15', 1, 'active', NULL, '2025-10-11 03:12:35', '2025-10-11 03:12:35'),
 (11, 11, 'SAL-2024-001', 100, 100, '2026-05-31', 'RespiCare', 1200.00, '2024-01-15', 1, 'active', NULL, '2025-10-11 03:12:35', '2025-10-11 03:12:35'),
 (12, 12, 'CET-2024-001', 600, 600, '2027-02-28', 'MedSupply Ltd', 60.00, '2024-01-15', 1, 'active', NULL, '2025-10-11 03:12:35', '2025-10-11 03:12:35'),
@@ -380,9 +496,9 @@ CREATE TABLE `medicine_dispensing` (
 -- (See below for the actual view)
 --
 CREATE TABLE `medicine_prescription_stats` (
-`generic_name` varchar(100)
-,`id` int
+`id` int
 ,`name` varchar(100)
+,`generic_name` varchar(100)
 ,`times_prescribed` bigint
 ,`total_quantity_dispensed` decimal(32,0)
 ,`total_revenue` decimal(42,2)
@@ -395,17 +511,17 @@ CREATE TABLE `medicine_prescription_stats` (
 -- (See below for the actual view)
 --
 CREATE TABLE `medicine_stock_status` (
-`active_batches` bigint
-,`generic_name` varchar(100)
-,`id` int
+`id` int
 ,`name` varchar(100)
-,`nearest_expiry` date
-,`reorder_level` int
-,`stock_alert` varchar(13)
+,`generic_name` varchar(100)
 ,`strength` varchar(50)
-,`total_stock` decimal(32,0)
 ,`unit` varchar(20)
 ,`unit_price` decimal(10,2)
+,`reorder_level` int
+,`total_stock` decimal(32,0)
+,`active_batches` bigint
+,`nearest_expiry` date
+,`stock_alert` varchar(13)
 );
 
 -- --------------------------------------------------------
@@ -453,7 +569,14 @@ INSERT INTO `patients` (`id`, `registration_number`, `first_name`, `last_name`, 
 (10, 'KJ20250010', 'hilghat', 'nindi', '1956-04-03', 'female', '0755059343', 'nindi@gmail.com', '', NULL, 'lwena adam', '0683274343', NULL, NULL, NULL, NULL, NULL, '2025-10-22 06:51:49', '2025-10-22 06:51:49'),
 (11, 'KJ20250011', 'july', 'millinga', '2006-04-03', 'male', '76543384', 'millinga@gmail.com', '', NULL, 'clala', '43245376', NULL, NULL, NULL, NULL, NULL, '2025-10-22 07:57:57', '2025-10-22 07:57:57'),
 (12, 'KJ20250012', 'lisah', 'kagemuro', '2003-04-02', 'female', '857635423734', 'lisah@gmaail.com', '', NULL, 'ntui', '324521567', NULL, NULL, NULL, NULL, NULL, '2025-10-22 08:17:18', '2025-10-22 08:17:18'),
-(13, 'KJ20250013', 'jackline', 'jfhf', '2005-05-07', 'male', '657788989', 'j@gmail.com', '', NULL, 'line', '75467876', NULL, NULL, NULL, NULL, NULL, '2025-10-23 11:01:32', '2025-10-23 11:01:32');
+(13, 'KJ20250013', 'jackline', 'jfhf', '2005-05-07', 'male', '657788989', 'j@gmail.com', '', NULL, 'line', '75467876', NULL, NULL, NULL, NULL, NULL, '2025-10-23 11:01:32', '2025-10-23 11:01:32'),
+(14, 'KJ20250014', 'manfred', 'tembo', '1998-05-07', 'male', '876565474', 'manfred@gmail.com', '', NULL, 'adam lwena', '987654456', NULL, NULL, NULL, NULL, NULL, '2025-10-23 21:18:45', '2025-10-23 21:18:45'),
+(15, 'KJ20250015', 'ephrahim', 'swilla', '1985-08-03', 'male', '0987654', 'swillai@gmail.com', '', NULL, 'david', '8763524278', NULL, NULL, NULL, NULL, NULL, '2025-10-23 22:47:21', '2025-10-23 22:47:21'),
+(16, 'KJ20250016', 'sjhdgfdsk', 'jhdfgdl', '2020-04-03', 'male', '765432686', 'fhgkj@gmail.com', '', NULL, 'fdgsfgn', '878654653', NULL, NULL, NULL, NULL, NULL, '2025-10-25 08:16:24', '2025-10-25 08:16:24'),
+(17, 'KJ20250017', 'kylian', 'mbappe', '2025-10-16', 'male', '542324564', 'cathy@gmail.com', '', NULL, 'fadghg', '655', NULL, NULL, NULL, NULL, NULL, '2025-10-26 20:48:31', '2025-10-26 20:48:31'),
+(18, 'KJ20250018', 'ester', 'lupolo', '2000-06-03', 'female', '645326345', '1abla@gmail.com', '', NULL, 'fadghg', '123453', NULL, NULL, NULL, NULL, NULL, '2025-10-29 09:12:35', '2025-10-29 09:12:35'),
+(19, 'KJ20250019', 'mariam', 'julius', '2002-03-05', 'female', '0612345678', 'ablaah1@gmail.com', 'mbeya', 'student', 'fadghg', '5643567', NULL, NULL, NULL, NULL, NULL, '2025-10-29 09:42:34', '2025-10-29 09:42:34'),
+(20, 'KJ20250020', 'nayoth', 'njovu', '1998-01-04', 'male', '989786545', 'nayoth@gmail.com', 'ruvuma', 'ujenzi', 'agress', '29875322', NULL, NULL, NULL, NULL, NULL, '2025-11-01 13:44:54', '2025-11-01 13:44:54');
 
 -- --------------------------------------------------------
 
@@ -462,14 +585,14 @@ INSERT INTO `patients` (`id`, `registration_number`, `first_name`, `last_name`, 
 -- (See below for the actual view)
 --
 CREATE TABLE `patient_latest_visit` (
-`created_at` timestamp
-,`patient_id` int
-,`status` enum('active','completed','cancelled')
-,`updated_at` timestamp
-,`visit_date` date
+`patient_id` int
 ,`visit_id` int
 ,`visit_number` int
+,`status` enum('active','completed','cancelled')
 ,`visit_type` enum('consultation','lab_only','minor_service')
+,`visit_date` date
+,`created_at` timestamp
+,`updated_at` timestamp
 );
 
 -- --------------------------------------------------------
@@ -503,15 +626,24 @@ INSERT INTO `patient_visits` (`id`, `patient_id`, `visit_number`, `visit_date`, 
 (4, 4, 1, '2025-10-17', 'consultation', NULL, 2, 'active', NULL, '2025-10-17 08:02:10', '2025-10-20 06:40:16'),
 (5, 5, 1, '2025-10-17', 'consultation', NULL, 2, 'active', NULL, '2025-10-17 08:35:54', '2025-10-20 06:40:16'),
 (6, 6, 1, '2025-10-18', 'consultation', NULL, 2, 'active', NULL, '2025-10-18 05:02:27', '2025-10-20 06:40:16'),
-(7, 1, 2, '2025-10-20', 'consultation', NULL, 2, 'active', NULL, '2025-10-20 07:00:37', '2025-10-22 19:11:12'),
-(9, 6, 2, '2025-10-20', 'consultation', NULL, 2, 'active', NULL, '2025-10-20 07:12:12', '2025-10-22 06:32:32'),
+(7, 1, 2, '2025-10-20', 'consultation', NULL, 2, 'completed', NULL, '2025-10-20 07:00:37', '2025-10-23 23:13:15'),
+(9, 6, 2, '2025-10-20', 'consultation', NULL, 2, 'completed', NULL, '2025-10-20 07:12:12', '2025-10-23 23:13:19'),
 (10, 7, 1, '2025-10-21', 'consultation', NULL, 2, 'active', NULL, '2025-10-21 19:04:49', '2025-10-21 19:04:49'),
-(11, 8, 1, '2025-10-21', 'consultation', NULL, 2, 'active', NULL, '2025-10-21 19:08:48', '2025-10-23 19:37:14'),
+(11, 8, 1, '2025-10-21', 'consultation', NULL, 2, 'completed', NULL, '2025-10-21 19:08:48', '2025-10-23 23:13:12'),
 (12, 9, 1, '2025-10-21', 'consultation', NULL, 2, 'active', NULL, '2025-10-21 19:18:47', '2025-10-21 19:18:47'),
 (13, 10, 1, '2025-10-22', 'consultation', NULL, 2, 'active', NULL, '2025-10-22 06:51:49', '2025-10-22 07:48:12'),
 (14, 11, 1, '2025-10-22', 'consultation', NULL, 2, 'active', NULL, '2025-10-22 07:57:57', '2025-10-22 07:57:57'),
 (15, 12, 1, '2025-10-22', 'consultation', NULL, 2, 'active', NULL, '2025-10-22 08:17:18', '2025-10-22 08:21:17'),
-(16, 13, 1, '2025-10-23', 'consultation', NULL, 2, 'active', NULL, '2025-10-23 11:01:32', '2025-10-23 19:24:30');
+(16, 13, 1, '2025-10-23', 'consultation', NULL, 2, 'completed', NULL, '2025-10-23 11:01:32', '2025-10-23 23:13:04'),
+(17, 14, 1, '2025-10-24', 'consultation', NULL, 2, 'active', NULL, '2025-10-23 21:18:45', '2025-10-23 21:22:07'),
+(18, 15, 1, '2025-10-24', 'consultation', NULL, 2, 'completed', NULL, '2025-10-23 22:47:21', '2025-11-03 09:01:59'),
+(28, 9, 2, '2025-10-24', 'consultation', NULL, 2, 'active', NULL, '2025-10-23 23:16:42', '2025-10-23 23:16:42'),
+(29, 16, 1, '2025-10-25', 'consultation', NULL, 2, 'active', NULL, '2025-10-25 08:16:24', '2025-10-25 08:16:24'),
+(30, 17, 1, '2025-10-26', 'consultation', NULL, 2, 'active', NULL, '2025-10-26 20:48:31', '2025-10-26 20:48:31'),
+(31, 18, 1, '2025-10-29', 'consultation', NULL, 2, 'active', NULL, '2025-10-29 09:12:35', '2025-10-29 09:12:35'),
+(32, 19, 1, '2025-10-29', 'consultation', NULL, 2, 'active', NULL, '2025-10-29 09:42:34', '2025-10-29 09:42:34'),
+(33, 2, 2, '2025-11-01', 'consultation', NULL, 2, 'active', NULL, '2025-11-01 13:38:30', '2025-11-01 13:38:30'),
+(34, 20, 1, '2025-11-01', 'consultation', NULL, 2, 'active', NULL, '2025-11-01 13:44:54', '2025-11-01 13:44:54');
 
 -- --------------------------------------------------------
 
@@ -563,7 +695,22 @@ INSERT INTO `payments` (`id`, `visit_id`, `patient_id`, `payment_type`, `item_id
 (22, 15, 12, 'registration', NULL, NULL, 3000.00, 'cash', 'paid', NULL, 2, '2025-10-22 08:17:18', 'Initial consultation payment'),
 (23, 15, 12, 'lab_test', 6, 'lab_order', 5000.00, 'cash', 'paid', '', 2, '2025-10-22 08:20:51', NULL),
 (24, 7, 1, 'medicine', 3, 'prescription', 500.00, 'cash', 'paid', '', 2, '2025-10-22 19:11:12', NULL),
-(25, 16, 13, 'registration', NULL, NULL, 3000.00, 'cash', 'paid', NULL, 2, '2025-10-23 11:01:32', 'Initial consultation payment');
+(25, 16, 13, 'registration', NULL, NULL, 3000.00, 'cash', 'paid', NULL, 2, '2025-10-23 11:01:32', 'Initial consultation payment'),
+(26, 11, 8, 'medicine', 8, 'prescription', 1000.00, 'cash', 'paid', '', 2, '2025-10-23 20:09:26', NULL),
+(27, 17, 14, 'registration', NULL, NULL, 3000.00, 'cash', 'paid', NULL, 2, '2025-10-23 21:18:45', 'Initial consultation payment'),
+(28, 17, 14, 'lab_test', 7, 'lab_order', 14000.00, 'cash', 'paid', '', 2, '2025-10-23 21:22:07', NULL),
+(29, 18, 15, 'registration', NULL, NULL, 3000.00, 'mobile_money', 'paid', NULL, 2, '2025-10-23 22:47:21', 'Initial consultation payment'),
+(30, 18, 15, 'lab_test', 9, 'lab_order', 5000.00, 'cash', 'paid', '', 2, '2025-10-23 22:54:57', NULL),
+(31, 18, 15, 'medicine', 9, 'prescription', 500.00, 'card', 'paid', '', 2, '2025-10-23 22:55:12', NULL),
+(32, 16, 13, 'medicine', 7, 'prescription', 500.00, 'mobile_money', 'paid', '', 2, '2025-10-23 22:55:19', NULL),
+(33, 18, 15, 'medicine', 10, 'prescription', 1000.00, 'insurance', 'paid', '', 2, '2025-10-23 22:58:08', NULL),
+(43, 29, 16, 'registration', NULL, NULL, 3000.00, 'cash', 'paid', NULL, 2, '2025-10-25 08:16:24', 'Initial consultation payment'),
+(44, 30, 17, 'registration', NULL, NULL, 3000.00, 'cash', 'paid', NULL, 2, '2025-10-26 20:48:31', 'Initial consultation payment'),
+(45, 31, 18, 'registration', NULL, NULL, 3000.00, 'cash', 'paid', NULL, 2, '2025-10-29 09:12:35', 'Initial consultation payment'),
+(46, 32, 19, 'registration', NULL, NULL, 3000.00, 'cash', 'paid', NULL, 2, '2025-10-29 09:42:34', 'Initial consultation payment'),
+(47, 33, 2, 'registration', NULL, NULL, 3000.00, 'mobile_money', 'paid', NULL, 2, '2025-11-01 13:38:30', 'Revisit payment - Visit #2'),
+(48, 34, 20, 'registration', NULL, NULL, 3000.00, 'cash', 'paid', NULL, 2, '2025-11-01 13:44:54', 'Initial consultation payment'),
+(49, 18, 15, 'medicine', 11, 'prescription', 500.00, 'card', 'paid', '', 2, '2025-11-03 09:01:43', NULL);
 
 -- --------------------------------------------------------
 
@@ -598,10 +745,13 @@ CREATE TABLE `prescriptions` (
 --
 
 INSERT INTO `prescriptions` (`id`, `consultation_id`, `visit_id`, `patient_id`, `doctor_id`, `medicine_id`, `quantity_prescribed`, `quantity_dispensed`, `dosage`, `frequency`, `duration`, `instructions`, `status`, `cancellation_reason`, `dispensed_by`, `dispensed_at`, `notes`, `created_at`, `updated_at`) VALUES
-(2, 6, 6, 6, 3, 1, 10, 0, '200g', 'as prescribed', '', '4', 'pending', NULL, NULL, NULL, NULL, '2025-10-18 05:14:25', '2025-10-18 05:14:25'),
-(3, 7, 7, 1, 3, 1, 10, 0, '200g', 'as prescribed', '', '2 kila siku', 'pending', NULL, NULL, NULL, NULL, '2025-10-22 06:48:58', '2025-10-22 06:48:58'),
-(7, 16, 16, 13, 3, 1, 10, 0, 'yf', 'as prescribed', '', '2 daily', 'pending', NULL, NULL, NULL, NULL, '2025-10-23 19:24:30', '2025-10-23 19:24:30'),
-(8, 11, 11, 8, 3, 9, 10, 0, '1 tablet', 'Once daily', '1', '12', 'pending', NULL, NULL, NULL, NULL, '2025-10-23 19:37:14', '2025-10-23 19:37:14');
+(2, 6, 6, 6, 3, 1, 10, 10, '200g', 'as prescribed', '', '4', 'dispensed', NULL, 2, '2025-10-23 23:13:19', NULL, '2025-10-18 05:14:25', '2025-10-23 23:13:19'),
+(3, 7, 7, 1, 3, 1, 10, 10, '200g', 'as prescribed', '', '2 kila siku', 'dispensed', NULL, 2, '2025-10-23 23:13:15', NULL, '2025-10-22 06:48:58', '2025-10-23 23:13:15'),
+(7, 16, 16, 13, 3, 1, 10, 10, 'yf', 'as prescribed', '', '2 daily', 'dispensed', NULL, 2, '2025-10-23 23:13:04', NULL, '2025-10-23 19:24:30', '2025-10-23 23:13:04'),
+(8, 11, 11, 8, 3, 9, 10, 10, '1 tablet', 'Once daily', '1', '12', 'dispensed', NULL, 2, '2025-10-23 23:13:12', NULL, '2025-10-23 19:37:14', '2025-10-23 23:13:12'),
+(9, 18, 18, 15, 3, 1, 10, 10, '200g', 'as prescribed', '', '2 daily', 'dispensed', NULL, 2, '2025-10-23 23:13:08', NULL, '2025-10-23 22:52:39', '2025-10-23 23:13:08'),
+(10, 18, 18, 15, 3, 7, 10, 10, '2 daily', 'Once daily', '1', 'i', 'dispensed', NULL, 2, '2025-10-23 23:13:08', NULL, '2025-10-23 22:57:39', '2025-10-23 23:13:08'),
+(11, 18, 18, 15, 3, 1, 10, 10, '1 tablet', 'Once daily', '1', 'always', 'dispensed', NULL, 2, '2025-11-03 09:01:59', NULL, '2025-11-01 13:29:51', '2025-11-03 09:01:59');
 
 -- --------------------------------------------------------
 
@@ -660,15 +810,15 @@ CREATE TABLE `service_orders` (
 -- (See below for the actual view)
 --
 CREATE TABLE `staff_performance` (
-`consultations_completed` bigint
-,`id` int
+`id` int
+,`staff_name` varchar(101)
+,`role` enum('admin','receptionist','doctor','lab_technician')
 ,`patients_registered` bigint
 ,`payments_collected` bigint
-,`prescriptions_written` bigint
-,`role` enum('admin','receptionist','doctor','lab_technician')
-,`staff_name` varchar(101)
-,`tests_completed` bigint
 ,`total_collected` decimal(32,2)
+,`consultations_completed` bigint
+,`prescriptions_written` bigint
+,`tests_completed` bigint
 );
 
 -- --------------------------------------------------------
@@ -742,7 +892,14 @@ INSERT INTO `vital_signs` (`id`, `visit_id`, `patient_id`, `temperature`, `blood
 (9, 13, 10, 36.0, 120, 80, 80, NULL, 68.0, 120.0, 2, '2025-10-22 06:51:49'),
 (10, 14, 11, 36.0, 120, 80, 120, NULL, 65.0, 102.0, 2, '2025-10-22 07:57:57'),
 (11, 15, 12, 36.0, 120, 80, 120, NULL, 57.0, 120.0, 2, '2025-10-22 08:17:18'),
-(12, 16, 13, 36.0, 120, 57, 120, NULL, 129.0, 200.0, 2, '2025-10-23 11:01:32');
+(12, 16, 13, 36.0, 120, 57, 120, NULL, 129.0, 200.0, 2, '2025-10-23 11:01:32'),
+(13, 17, 14, 36.0, 120, 80, 71, NULL, 73.0, 180.0, 2, '2025-10-23 21:18:45'),
+(14, 18, 15, 36.0, 120, 80, 71, NULL, 73.0, 180.0, 2, '2025-10-23 22:47:21'),
+(15, 29, 16, 36.0, 120, 80, 120, NULL, 38.0, 56.0, 2, '2025-10-25 08:16:24'),
+(16, 30, 17, 36.0, 120, 80, 120, NULL, 56.0, 138.0, 2, '2025-10-26 20:48:31'),
+(17, 31, 18, 36.0, 120, 80, 120, NULL, 56.0, 120.0, 2, '2025-10-29 09:12:35'),
+(18, 32, 19, 36.0, 120, 80, 40, NULL, 68.0, 120.0, 2, '2025-10-29 09:42:34'),
+(19, 34, 20, 36.0, 129, 87, 40, NULL, 50.0, 123.0, 2, '2025-11-01 13:44:54');
 
 -- --------------------------------------------------------
 
@@ -822,6 +979,25 @@ ALTER TABLE `consultations`
   ADD KEY `idx_consultation_status` (`status`);
 
 --
+-- Indexes for table `lab_equipment`
+--
+ALTER TABLE `lab_equipment`
+  ADD PRIMARY KEY (`id`),
+  ADD UNIQUE KEY `equipment_code` (`equipment_code`),
+  ADD KEY `idx_equipment_status` (`status`),
+  ADD KEY `idx_equipment_managed_by` (`managed_by`),
+  ADD KEY `idx_equipment_active` (`is_active`);
+
+--
+-- Indexes for table `lab_inventory`
+--
+ALTER TABLE `lab_inventory`
+  ADD PRIMARY KEY (`id`),
+  ADD UNIQUE KEY `item_code` (`item_code`),
+  ADD KEY `idx_inventory_category` (`category`),
+  ADD KEY `idx_inventory_active` (`is_active`);
+
+--
 -- Indexes for table `lab_results`
 --
 ALTER TABLE `lab_results`
@@ -848,6 +1024,15 @@ ALTER TABLE `lab_tests`
 ALTER TABLE `lab_test_categories`
   ADD PRIMARY KEY (`id`),
   ADD UNIQUE KEY `category_code` (`category_code`);
+
+--
+-- Indexes for table `lab_test_items`
+--
+ALTER TABLE `lab_test_items`
+  ADD PRIMARY KEY (`id`),
+  ADD UNIQUE KEY `unique_test_item` (`test_id`,`item_id`),
+  ADD KEY `test_id` (`test_id`),
+  ADD KEY `item_id` (`item_id`);
 
 --
 -- Indexes for table `lab_test_orders`
@@ -984,13 +1169,25 @@ ALTER TABLE `vital_signs`
 -- AUTO_INCREMENT for table `consultations`
 --
 ALTER TABLE `consultations`
-  MODIFY `id` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=17;
+  MODIFY `id` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=25;
+
+--
+-- AUTO_INCREMENT for table `lab_equipment`
+--
+ALTER TABLE `lab_equipment`
+  MODIFY `id` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=7;
+
+--
+-- AUTO_INCREMENT for table `lab_inventory`
+--
+ALTER TABLE `lab_inventory`
+  MODIFY `id` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=9;
 
 --
 -- AUTO_INCREMENT for table `lab_results`
 --
 ALTER TABLE `lab_results`
-  MODIFY `id` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=6;
+  MODIFY `id` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=8;
 
 --
 -- AUTO_INCREMENT for table `lab_tests`
@@ -1005,10 +1202,16 @@ ALTER TABLE `lab_test_categories`
   MODIFY `id` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=6;
 
 --
+-- AUTO_INCREMENT for table `lab_test_items`
+--
+ALTER TABLE `lab_test_items`
+  MODIFY `id` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=7;
+
+--
 -- AUTO_INCREMENT for table `lab_test_orders`
 --
 ALTER TABLE `lab_test_orders`
-  MODIFY `id` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=7;
+  MODIFY `id` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=10;
 
 --
 -- AUTO_INCREMENT for table `medicines`
@@ -1032,25 +1235,25 @@ ALTER TABLE `medicine_dispensing`
 -- AUTO_INCREMENT for table `patients`
 --
 ALTER TABLE `patients`
-  MODIFY `id` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=14;
+  MODIFY `id` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=21;
 
 --
 -- AUTO_INCREMENT for table `patient_visits`
 --
 ALTER TABLE `patient_visits`
-  MODIFY `id` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=17;
+  MODIFY `id` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=35;
 
 --
 -- AUTO_INCREMENT for table `payments`
 --
 ALTER TABLE `payments`
-  MODIFY `id` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=26;
+  MODIFY `id` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=50;
 
 --
 -- AUTO_INCREMENT for table `prescriptions`
 --
 ALTER TABLE `prescriptions`
-  MODIFY `id` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=9;
+  MODIFY `id` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=12;
 
 --
 -- AUTO_INCREMENT for table `services`
@@ -1074,7 +1277,7 @@ ALTER TABLE `users`
 -- AUTO_INCREMENT for table `vital_signs`
 --
 ALTER TABLE `vital_signs`
-  MODIFY `id` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=13;
+  MODIFY `id` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=20;
 
 --
 -- Constraints for dumped tables
@@ -1087,6 +1290,12 @@ ALTER TABLE `consultations`
   ADD CONSTRAINT `consultations_ibfk_1` FOREIGN KEY (`visit_id`) REFERENCES `patient_visits` (`id`) ON DELETE CASCADE,
   ADD CONSTRAINT `consultations_ibfk_2` FOREIGN KEY (`patient_id`) REFERENCES `patients` (`id`) ON DELETE CASCADE,
   ADD CONSTRAINT `consultations_ibfk_3` FOREIGN KEY (`doctor_id`) REFERENCES `users` (`id`);
+
+--
+-- Constraints for table `lab_equipment`
+--
+ALTER TABLE `lab_equipment`
+  ADD CONSTRAINT `lab_equipment_ibfk_1` FOREIGN KEY (`managed_by`) REFERENCES `users` (`id`);
 
 --
 -- Constraints for table `lab_results`
@@ -1103,6 +1312,13 @@ ALTER TABLE `lab_results`
 --
 ALTER TABLE `lab_tests`
   ADD CONSTRAINT `lab_tests_ibfk_1` FOREIGN KEY (`category_id`) REFERENCES `lab_test_categories` (`id`);
+
+--
+-- Constraints for table `lab_test_items`
+--
+ALTER TABLE `lab_test_items`
+  ADD CONSTRAINT `lab_test_items_ibfk_1` FOREIGN KEY (`test_id`) REFERENCES `lab_tests` (`id`) ON DELETE CASCADE,
+  ADD CONSTRAINT `lab_test_items_ibfk_2` FOREIGN KEY (`item_id`) REFERENCES `lab_inventory` (`id`) ON DELETE CASCADE;
 
 --
 -- Constraints for table `lab_test_orders`

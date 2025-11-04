@@ -250,11 +250,31 @@ class DoctorController extends BaseController {
         $stmt->execute([$patient_id]);
         $lab_orders = $stmt->fetchAll();
 
+        // Build a map of latest lab results by test name for this patient
+        $lab_results_map = [];
+        $stmt = $this->pdo->prepare("\n            SELECT lr.*, lt.test_name\n            FROM lab_results lr\n            JOIN lab_test_orders lto ON lr.order_id = lto.id\n            JOIN lab_tests lt ON lr.test_id = lt.id\n            WHERE lto.patient_id = ?\n            ORDER BY lt.test_name ASC, lr.completed_at DESC\n        ");
+        $stmt->execute([$patient_id]);
+        $all_lab_results = $stmt->fetchAll();
+        foreach ($all_lab_results as $r) {
+            $name = $r['test_name'] ?? '';
+            if ($name === '') continue;
+            // keep first (most recent) occurrence per exact test_name
+            if (!isset($lab_results_map[$name])) {
+                $lab_results_map[$name] = $r;
+            }
+            // also store a normalized key to improve lookup flexibility
+            $norm = strtolower(preg_replace('/\s+/', '', $name));
+            if (!isset($lab_results_map[$norm])) {
+                $lab_results_map[$norm] = $r;
+            }
+        }
+
         $this->render('doctor/view_patient', [
             'patient' => $patient,
             'consultations' => $consultations,
             'vital_signs' => $vital_signs,
             'lab_orders' => $lab_orders,
+            'lab_results_map' => $lab_results_map,
             'csrf_token' => $this->generateCSRF()
         ]);
     }
