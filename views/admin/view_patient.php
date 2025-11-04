@@ -29,7 +29,7 @@
                             <i class="fas fa-calendar mr-1"></i>
                             Last Visit: <?php echo $lastVisit ? date('d/m/Y', strtotime($lastVisit)) : 'First Visit'; ?>
                         </span>
-                        <span class="bg-white bg-opacity-20 px-3 py-1 rounded-full text-sm">
+                        <span class="bg-blue bg-opacity-20 px-3 py-1 rounded-full text-sm">
                             <i class="fas fa-history mr-1"></i>
                             Total Visits: <?php echo $visitCount; ?>
                         </span>
@@ -564,28 +564,28 @@ function generateMedicalForm(consultationId, visitIndex) {
                 <div class="grid grid-cols-2 md:grid-cols-5 gap-4 text-sm">
                     <div class="text-center">
                         <div class="font-medium mb-1">Temperature</div>
-                        <div class="border border-gray-400 h-20 p-2 text-center">
+                        <div class="border border-gray-400 h-10 p-2 text-center">
                             <!-- Vital signs would be loaded here -->
                         </div>
                     </div>
                     <div class="text-center">
                         <div class="font-medium mb-1">Blood Pressure</div>
-                        <div class="border border-gray-400 h-20 p-2 text-center">
+                        <div class="border border-gray-400 h-10 p-2 text-center">
                         </div>
                     </div>
                     <div class="text-center">
                         <div class="font-medium mb-1">Pulse Rate</div>
-                        <div class="border border-gray-400 h-20 p-2 text-center">
+                        <div class="border border-gray-400 h-10 p-2 text-center">
                         </div>
                     </div>
                     <div class="text-center">
                         <div class="font-medium mb-1">Body Weight</div>
-                        <div class="border border-gray-400 h-20 p-2 text-center">
+                        <div class="border border-gray-400 h-10 p-2 text-center">
                         </div>
                     </div>
                     <div class="text-center">
                         <div class="font-medium mb-1">Height</div>
-                        <div class="border border-gray-400 h-20 p-2 text-center">
+                        <div class="border border-gray-400 h-10 p-2 text-center">
                         </div>
                     </div>
                 </div>

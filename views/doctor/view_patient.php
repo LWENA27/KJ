@@ -100,7 +100,7 @@
         <div class="grid grid-cols-5 gap-4 text-sm">
             <div class="text-center">
                 <div class="font-medium mb-1">Temperature</div>
-                <div class="border border-gray-400 h-20 p-2 text-center">
+                <div class="border border-gray-400 h-10 p-2 text-center">
                     <?php 
                     if (!empty($vital_signs['temperature'])) {
                         echo htmlspecialchars($vital_signs['temperature']) . '°C';
@@ -110,7 +110,7 @@
             </div>
             <div class="text-center">
                 <div class="font-medium mb-1">Blood Pressure</div>
-                <div class="border border-gray-400 h-20 p-2 text-center">
+                <div class="border border-gray-400 h-10 p-2 text-center">
                     <?php 
                     if (!empty($vital_signs['blood_pressure_systolic']) && !empty($vital_signs['blood_pressure_diastolic'])) {
                         echo htmlspecialchars($vital_signs['blood_pressure_systolic']) . '/' . htmlspecialchars($vital_signs['blood_pressure_diastolic']);
@@ -120,7 +120,7 @@
             </div>
             <div class="text-center">
                 <div class="font-medium mb-1">Pulse Rate</div>
-                <div class="border border-gray-400 h-20 p-2 text-center">
+                <div class="border border-gray-400 h-10 p-2 text-center">
                     <?php 
                     if (!empty($vital_signs['pulse_rate'])) {
                         echo htmlspecialchars($vital_signs['pulse_rate']) . ' bpm';
@@ -130,7 +130,7 @@
             </div>
             <div class="text-center">
                 <div class="font-medium mb-1">Body Weight</div>
-                <div class="border border-gray-400 h-20 p-2 text-center">
+                <div class="border border-gray-400 h-10 p-2 text-center">
                     <?php 
                     if (!empty($vital_signs['weight'])) {
                         echo htmlspecialchars($vital_signs['weight']) . ' kg';
@@ -140,7 +140,7 @@
             </div>
             <div class="text-center">
                 <div class="font-medium mb-1">Height</div>
-                <div class="border border-gray-400 h-20 p-2 text-center">
+                <div class="border border-gray-400 h-10 p-2 text-center">
                     <?php 
                     if (!empty($vital_signs['height'])) {
                         echo htmlspecialchars($vital_signs['height']) . ' cm';

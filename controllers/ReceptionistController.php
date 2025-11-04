@@ -171,6 +171,7 @@ class ReceptionistController extends BaseController
             $phone = $post['phone'] ?? null;
             $email = $post['email'] ?? null;
             $address = $post['address'] ?? null;
+            $occupation = $post['occupation'] ?? null;
             $emergency_contact_name = $post['emergency_contact_name'] ?? null;
             $emergency_contact_phone = $post['emergency_contact_phone'] ?? null;
             $temperature = $post['temperature'] ?? null;
@@ -206,9 +207,9 @@ class ReceptionistController extends BaseController
                     INSERT INTO patients (
                         registration_number, first_name, last_name,
                         date_of_birth, gender, phone, email,
-                        address, emergency_contact_name,
+                        address, occupation, emergency_contact_name,
                         emergency_contact_phone, created_at
-                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())
+                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())
                 ");
 
                 $registration_number = $this->generateRegistrationNumber();
@@ -223,6 +224,7 @@ class ReceptionistController extends BaseController
                     $this->sanitize($phone),
                     $this->sanitize($email),
                     $this->sanitize($address),
+                    $this->sanitize($occupation),
                     $this->sanitize($emergency_contact_name),
                     $this->sanitize($emergency_contact_phone)
                 ]);

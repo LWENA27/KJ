@@ -93,6 +93,26 @@
                         <input type="email" id="email" name="email" placeholder="patient@example.com"
                                class="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors">
                     </div>
+                    
+                    <!-- Address -->
+                    <div class="md:col-span-2">
+                        <label for="address" class="block text-sm font-medium text-gray-700 mb-1">
+                            Address
+                        </label>
+               <input type="text" id="address" name="address" placeholder="Patient address (optional)"
+                   value="<?php echo htmlspecialchars($_POST['address'] ?? ''); ?>"
+                   class="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors">
+                    </div>
+
+                    <!-- Occupation -->
+                    <div>
+                        <label for="occupation" class="block text-sm font-medium text-gray-700 mb-1">
+                            Occupation
+                        </label>
+               <input type="text" id="occupation" name="occupation" placeholder="Occupation (optional)"
+                   value="<?php echo htmlspecialchars($_POST['occupation'] ?? ''); ?>"
+                   class="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors">
+                    </div>
                 </div>
             </div>
 

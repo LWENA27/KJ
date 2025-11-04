@@ -152,7 +152,7 @@
                                 <a href="#" class="bg-blue-100 hover:bg-blue-200 text-blue-700 px-3 py-1 rounded-lg text-sm font-medium transition-all duration-300 transform hover:scale-105" title="Edit Appointment">
                                     <i class="fas fa-edit"></i>
                                 </a>
-                                <a href="#" class="bg-green-100 hover:bg-green-200 text-green-700 px-3 py-1 rounded-lg text-sm font-medium transition-all duration-300 transform hover:scale-105" title="View Details">
+                                <a href="<?= htmlspecialchars($BASE_PATH) ?>/receptionist/view_patient?id=<?= $appointment['patient_id'] ?>" class="bg-green-100 hover:bg-green-200 text-green-700 px-3 py-1 rounded-lg text-sm font-medium transition-all duration-300 transform hover:scale-105" title="View Patient">
                                     <i class="fas fa-eye"></i>
                                 </a>
                                 <?php if ($appointment['status'] === 'scheduled'): ?>
