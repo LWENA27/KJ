@@ -1,0 +1,21 @@
+# Ignore local admin tools and dumps
+/adminer.php
+/adminer-*.php
+/adminer*/
+/phpmyadmin/
+/phpMyAdmin/
+
+# Local environment files
+.env
+.env.local
+.env.*.local
+
+# Editor and OS files
+.vscode/
+.idea/
+*.log
+.DS_Store
+
+# Node and vendor
+node_modules/
+vendor/
