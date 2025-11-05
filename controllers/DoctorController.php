@@ -75,16 +75,21 @@ class DoctorController extends BaseController {
         $stmt->execute([$doctor_id]);
         $other_doctors = $stmt->fetchAll();
 
-        // Recent lab results
+        // Recent lab results - normalize keys expected by the view (status, created_at)
         $stmt = $this->pdo->prepare("
-            SELECT lr.*, lt.test_name as test_name, p.first_name, p.last_name
+            SELECT
+                lr.*, 
+                lt.test_name as test_name, 
+                p.first_name, p.last_name,
+                COALESCE(lto.status, 'unknown') as status,
+                COALESCE(lr.completed_at, lto.created_at) as created_at
             FROM lab_results lr
             JOIN lab_test_orders lto ON lr.order_id = lto.id
             JOIN lab_tests lt ON lr.test_id = lt.id
             JOIN consultations c ON lto.consultation_id = c.id
             JOIN patients p ON c.patient_id = p.id
             WHERE c.doctor_id = ?
-            ORDER BY lr.completed_at DESC
+            ORDER BY COALESCE(lr.completed_at, lto.created_at) DESC
             LIMIT 5
         ");
         $stmt->execute([$doctor_id]);
@@ -141,25 +146,48 @@ class DoctorController extends BaseController {
                 $stmt->execute([$doctor_id]);
                 $pending_consultations = $stmt->fetchAll();
 
-        // Add these variables for the dashboard statistics
-        $stats = [
-            'today_consultations' => 0,
-            'completed_consultations' => 0,
-            'total_consultations' => 0
+        // Prepare stats for the dashboard using the earlier stats query result
+        // (the $stats variable was set earlier from the DB query)
+        $dashboardStats = [
+            'today_consultations' => isset($stats['today_consultations']) ? (int)$stats['today_consultations'] : 0,
+            'completed_consultations' => isset($stats['completed_consultations']) ? (int)$stats['completed_consultations'] : 0,
+            'total_consultations' => isset($stats['total_consultations']) ? (int)$stats['total_consultations'] : 0,
         ];
+
+        // Normalize available_patients created_at to what the view expects
+        foreach ($available_patients as &$p) {
+            if (empty($p['created_at']) && !empty($p['visit_created_at'])) {
+                $p['created_at'] = $p['visit_created_at'];
+            }
+        }
+        unset($p);
+
+        // Ensure we have a list of other users (doctors, receptionists, lab techs, etc.) for allocation
+        $stmt = $this->pdo->prepare(
+            "SELECT id, CONCAT(first_name, ' ', last_name) as name, role FROM users WHERE id != ? AND is_active = 1 AND role != 'admin' ORDER BY role, first_name, last_name"
+        );
+        $stmt->execute([$doctor_id]);
+        $other_users = $stmt->fetchAll();
+
+        // For backward compatibility some views reference other_doctors - provide both
+        $other_doctors = $other_users;
 
         // Pass all required variables to the view
         $this->render('doctor/dashboard', [
             'available_patients' => $available_patients,
-            'stats' => $stats,
+            'stats' => $dashboardStats,
             'csrf_token' => $this->generateCSRF(),
-            'other_doctors' => []  // Add empty array to prevent undefined variable error
+            'other_doctors' => $other_doctors,
+            'other_users' => $other_users,
+            'pending_results' => $pending_results ?? [],
+            'today_completed' => $today_completed ?? [],
+            'recent_results' => $recent_results ?? [],
+            'pending_consultations' => $pending_consultations ?? []
         ]);
     }
 
     public function consultations() {
         $doctor_id = $_SESSION['user_id'];
-
         $stmt = $this->pdo->prepare("
             SELECT c.*, p.first_name, p.last_name, p.date_of_birth, p.phone,
                    pv.visit_date,
@@ -173,14 +201,20 @@ class DoctorController extends BaseController {
             FROM consultations c
             JOIN patients p ON c.patient_id = p.id
             LEFT JOIN patient_visits pv ON c.visit_id = pv.id
-            WHERE c.doctor_id = ?
+            WHERE c.doctor_id = ? AND c.status = 'completed'
             ORDER BY COALESCE(c.follow_up_date, pv.visit_date, c.created_at) DESC
         ");
-            $stmt->execute([$doctor_id]);
+        $stmt->execute([$doctor_id]);
         $consultations = $stmt->fetchAll();
+
+        // Pending consultations (not completed/cancelled)
+        $stmt = $this->pdo->prepare("\n            SELECT c.*, p.first_name AS patient_first, p.last_name AS patient_last, p.date_of_birth AS patient_dob, p.phone AS patient_phone, pv.visit_date, COALESCE(c.follow_up_date, pv.visit_date, c.created_at) as appointment_date\n            FROM consultations c\n            JOIN patients p ON c.patient_id = p.id\n            LEFT JOIN patient_visits pv ON c.visit_id = pv.id\n            WHERE c.doctor_id = ? AND (c.status IS NULL OR c.status NOT IN ('completed','cancelled'))\n            ORDER BY COALESCE(c.created_at, c.follow_up_date, pv.visit_date) ASC\n        ");
+        $stmt->execute([$doctor_id]);
+        $pending_consultations = $stmt->fetchAll();
 
         $this->render('doctor/consultations', [
             'consultations' => $consultations,
+            'pending_consultations' => $pending_consultations,
             'csrf_token' => $this->generateCSRF()
         ]);
     }

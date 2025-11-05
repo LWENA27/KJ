@@ -5,13 +5,15 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title><?php echo isset($title) ? htmlspecialchars($title) . ' - ' : ''; ?>Healthcare Management System</title>
-    <!-- Local CSS Files -->
-    <link rel="stylesheet" href="/assets/css/tailwind.css">
-    <link rel="stylesheet" href="/assets/css/fontawesome.min.css">
-    <link rel="stylesheet" href="/assets/css/fonts.css">
+    <!-- Local CSS Files (use BASE_PATH to avoid absolute-root 404s) -->
+    <?php $bp = rtrim($BASE_PATH ?? '', '/'); ?>
+    <link rel="stylesheet" href="<?php echo htmlspecialchars($bp ?: ''); ?>/assets/css/tailwind.css">
+    <link rel="stylesheet" href="<?php echo htmlspecialchars($bp ?: ''); ?>/assets/css/fontawesome.min.css">
+    <link rel="stylesheet" href="<?php echo htmlspecialchars($bp ?: ''); ?>/assets/css/fonts.css">
     <!-- additional awaresome links -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
-    <link rel="stylesheet" href="/KJ/assets/css/tailwind.css">
+    <!-- Fallback favicon to avoid browser requesting /favicon.ico and showing 404 -->
+    <link rel="icon" href="<?php echo htmlspecialchars($bp ?: ''); ?>/assets/icons/icon-192x192.svg" type="image/svg+xml">
     <!-- additional awaresome links -->
 
     <!-- PWA Manifest - Optional -->

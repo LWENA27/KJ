@@ -89,14 +89,14 @@
                     <i class="fas fa-print mr-1"></i>Print Record
                 </button>
                 
-                <a href="<?php echo htmlspecialchars($BASE_PATH); ?>/receptionist/create_revisit?patient_id=<?php echo $patient['id']; ?>"
+                <a href="<?php echo htmlspecialchars($BASE_PATH); ?>/doctor/attend_patient/<?php echo $patient['id']; ?>"
                    class="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded-md text-sm transition-colors">
-                    <i class="fas fa-user-check mr-1"></i>Create Revisit
+                    <i class="fas fa-stethoscope mr-1"></i>Attend Patient
                 </a>
                 
-                <a href="<?php echo htmlspecialchars($BASE_PATH); ?>/receptionist/payments?patient_id=<?php echo $patient['id']; ?>&step=consultation"
-                   class="bg-orange-500 hover:bg-orange-600 text-white px-4 py-2 rounded-md text-sm transition-colors">
-                    <i class="fas fa-credit-card mr-1"></i>Process Payment
+                <a href="<?php echo htmlspecialchars($BASE_PATH); ?>/doctor/allocate_resources?patient_id=<?php echo $patient['id']; ?>"
+                   class="bg-purple-500 hover:bg-purple-600 text-white px-4 py-2 rounded-md text-sm transition-colors">
+                    <i class="fas fa-tasks mr-1"></i>Allocate
                 </a>
                 
                 <a href="<?php echo htmlspecialchars($BASE_PATH); ?>/receptionist/appointments?patient_id=<?php echo $patient['id']; ?>"

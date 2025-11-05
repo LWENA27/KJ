@@ -169,7 +169,7 @@
                                 </td>
                                 <td class="px-6 py-4 whitespace-nowrap">
                                     <div class="text-sm text-gray-900">
-                                        <?php echo htmlspecialchars(safe_date('h:i A', $patient['created_at'], 'N/A')); ?>
+                                        <?php echo htmlspecialchars(safe_date('h:i A', $patient['created_at'] ?? $patient['visit_created_at'] ?? null, 'N/A')); ?>
                                     </div>
                                 </td>
                                 <td class="px-6 py-4 whitespace-nowrap">
@@ -223,9 +223,10 @@
                         </div>
                     </div>
                     <div class="text-right">
+                        <?php $r_status = (string)($result['status'] ?? 'unknown'); ?>
                         <span class="inline-flex px-2 py-1 text-xs font-medium rounded-full
                             <?php
-                            switch ($result['status']) {
+                            switch ($r_status) {
                                 case 'pending':
                                     echo 'bg-yellow-100 text-yellow-800';
                                     break;
@@ -235,12 +236,15 @@
                                 case 'reviewed':
                                     echo 'bg-blue-100 text-blue-800';
                                     break;
+                                default:
+                                    echo 'bg-gray-100 text-gray-800';
+                                    break;
                             }
                             ?>">
-                            <?php echo ucfirst($result['status']); ?>
+                            <?php echo ucfirst($r_status); ?>
                         </span>
                             <p class="text-xs text-gray-400 mt-1">
-                            <?php echo htmlspecialchars(safe_date('M j, H:i', $result['created_at'], 'N/A')); ?>
+                            <?php echo htmlspecialchars(safe_date('M j, H:i', $result['created_at'] ?? null, 'N/A')); ?>
                         </p>
                     </div>
                 </div>
@@ -349,11 +353,11 @@ document.getElementById('medicineModal')?.addEventListener('click', function(e) 
             </div>
 
             <div>
-                <label for="targetDoctor" class="form-label">Allocate to Doctor</label>
+                <label for="targetDoctor" class="form-label">Allocate to user</label>
                 <select id="targetDoctor" name="target_doctor_id" required class="form-input">
-                    <option value="">Select Doctor</option>
-                    <?php foreach ($other_doctors as $doctor): ?>
-                    <option value="<?php echo $doctor['id']; ?>"><?php echo htmlspecialchars($doctor['name']); ?></option>
+                    <option value="">Select user</option>
+                    <?php foreach (($other_users ?? $other_doctors) as $user): ?>
+                    <option value="<?php echo $user['id']; ?>"><?php echo htmlspecialchars($user['name'] . ' (' . ucfirst($user['role']) . ')'); ?></option>
                     <?php endforeach; ?>
                 </select>
             </div>
