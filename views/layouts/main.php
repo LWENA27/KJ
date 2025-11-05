@@ -1112,7 +1112,7 @@
                             $menu_items = [
                                 ['url' => 'doctor/dashboard', 'icon' => 'fas fa-chart-line', 'text' => 'Dashboard'],
                                 ['url' => 'doctor/consultations', 'icon' => 'fas fa-stethoscope', 'text' => 'Consultations'],
-                                ['url' => 'doctor/patients', 'icon' => 'fas fa-user-injured', 'text' => 'My Patients'],
+                                ['url' => 'doctor/patients', 'icon' => 'fas fa-user-injured', 'text' => 'Patients'],
                                 ['url' => 'doctor/lab_results', 'icon' => 'fas fa-flask', 'text' => 'Lab Results'],
                             ];
                         } elseif ($role === 'lab_technician') {
@@ -1437,6 +1437,7 @@
             const sidebar = document.getElementById('sidebar');
             const overlay = document.getElementById('sidebarOverlay');
             const mainContent = document.getElementById('contentWrapper');
+            const topHeader = document.querySelector('.top-header');
 
             if (!sidebar) return;
 
@@ -1457,7 +1458,6 @@
                 // On small screens always ensure sidebar isn't stuck collapsed (desktop-only)
                 sidebar.classList.remove('collapsed');
                 if (mainContent) mainContent.classList.remove('fullwidth');
-                const topHeader = document.querySelector('.top-header');
                 if (topHeader) topHeader.classList.remove('header-expanded');
             }
         });

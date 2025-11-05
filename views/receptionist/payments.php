@@ -9,6 +9,56 @@
     #paymentModal { z-index: 99999 !important; }
     /* Ensure the modal dialog content creates its own stacking context above overlay */
     #paymentModal > .bg-white { position: relative; z-index: 100000; }
+    /* Improve visibility of Record Payment buttons across the page */
+    .record-payment-btn {
+        font-weight: 600;
+        box-shadow: 0 6px 14px rgba(99,102,241,0.12);
+        padding-top: .65rem; /* 10px-ish */
+        padding-bottom: .65rem;
+        padding-left: 1rem;
+        padding-right: 1rem;
+        border-radius: .5rem;
+        min-width: 150px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+    }
+    /* Slightly larger icons inside buttons */
+    .record-payment-btn i { margin-right: .5rem; }
+    /* Ensure the button color matches the section header color for stronger visual association */
+    /* Lab (red) */
+    div.bg-gradient-to-r.from-red-500 + .overflow-x-auto .record-payment-btn {
+        background: linear-gradient(90deg,#ef4444,#dc2626);
+        color: #fff;
+        box-shadow: 0 8px 20px rgba(220,38,38,0.12);
+        border: none;
+    }
+    div.bg-gradient-to-r.from-red-500 + .overflow-x-auto .record-payment-btn:hover {
+        background: linear-gradient(90deg,#dc2626,#b91c1c);
+    }
+    /* Medicine (orange) */
+    div.bg-gradient-to-r.from-orange-500 + .overflow-x-auto .record-payment-btn {
+        background: linear-gradient(90deg,#fb923c,#f97316);
+        color: #fff;
+        box-shadow: 0 8px 20px rgba(249,115,22,0.12);
+        border: none;
+    }
+    div.bg-gradient-to-r.from-orange-500 + .overflow-x-auto .record-payment-btn:hover {
+        background: linear-gradient(90deg,#f97316,#ea580c);
+    }
+    /* Services (blue) */
+    div.bg-gradient-to-r.from-blue-500 + .overflow-x-auto .record-payment-btn {
+        background: linear-gradient(90deg,#6366f1,#4f46e5);
+        color: #fff;
+        box-shadow: 0 8px 20px rgba(79,70,229,0.12);
+        border: none;
+    }
+    div.bg-gradient-to-r.from-blue-500 + .overflow-x-auto .record-payment-btn:hover {
+        background: linear-gradient(90deg,#4f46e5,#4338ca);
+    }
+
+    /* Slight lift on hover for emphasis */
+    .record-payment-btn:hover { transform: translateY(-2px); }
 </style>
 
 <div class="max-w-7xl mx-auto">
@@ -38,7 +88,7 @@
     </div>
 
     <!-- Summary Statistics -->
-    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 mb-6">
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
         <!-- Pending Lab Tests -->
         <div class="bg-white rounded-lg shadow-lg p-6 hover:shadow-xl transition-all duration-300">
             <div class="flex items-center justify-between">
@@ -79,16 +129,39 @@
             </div>
         </div>
 
+        <!-- Pending Services -->
+        <div class="bg-white rounded-lg shadow-lg p-6 hover:shadow-xl transition-all duration-300">
+            <div class="flex items-center justify-between">
+                <div>
+                    <p class="text-sm font-medium text-gray-600 mb-1">Pending Services</p>
+                    <p class="text-3xl font-bold text-blue-600"><?php echo isset($pending_service_payments) ? count($pending_service_payments) : 0; ?></p>
+                    <p class="text-sm text-gray-500 mt-1">
+                        Tsh <?php 
+                        // Sum of amounts for services
+                        $service_total_pending = isset($pending_service_payments) ? array_sum(array_column($pending_service_payments, 'amount')) : 0;
+                        echo number_format($service_total_pending, 0);
+                        ?>
+                    </p>
+                </div>
+                <div class="w-14 h-14 bg-gradient-to-br from-blue-500 to-blue-600 rounded-xl flex items-center justify-center shadow-lg">
+                    <i class="fas fa-concierge-bell text-white text-xl"></i>
+                </div>
+            </div>
+        </div>
+
         <!-- Total Pending Amount -->
         <div class="bg-white rounded-lg shadow-lg p-6 hover:shadow-xl transition-all duration-300">
             <div class="flex items-center justify-between">
                 <div>
                     <p class="text-sm font-medium text-gray-600 mb-1">Total Pending</p>
                     <p class="text-3xl font-bold text-purple-600">
-                        <?php echo count($pending_lab_payments) + count($pending_medicine_payments); ?>
+                        <?php 
+                        $service_total_pending = isset($pending_service_payments) ? array_sum(array_column($pending_service_payments, 'amount')) : 0;
+                        echo count($pending_lab_payments) + count($pending_medicine_payments) + (isset($pending_service_payments) ? count($pending_service_payments) : 0); 
+                        ?>
                     </p>
                     <p class="text-sm text-gray-500 mt-1">
-                        Tsh <?php echo number_format($lab_total_pending + $med_total_pending, 0); ?>
+                        Tsh <?php echo number_format($lab_total_pending + $med_total_pending + $service_total_pending, 0); ?>
                     </p>
                 </div>
                 <div class="w-14 h-14 bg-gradient-to-br from-purple-500 to-purple-600 rounded-xl flex items-center justify-center shadow-lg">
@@ -98,7 +171,7 @@
         </div>
     </div>
 
-    <?php if (empty($pending_lab_payments) && empty($pending_medicine_payments)): ?>
+    <?php if (empty($pending_lab_payments) && empty($pending_medicine_payments) && empty($pending_service_payments)): ?>
         <!-- No Pending Payments Message -->
         <div class="bg-white rounded-lg shadow-lg p-12 text-center">
             <div class="flex justify-center mb-4">
@@ -206,7 +279,7 @@
                                                 <?php echo $payment['order_id']; ?>, 
                                                 'lab_order'
                                             )"
-                                            class="inline-flex items-center px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 transition-colors">
+                                            class="record-payment-btn inline-flex items-center px-4 py-2 bg-red-600 text-white hover:bg-red-700 transition-colors">
                                         <i class="fas fa-credit-card mr-2"></i>
                                         Record Payment
                                     </button>
@@ -306,7 +379,111 @@
                                                 <?php echo $payment['prescription_id']; ?>, 
                                                 'prescription'
                                             )"
-                                            class="inline-flex items-center px-4 py-2 bg-orange-600 text-white rounded-md hover:bg-orange-700 transition-colors">
+                                            class="record-payment-btn inline-flex items-center px-4 py-2 bg-orange-600 text-white hover:bg-orange-700 transition-colors">
+                                        <i class="fas fa-credit-card mr-2"></i>
+                                        Record Payment
+                                    </button>
+                                </td>
+                            </tr>
+                        <?php endforeach; ?>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        <?php endif; ?>
+
+        <!-- Pending Service Payments -->
+        <?php if (!empty($pending_service_payments)): ?>
+        <div class="bg-white rounded-lg shadow-lg mt-6 overflow-hidden">
+            <div class="bg-gradient-to-r from-blue-500 to-blue-600 px-6 py-4">
+                <div class="flex items-center justify-between">
+                    <h2 class="text-xl font-bold text-white flex items-center">
+                        <i class="fas fa-concierge-bell mr-3"></i>
+                        Pending Service Payments
+                    </h2>
+                    <span class="bg-white text-blue-600 px-3 py-1 rounded-full text-sm font-semibold">
+                        <?php echo count($pending_service_payments); ?> pending
+                    </span>
+                </div>
+            </div>
+
+            <div class="overflow-x-auto">
+                <table class="min-w-full divide-y divide-gray-200">
+                    <thead class="bg-gray-50">
+                        <tr>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                Patient
+                            </th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                Service
+                            </th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                Visit Date
+                            </th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                Amount
+                            </th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                Status
+                            </th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                Actions
+                            </th>
+                        </tr>
+                    </thead>
+                    <tbody class="bg-white divide-y divide-gray-200">
+                        <?php foreach ($pending_service_payments as $payment): ?>
+                            <tr class="hover:bg-blue-50 transition-colors">
+                                <td class="px-6 py-4 whitespace-nowrap">
+                                    <div class="flex items-center">
+                                        <div class="flex-shrink-0 h-10 w-10">
+                                            <div class="h-10 w-10 rounded-full bg-blue-600 flex items-center justify-center text-white font-semibold">
+                                                <?php echo strtoupper(substr($payment['first_name'], 0, 1) . substr($payment['last_name'], 0, 1)); ?>
+                                            </div>
+                                        </div>
+                                        <div class="ml-4">
+                                            <div class="text-sm font-medium text-gray-900">
+                                                <?php echo htmlspecialchars($payment['first_name'] . ' ' . $payment['last_name']); ?>
+                                            </div>
+                                            <div class="text-sm text-gray-500">
+                                                Reg: <?php echo htmlspecialchars($payment['registration_number']); ?>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </td>
+                                <td class="px-6 py-4">
+                                    <div class="text-sm font-medium text-gray-900">
+                                        <?php echo htmlspecialchars($payment['service_name']); ?>
+                                    </div>
+                                </td>
+                                <td class="px-6 py-4 whitespace-nowrap">
+                                    <div class="text-sm text-gray-900">
+                                        <?php echo date('M d, Y', strtotime($payment['visit_date'])); ?>
+                                    </div>
+                                </td>
+                                <td class="px-6 py-4 whitespace-nowrap">
+                                    <div class="text-lg font-bold text-blue-600">
+                                        Tsh <?php echo number_format($payment['amount'], 0); ?>
+                                    </div>
+                                </td>
+                                <td class="px-6 py-4 whitespace-nowrap">
+                                    <span class="px-2 py-1 text-xs font-semibold rounded-full 
+                                        <?php echo ($payment['payment_status'] === 'pending') ? 'bg-yellow-100 text-yellow-800' : 'bg-gray-100 text-gray-800'; ?>">
+                                        <?php echo $payment['payment_status'] ? ucfirst($payment['payment_status']) : 'Pending'; ?>
+                                    </span>
+                                </td>
+                                <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                                    <button onclick="openPaymentModal(
+                                                <?php echo $payment['patient_id']; ?>, 
+                                                <?php echo $payment['visit_id']; ?>, 
+                                                'minor_service', 
+                                                <?php echo $payment['amount']; ?>, 
+                                                0, 
+                                                '<?php echo htmlspecialchars($payment['first_name'] . ' ' . $payment['last_name'], ENT_QUOTES); ?>', 
+                                                <?php echo $payment['order_id']; ?>, 
+                                                'service'
+                                            )"
+                                            class="record-payment-btn inline-flex items-center px-4 py-2 bg-blue-600 text-white hover:bg-blue-700 transition-colors">
                                         <i class="fas fa-credit-card mr-2"></i>
                                         Record Payment
                                     </button>

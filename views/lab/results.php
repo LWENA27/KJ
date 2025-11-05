@@ -375,7 +375,6 @@ let selectedResults = new Set();
 
 // Initialize page
 document.addEventListener('DOMContentLoaded', function() {
-    console.log('Lab Results History - Enhanced Version Loaded');
     setView('card');
     updateSelectedCount();
     applyFilters();
@@ -896,13 +895,8 @@ document.addEventListener('keydown', function(e) {
 
 // Auto-refresh every 5 minutes
 setInterval(() => {
-    const lastUpdate = new Date().toLocaleTimeString();
-    console.log(`Auto-refresh check at ${lastUpdate}`);
     // In production, you could add logic to check for new results
 }, 300000);
-
-console.log('Lab Results History Page - Ready');
-console.log('Keyboard shortcuts: Ctrl+F (Search), Ctrl+P (Print), Ctrl+E (Export), Ctrl+A (Select All), Esc (Close)');
 </script>
 
 <style>

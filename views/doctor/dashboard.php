@@ -179,7 +179,7 @@
                                     </span>
                                 </td>
                                 <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                                    <a href="<?php echo htmlspecialchars($BASE_PATH); ?>/doctor/view_patient/<?php echo $patient['id']; ?>"
+                                    <a href="<?php echo htmlspecialchars($BASE_PATH); ?>/doctor/attend_patient/<?php echo $patient['id']; ?>"
                                             class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded mr-2 inline-block">
                                         <i class="fas fa-stethoscope mr-1"></i>Attend
                                     </a>

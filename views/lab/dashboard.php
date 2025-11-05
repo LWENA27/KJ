@@ -764,7 +764,6 @@
     // Auto-refresh pending tests count (simulated)
     function refreshTestCounts() {
         // In real implementation, this would fetch from API
-        console.log('Refreshing test counts...');
     }
 
     // Refresh every 30 seconds
@@ -831,7 +830,6 @@
     // Initialize dashboard
     document.addEventListener('DOMContentLoaded', function() {
         updateClock();
-        console.log('Lab Dashboard Enhanced - Ready for optimal workflow!');
     });
 
     // Report Modal Functions
@@ -874,6 +872,5 @@
     // Auto-refresh dashboard every 30 seconds
     setInterval(function() {
         // You can add AJAX call here to refresh pending tests
-        console.log('Auto-refreshing dashboard...');
     }, 30000);
 </script>

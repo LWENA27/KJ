@@ -346,13 +346,11 @@ function showNotification(title, message, type = 'info') {
 
 // Auto-refresh test queue every 30 seconds
 setInterval(() => {
-    console.log('Auto-refreshing test queue...');
     // In real implementation, this would fetch updated data
 }, 30000);
 
 // Initialize page
 document.addEventListener('DOMContentLoaded', function() {
-    console.log('Test Queue Enhanced - Ready for optimal laboratory workflow!');
     
     // Add keyboard shortcuts
     document.addEventListener('keydown', function(e) {
@@ -594,7 +592,7 @@ document.addEventListener('DOMContentLoaded', function() {
     // Function to open modal
     function openModal(testId, patientName, testName) {
         try {
-            console.log('Opening modal for test:', { testId, patientName, testName });
+
             
             // Set form values
             document.getElementById('resultTestId').value = testId;
@@ -616,7 +614,7 @@ document.addEventListener('DOMContentLoaded', function() {
             // Apply blur effect to main content
             document.querySelector('.space-y-6').classList.add('blur-sm');
             
-            console.log('Modal opened successfully for test ID:', testId);
+
         } catch (error) {
             console.error('Error opening modal:', error);
             showNotification('Error', 'Failed to open result dialog: ' + error.message, 'error');
@@ -634,7 +632,7 @@ document.addEventListener('DOMContentLoaded', function() {
         // Reset form
         resultForm.reset();
         
-        console.log('Modal closed');
+
     }
     
     // Attach click handlers to all "Result" buttons
@@ -671,9 +669,6 @@ document.addEventListener('DOMContentLoaded', function() {
             resultValue.value = '1.0';
         }
         
-        // Log current form state
-        console.log('Form state before submission:', window.debugFormValues());
-        
         // Attempt to submit the form
         try {
             submitResultForm();
@@ -696,14 +691,6 @@ document.addEventListener('DOMContentLoaded', function() {
             // Check if required fields are filled - use the new field IDs
             const resultValue = document.getElementById('result_value_field').value;
             
-            console.log('Form submission - Result value:', resultValue);
-            console.log('Form field elements found:', {
-                testId: document.getElementById('resultTestId') ? 'Found' : 'Not Found',
-                resultValue: document.getElementById('result_value_field') ? 'Found' : 'Not Found',
-                unit: document.getElementById('unit_field') ? 'Found' : 'Not Found',
-                status: document.getElementById('result_status_field') ? 'Found' : 'Not Found'
-            });
-            
             // Force a default value if empty
             if (!resultValue || resultValue.trim() === '') {
                 document.getElementById('result_value_field').value = '1.0';
@@ -718,17 +705,6 @@ document.addEventListener('DOMContentLoaded', function() {
             formData.append('result_status', document.getElementById('result_status_field').value);
             formData.append('result_notes', document.getElementById('result_notes_field').value || 'Test completed');
             formData.append('completion_time', document.getElementById('completionTime').value);
-            
-            // Debug the form data
-            console.log('Form data being submitted:', {
-                csrf_token: formData.get('csrf_token'),
-                testId: formData.get('test_order_id'),
-                resultValue: formData.get('result_value'),
-                unit: formData.get('unit'),
-                status: formData.get('result_status'),
-                notes: formData.get('result_notes'),
-                completionTime: formData.get('completion_time')
-            });
             
             // Validate that we have the minimum required fields
             if (!formData.get('test_order_id')) {
@@ -751,12 +727,7 @@ document.addEventListener('DOMContentLoaded', function() {
         saveResultBtn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>Saving...';
         saveResultBtn.disabled = true;
         
-        // Send AJAX request - improved error handling
-        console.log('Sending request to /KJ/lab/add_result with data:', urlEncodedData);
-        
-        console.log("Sending to endpoint:", '/KJ/lab/add_result');
-        console.log("Raw data being sent:", urlEncodedData);
-        
+        // Send AJAX request
         fetch('/KJ/lab/add_result', {
             method: 'POST',
             headers: {
@@ -766,7 +737,7 @@ document.addEventListener('DOMContentLoaded', function() {
             body: urlEncodedData
         })
         .then(response => {
-            console.log('Response status:', response.status, response.statusText);
+
             // Handle both JSON and non-JSON responses
             const contentType = response.headers.get('content-type');
             if (contentType && contentType.includes('application/json')) {
@@ -780,8 +751,6 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         })
         .then(result => {
-            console.log('Submission result:', result);
-            
             if (result.ok) {
                 // Always treat success response as successful even if it's not JSON
                 showNotification('Success', 'Test result saved successfully', 'success');
@@ -898,6 +867,6 @@ document.addEventListener('DOMContentLoaded', function() {
     debugButton.onclick = window.debugFormValues;
     document.getElementById('saveResultBtn').insertAdjacentElement('beforebegin', debugButton);
     
-    console.log('Result modal functionality initialized');
+
 });
 </script>

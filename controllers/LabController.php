@@ -370,7 +370,6 @@ class LabController extends BaseController {
 
         } catch (Exception $e) {
             $this->pdo->rollBack();
-            error_log('Record result error: ' . $e->getMessage());
             $_SESSION['error'] = 'Failed to record result: ' . $e->getMessage();
         }
 
@@ -741,17 +740,7 @@ class LabController extends BaseController {
                 $completion_time
             ];
             // Execute insert with prepared parameters
-            
-            try {
-                $stmt->execute($sqlParams);
-                error_log("SQL execution successful for lab_results insert");
-            } catch (PDOException $pdoEx) {
-                error_log("PDO Exception during lab_results insert: " . $pdoEx->getMessage());
-                error_log("SQL State: " . $pdoEx->errorInfo[0]);
-                error_log("Error Code: " . $pdoEx->errorInfo[1]);
-                error_log("Error Message: " . $pdoEx->errorInfo[2]);
-                throw $pdoEx; // Re-throw to be caught by the outer try-catch
-            }
+            $stmt->execute($sqlParams);
 
             // Update patient workflow status if all tests for this visit are completed
             $stmt = $this->pdo->prepare("

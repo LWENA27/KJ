@@ -505,10 +505,39 @@ class ReceptionistController extends BaseController
         $stmt->execute();
         $pending_medicine_payments = $stmt->fetchAll();
 
+        // Get pending service payments (services allocated but not paid)
+        $stmt = $this->pdo->prepare("
+            SELECT 
+                so.id AS order_id,
+                so.visit_id,
+                so.patient_id,
+                p.first_name,
+                p.last_name,
+                p.registration_number,
+                pv.visit_date,
+                s.service_name,
+                s.price AS amount,
+                pay.payment_status,
+                pay.id AS payment_id
+            FROM service_orders so
+            JOIN services s ON so.service_id = s.id
+            JOIN patients p ON so.patient_id = p.id
+            LEFT JOIN patient_visits pv ON so.visit_id = pv.id
+            LEFT JOIN payments pay ON so.visit_id = pay.visit_id 
+                                  AND pay.item_type = 'service' 
+                                  AND pay.item_id = s.id
+            WHERE so.status = 'pending'
+              AND (pay.payment_status = 'pending' OR pay.payment_status IS NULL)
+            ORDER BY so.created_at DESC
+        ");
+        $stmt->execute();
+        $pending_service_payments = $stmt->fetchAll();
+
         $this->render('receptionist/payments', [
             'payments' => $payments, // Pass general payments too if needed by the view
             'pending_lab_payments' => $pending_lab_payments,
             'pending_medicine_payments' => $pending_medicine_payments,
+            'pending_service_payments' => $pending_service_payments,
             'csrf_token' => $this->generateCSRF()
         ]);
     }
