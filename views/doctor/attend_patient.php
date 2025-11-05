@@ -227,14 +227,10 @@
             console.log('✅✅✅ Validation passed! Form will submit. ✅✅✅');
             console.log('=== FORM VALIDATION ENDED ===');
 
-            // Validate medicine quantities and details
+            // Validate medicine quantities and details (we collect Dosage/Instructions as one field)
             for (const medicine of selectedMedicines) {
-                if (!medicine.dosage.trim()) {
-                    alert(`Please specify dosage for ${medicine.name}`);
-                    return false;
-                }
-                if (!medicine.instructions.trim()) {
-                    alert(`Please specify instructions for ${medicine.name}`);
+                if (!medicine.dosage || !medicine.dosage.toString().trim()) {
+                    alert(`Please specify dosage/instructions for ${medicine.name}`);
                     return false;
                 }
                 // Ensure numeric comparison (quantities may be strings after being edited)
@@ -269,18 +265,29 @@
                     if (!div) return m;
 
                     const qtyInput = div.querySelector('input[type="number"]');
-                    const dosageInput = div.querySelector('input[placeholder^="e.g."]');
-                    const instrInput = Array.from(div.querySelectorAll('input')).find(i => i.placeholder && i.placeholder.toLowerCase().includes('daily')) || null;
+                    const textInput = div.querySelector('input[type="text"]');
 
                     return {
                         ...m,
                         quantity: qtyInput ? Number(qtyInput.value) : m.quantity,
-                        dosage: dosageInput ? dosageInput.value : m.dosage,
-                        instructions: instrInput ? instrInput.value : m.instructions
+                        // We store the combined Dosage/Instructions in the `dosage` property
+                        dosage: textInput ? textInput.value : m.dosage,
+                        // Keep instructions empty (server will accept it) or set to previous value
+                        instructions: ''
                     };
                 });
 
-                document.getElementById('selectedMedicines').value = JSON.stringify(selectedMedicines);
+                // Build a controller-compatible payload: id, quantity, dosage, frequency, duration, instructions
+                const payload = selectedMedicines.map(m => ({
+                    id: m.id,
+                    quantity: m.quantity,
+                    dosage: m.dosage || '',
+                    frequency: m.frequency || 'Once daily',
+                    duration: m.duration || 1,
+                    instructions: m.instructions || ''
+                }));
+
+                document.getElementById('selectedMedicines').value = JSON.stringify(payload);
             } catch (e) {
                 console.warn('syncSelectedMedicinesFromDOM failed', e);
             }
@@ -683,7 +690,7 @@
                             <i class="fas fa-times"></i>
                         </button>
                     </div>
-                    <div class="grid grid-cols-1 md:grid-cols-3 gap-2">
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-2">
                         <div>
                             <label class="block text-xs text-gray-600">Quantity</label>
                 <input type="number" min="1" value="${medicine.quantity}" 
@@ -691,15 +698,9 @@
                                    class="w-full px-2 py-1 border border-gray-300 rounded text-sm">
                         </div>
                         <div>
-                            <label class="block text-xs text-gray-600">Dosage</label>
-                <input type="text" placeholder="e.g., 500mg" value="${medicine.dosage}"
+                            <label class="block text-xs text-gray-600">Dosage / Instructions</label>
+                <input type="text" placeholder="e.g., 500mg, 1 tab twice daily after meals" value="${medicine.dosage}"
                     onchange="updateMedicineDetails(${medicine.id}, 'dosage', this.value)"
-                                   class="w-full px-2 py-1 border border-gray-300 rounded text-sm">
-                        </div>
-                        <div>
-                            <label class="block text-xs text-gray-600">Instructions</label>
-                <input type="text" placeholder="e.g., 2x daily" value="${medicine.instructions}"
-                    onchange="updateMedicineDetails(${medicine.id}, 'instructions', this.value)"
                                    class="w-full px-2 py-1 border border-gray-300 rounded text-sm">
                         </div>
                     </div>

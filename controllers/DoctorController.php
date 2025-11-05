@@ -292,6 +292,131 @@ class DoctorController extends BaseController {
         ]);
     }
 
+    /**
+     * Render standalone medical form page (printable) for a specific consultation.
+     * URL: /doctor/view_patient_medicalform?id={patient_id}&consultation_id={consultation_id}
+     */
+    public function view_patient_medicalform($patient_id = null) {
+        // Accept either path param or ?id= fallback
+        if ($patient_id === null) {
+            $patient_id = filter_input(INPUT_GET, 'id', FILTER_VALIDATE_INT) ?: null;
+        }
+        if (!$patient_id) {
+            $this->redirect('doctor/patients');
+        }
+
+        // Optional access check (same as view_patient)
+        $access_check = $this->checkWorkflowAccess($patient_id, 'consultation');
+        if (!$access_check['access']) {
+            $this->render('doctor/payment_required', [
+                'patient_id' => $patient_id,
+                'step' => $access_check['step'],
+                'message' => $access_check['message'],
+                'csrf_token' => $this->generateCSRF()
+            ]);
+            return;
+        }
+
+        // Get patient details
+        $stmt = $this->pdo->prepare("SELECT * FROM patients WHERE id = ?");
+        $stmt->execute([$patient_id]);
+        $patient = $stmt->fetch();
+        if (!$patient) {
+            $this->redirect('doctor/patients');
+        }
+
+        // Get all consultations for this patient (so the view can pick latest if needed)
+        $stmt = $this->pdo->prepare("\n            SELECT c.*, pv.visit_date\n            FROM consultations c\n            LEFT JOIN patient_visits pv ON c.visit_id = pv.id\n            WHERE c.patient_id = ? \n            ORDER BY COALESCE(c.follow_up_date, pv.visit_date, c.created_at) DESC\n        ");
+        $stmt->execute([$patient_id]);
+        $consultations = $stmt->fetchAll();
+
+        // Determine which consultation to show
+        $consultation_id = filter_input(INPUT_GET, 'consultation_id', FILTER_VALIDATE_INT) ?: null;
+        $selected_consultation = null;
+        if ($consultation_id) {
+            $stmt = $this->pdo->prepare("SELECT * FROM consultations WHERE id = ? AND patient_id = ? LIMIT 1");
+            $stmt->execute([$consultation_id, $patient_id]);
+            $selected_consultation = $stmt->fetch();
+        }
+
+        // Fallback: use the latest consultation if none selected
+        if (!$selected_consultation && !empty($consultations)) {
+            $selected_consultation = $consultations[0];
+            $consultation_id = $selected_consultation['id'] ?? null;
+        }
+
+        // Find the visit id to scope vitals and lab orders
+        $visit_id = $selected_consultation['visit_id'] ?? null;
+        if (!$visit_id) {
+            // fallback to latest visit for patient
+            $stmt = $this->pdo->prepare("SELECT * FROM patient_visits WHERE patient_id = ? ORDER BY created_at DESC LIMIT 1");
+            $stmt->execute([$patient_id]);
+            $latest_visit = $stmt->fetch();
+            $visit_id = $latest_visit['id'] ?? null;
+        }
+
+        // Get vital signs for this visit (or latest patient-level)
+        if (!empty($visit_id)) {
+            $stmt = $this->pdo->prepare("\n                SELECT vs.*, pv.visit_date\n                FROM vital_signs vs\n                LEFT JOIN patient_visits pv ON vs.visit_id = pv.id\n                WHERE vs.visit_id = ?\n                ORDER BY vs.recorded_at DESC\n                LIMIT 1\n            ");
+            $stmt->execute([$visit_id]);
+            $vital_signs = $stmt->fetch();
+            if (!$vital_signs) {
+                $stmt = $this->pdo->prepare("\n                    SELECT vs.*, pv.visit_date\n                    FROM vital_signs vs\n                    LEFT JOIN patient_visits pv ON vs.visit_id = pv.id\n                    WHERE vs.patient_id = ?\n                    ORDER BY vs.recorded_at DESC\n                    LIMIT 1\n                ");
+                $stmt->execute([$patient_id]);
+                $vital_signs = $stmt->fetch();
+            }
+        } else {
+            $stmt = $this->pdo->prepare("\n                SELECT vs.*, pv.visit_date\n                FROM vital_signs vs\n                LEFT JOIN patient_visits pv ON vs.visit_id = pv.id\n                WHERE vs.patient_id = ?\n                ORDER BY vs.recorded_at DESC\n                LIMIT 1\n            ");
+            $stmt->execute([$patient_id]);
+            $vital_signs = $stmt->fetch();
+        }
+
+        // Get lab orders for this visit/consultation
+        $lab_orders = [];
+        if (!empty($visit_id)) {
+            $stmt = $this->pdo->prepare("\n                SELECT lto.*, lt.test_name, lt.test_code, lr.result_value, lr.result_text, lr.completed_at as result_completed_at\n                FROM lab_test_orders lto\n                JOIN lab_tests lt ON lto.test_id = lt.id\n                LEFT JOIN lab_results lr ON lto.id = lr.order_id\n                WHERE lto.patient_id = ? AND lto.visit_id = ?" . (!empty($consultation_id) ? " AND lto.consultation_id = ?" : "") . "\n                ORDER BY lto.created_at DESC\n            ");
+            if (!empty($consultation_id)) {
+                $stmt->execute([$patient_id, $visit_id, $consultation_id]);
+            } else {
+                $stmt->execute([$patient_id, $visit_id]);
+            }
+            $lab_orders = $stmt->fetchAll();
+        }
+
+        // Build lab results map (most recent per test_name) scoped to visit if possible
+        $lab_results_map = [];
+        if (!empty($visit_id)) {
+            $stmt = $this->pdo->prepare("\n                SELECT lr.*, lt.test_name\n                FROM lab_results lr\n                JOIN lab_test_orders lto ON lr.order_id = lto.id\n                JOIN lab_tests lt ON lr.test_id = lt.id\n                WHERE lto.patient_id = ? AND lto.visit_id = ?\n                ORDER BY lt.test_name ASC, lr.completed_at DESC\n            ");
+            $stmt->execute([$patient_id, $visit_id]);
+        } else {
+            $stmt = $this->pdo->prepare("\n                SELECT lr.*, lt.test_name\n                FROM lab_results lr\n                JOIN lab_test_orders lto ON lr.order_id = lto.id\n                JOIN lab_tests lt ON lr.test_id = lt.id\n                WHERE lto.patient_id = ?\n                ORDER BY lt.test_name ASC, lr.completed_at DESC\n            ");
+            $stmt->execute([$patient_id]);
+        }
+        $all_lab_results = $stmt->fetchAll();
+        foreach ($all_lab_results as $r) {
+            $name = $r['test_name'] ?? '';
+            if ($name === '') continue;
+            if (!isset($lab_results_map[$name])) {
+                $lab_results_map[$name] = $r;
+            }
+            $norm = strtolower(preg_replace('/\s+/', '', $name));
+            if (!isset($lab_results_map[$norm])) {
+                $lab_results_map[$norm] = $r;
+            }
+        }
+
+        // Render the standalone medical form view
+        $this->render('doctor/view_patient_medicalform', [
+            'patient' => $patient,
+            'consultations' => $consultations,
+            'latest_consultation' => $selected_consultation,
+            'vital_signs' => $vital_signs,
+            'lab_orders' => $lab_orders,
+            'lab_results_map' => $lab_results_map,
+            'csrf_token' => $this->generateCSRF()
+        ]);
+    }
+
     public function patients() {
         $doctor_id = $_SESSION['user_id'];
 

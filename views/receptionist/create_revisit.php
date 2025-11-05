@@ -182,50 +182,36 @@ $BASE_PATH = '/KJ';
 
                 <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
                     <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-1">Temperature (°C)</label>
-                        <input type="number" name="temperature" step="0.1" min="30" max="45"
+                        <label for="temperature" class="block text-sm font-medium text-gray-700 mb-1">Temperature (°C)</label>
+                        <input type="number" id="temperature" name="temperature" step="0.1" min="35" max="42"
                                placeholder="e.g. 36.6"
                                class="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-green-500 focus:border-green-500">
                     </div>
 
                     <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-1">Blood Pressure (Systolic)</label>
-                        <input type="number" name="blood_pressure_systolic" step="1" min="40" max="250"
-                               placeholder="e.g. 120"
-                               class="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-green-500 focus:border-green-500">
+                        <label for="blood_pressure" class="block text-sm font-medium text-gray-700 mb-1">Blood Pressure (mmHg)</label>
+                        <input type="text" id="blood_pressure" name="blood_pressure" placeholder="120/80"
+                               pattern="\d{2,3}\/\d{2,3}" title="Please enter blood pressure in the format '120/80'"
+                               maxlength="7" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-green-500 focus:border-green-500">
                     </div>
 
                     <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-1">Blood Pressure (Diastolic)</label>
-                        <input type="number" name="blood_pressure_diastolic" step="1" min="30" max="150"
-                               placeholder="e.g. 80"
-                               class="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-green-500 focus:border-green-500">
-                    </div>
-
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-1">Pulse Rate (bpm)</label>
-                        <input type="number" name="pulse_rate" step="1" min="20" max="220"
+                        <label for="pulse_rate" class="block text-sm font-medium text-gray-700 mb-1">Pulse Rate (bpm)</label>
+                        <input type="number" id="pulse_rate" name="pulse_rate" step="1" min="40" max="220"
                                placeholder="e.g. 72"
                                class="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-green-500 focus:border-green-500">
                     </div>
 
                     <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-1">Respiratory Rate (breaths/min)</label>
-                        <input type="number" name="respiratory_rate" step="1" min="5" max="60"
-                               placeholder="e.g. 16"
-                               class="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-green-500 focus:border-green-500">
-                    </div>
-
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-1">Weight (kg)</label>
-                        <input type="number" name="weight" step="0.1" min="1" max="500"
+                        <label for="body_weight" class="block text-sm font-medium text-gray-700 mb-1">Weight (kg)</label>
+                        <input type="number" id="body_weight" name="body_weight" step="0.1" min="1" max="500"
                                placeholder="e.g. 70.5"
                                class="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-green-500 focus:border-green-500">
                     </div>
 
                     <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-1">Height (cm)</label>
-                        <input type="number" name="height" step="0.1" min="20" max="300"
+                        <label for="height" class="block text-sm font-medium text-gray-700 mb-1">Height (cm)</label>
+                        <input type="number" id="height" name="height" step="0.1" min="20" max="300"
                                placeholder="e.g. 175"
                                class="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-green-500 focus:border-green-500">
                     </div>

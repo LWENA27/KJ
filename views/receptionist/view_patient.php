@@ -482,6 +482,12 @@
 <script>
 // Lab orders data for real-time updates
 const labOrders = <?php echo json_encode($lab_orders ?? []); ?>;
+// Lab results map (normalized keys) provided by controller so receptionist view can show actual results
+const labResultsMap = <?php echo json_encode($lab_results_map ?? []); ?>;
+// Consultations, patient and vitals data for rendering medical forms like the doctor view
+const consultationsData = <?php echo json_encode($consultations ?? []); ?>;
+const patientData = <?php echo json_encode($patient ?? []); ?>;
+const vitalSignsData = <?php echo json_encode($vital_signs ?? []); ?>;
 
 // Medical form modal functionality
 function viewMedicalForm(consultationId, visitIndex) {
@@ -493,7 +499,31 @@ function viewMedicalForm(consultationId, visitIndex) {
 }
 
 function generateMedicalForm(consultationId, visitIndex) {
-    // Generate the medical form HTML for the specific consultation
+    // Find the consultation data for this consultationId (fallback to index)
+    const consultation = consultationsData.find(c => Number(c.id) === Number(consultationId)) || consultationsData[visitIndex] || {};
+
+    // Helper: find vitals for this consultation
+    const findVitals = (cid) => {
+        if (!Array.isArray(vitalSignsData)) return {};
+        const vs = vitalSignsData.find(v => Number(v.consultation_id) === Number(cid));
+        return vs || {};
+    };
+
+    const vitals = findVitals(consultationId);
+
+    // Filter lab orders for this consultation
+    const ordersForThis = (Array.isArray(labOrders) ? labOrders.filter(o => Number(o.consultation_id) === Number(consultationId)) : []);
+
+    // Build prescriptions rendering: consultations may have a `prescription` field (string) or an array
+    const prescriptions = (() => {
+        if (!consultation) return [];
+        if (Array.isArray(consultation.prescriptions)) return consultation.prescriptions;
+        if (Array.isArray(consultation.prescription)) return consultation.prescription;
+        if (typeof consultation.prescription === 'string' && consultation.prescription.trim()) return [{ text: consultation.prescription }];
+        return [];
+    })();
+
+    // Generate the medical form HTML using the consultation and vitals
     const medicalFormHTML = `
         <div class="bg-white border-2 border-gray-300 p-8 print:border-none print:p-4">
             <!-- Header -->
@@ -511,127 +541,151 @@ function generateMedicalForm(consultationId, visitIndex) {
             <!-- Patient Record Header -->
             <div class="mb-6">
                 <h2 class="text-xl font-bold text-center mb-4 underline">PATIENT RECORD - VISIT ${visitIndex + 1}</h2>
-                
+
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4 text-sm">
                     <div class="flex items-center">
                         <span class="font-medium mr-2">DATE:</span>
-                        <span class="border-b border-gray-400 flex-1 px-2">${new Date().toLocaleDateString('en-GB')}</span>
+                        <span class="border-b border-gray-400 flex-1 px-2">${(consultation.created_at ? new Date(consultation.created_at).toLocaleDateString('en-GB') : new Date().toLocaleDateString('en-GB'))}</span>
                     </div>
                     <div class="flex items-center">
                         <span class="font-medium mr-2">REG NO:</span>
-                        <span class="border-b border-gray-400 flex-1 px-2"><?php echo htmlspecialchars($patient['registration_number']); ?></span>
+                        <span class="border-b border-gray-400 flex-1 px-2">${patientData.registration_number || ''}</span>
                     </div>
                 </div>
 
                 <div class="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-4 text-sm">
                     <div class="lg:col-span-2 flex items-center">
                         <span class="font-medium mr-2">PATIENT NAME:</span>
-                        <span class="border-b border-gray-400 flex-1 px-2"><?php echo htmlspecialchars($patient['first_name'] . ' ' . $patient['last_name']); ?></span>
+                        <span class="border-b border-gray-400 flex-1 px-2">${(patientData.first_name || '') + ' ' + (patientData.last_name || '')}</span>
                     </div>
                     <div class="flex items-center">
                         <span class="font-medium mr-2">AGE:</span>
-                        <span class="border-b border-gray-400 flex-1 px-2 mr-4"><?php 
-                        $dob = $patient['date_of_birth'] ?? null;
-                        if (!empty($dob)) {
-                            echo date_diff(date_create($dob), date_create('today'))->y;
-                        } else {
-                            echo 'N/A';
-                        }
-                        ?></span>
+                        <span class="border-b border-gray-400 flex-1 px-2 mr-4">${patientData.date_of_birth ? Math.max(0, new Date().getFullYear() - new Date(patientData.date_of_birth).getFullYear()) : 'N/A'}</span>
                         <span class="font-medium mr-2">SEX:</span>
-                        <span class="border-b border-gray-400 px-2"><?php echo strtoupper(substr($patient['gender'] ?? 'U', 0, 1)); ?></span>
+                        <span class="border-b border-gray-400 px-2">${(patientData.gender || 'U').toString().toUpperCase().charAt(0)}</span>
                     </div>
                 </div>
 
                 <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6 text-sm">
                     <div class="flex items-center">
                         <span class="font-medium mr-2">ADDRESS:</span>
-                        <span class="border-b border-gray-400 flex-1 px-2"><?php echo htmlspecialchars($patient['address'] ?? ''); ?></span>
+                        <span class="border-b border-gray-400 flex-1 px-2">${patientData.address || ''}</span>
                     </div>
                     <div class="flex items-center">
                         <span class="font-medium mr-2">OCCUPATION:</span>
-                        <span class="border-b border-gray-400 flex-1 px-2"><?php echo htmlspecialchars($patient['occupation'] ?? ''); ?></span>
+                        <span class="border-b border-gray-400 flex-1 px-2">${patientData.occupation || ''}</span>
                     </div>
                     <div class="flex items-center">
                         <span class="font-medium mr-2">PHONE NO:</span>
-                        <span class="border-b border-gray-400 flex-1 px-2"><?php echo htmlspecialchars($patient['phone'] ?? ''); ?></span>
+                        <span class="border-b border-gray-400 flex-1 px-2">${patientData.phone || ''}</span>
                     </div>
                 </div>
             </div>
 
-            <!-- Medical Form Template (this would be filled with actual data in a real implementation) -->
+            <!-- Clinical Details -->
             <div class="mb-6">
                 <div class="grid grid-cols-2 md:grid-cols-5 gap-4 text-sm">
                     <div class="text-center">
                         <div class="font-medium mb-1">Temperature</div>
-                        <div class="border border-gray-400 h-10 p-2 text-center">
-                              <?php 
-                    if (!empty($vital_signs['temperature'])) {
-                        echo htmlspecialchars($vital_signs['temperature']) . '°C';
-                    }
-                    ?>
-                        </div>
+                        <div class="border border-gray-400 h-10 p-2 text-center">${vitals.temperature ? vitals.temperature + ' °C' : ''}</div>
                     </div>
                     <div class="text-center">
                         <div class="font-medium mb-1">Blood Pressure</div>
-                        <div class="border border-gray-400 h-10 p-2 text-center">
-                        </div>
+                        <div class="border border-gray-400 h-10 p-2 text-center">${vitals.blood_pressure || ''}</div>
                     </div>
                     <div class="text-center">
                         <div class="font-medium mb-1">Pulse Rate</div>
-                        <div class="border border-gray-400 h-10 p-2 text-center">
-                        </div>
+                        <div class="border border-gray-400 h-10 p-2 text-center">${vitals.pulse || ''}</div>
                     </div>
                     <div class="text-center">
                         <div class="font-medium mb-1">Body Weight</div>
-                        <div class="border border-gray-400 h-10 p-2 text-center">
-                        </div>
+                        <div class="border border-gray-400 h-10 p-2 text-center">${vitals.weight || ''}</div>
                     </div>
                     <div class="text-center">
                         <div class="font-medium mb-1">Height</div>
-                        <div class="border border-gray-400 h-10 p-2 text-center">
-                        </div>
+                        <div class="border border-gray-400 h-10 p-2 text-center">${vitals.height || ''}</div>
                     </div>
                 </div>
             </div>
 
-            ${labOrders && labOrders.length > 0 ? `
-            <!-- Requested Lab Tests Summary -->
-            <div class="mb-4 border border-blue-400 bg-blue-50 p-3">
-                <h4 class="font-bold mb-2 text-blue-800">Lab Tests Requested for This Visit:</h4>
-                <div class="grid grid-cols-3 gap-2 text-xs">
-                    ${labOrders.map(order => `
-                        <div class="flex items-center">
-                            ${order.result_completed_at ? 
-                                `<input type="checkbox" checked disabled class="mr-2">
-                                <span class="text-green-700 font-semibold">${order.test_name}</span>` :
-                                order.status === 'in_progress' ?
-                                `<input type="checkbox" disabled class="mr-2">
-                                <span class="text-blue-600">${order.test_name} (In Progress)</span>` :
-                                `<input type="checkbox" disabled class="mr-2">
-                                <span class="text-gray-600">${order.test_name} (Pending)</span>`
-                            }
-                        </div>
-                    `).join('')}
+            <!-- Consultation Content -->
+            <div class="mb-6">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+                    <div>
+                        <h4 class="font-medium mb-1">Main Complaint</h4>
+                        <div class="border border-gray-300 p-3 min-h-[60px]">${consultation.main_complaint || ''}</div>
+                    </div>
+                    <div>
+                        <h4 class="font-medium mb-1">On Examination</h4>
+                        <div class="border border-gray-300 p-3 min-h-[60px]">${consultation.on_examination || ''}</div>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4 text-sm">
+                    <div>
+                        <h4 class="font-medium mb-1">Preliminary Diagnosis</h4>
+                        <div class="border border-gray-300 p-3 min-h-[40px]">${consultation.preliminary_diagnosis || ''}</div>
+                    </div>
+                    <div>
+                        <h4 class="font-medium mb-1">Final Diagnosis</h4>
+                        <div class="border border-gray-300 p-3 min-h-[40px]">${consultation.final_diagnosis || ''}</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Prescriptions -->
+            ${prescriptions.length ? `
+            <div class="mb-4 border border-purple-300 bg-purple-50 p-3">
+                <h4 class="font-bold mb-2 text-purple-800">Prescription</h4>
+                <div class="space-y-2 text-sm">
+                    ${prescriptions.map(p => `<div class="p-2 bg-white border rounded">${p.name ? `<strong>${p.name}</strong>: ` : ''}${p.dosage || p.text || ''}${p.quantity ? ' — Qty: ' + p.quantity : ''}</div>`).join('')}
                 </div>
             </div>
             ` : ''}
 
-            <!-- Note: Full medical form template would continue here -->
-            <div class="text-center text-gray-500 py-8">
-                <i class="fas fa-file-medical text-4xl mb-4"></i>
-                <p>Complete medical form for Visit ${visitIndex + 1}</p>
-                <p class="text-sm">This would contain all consultation details, vital signs, and lab results</p>
+            <!-- Lab orders for this consultation -->
+            ${ordersForThis.length ? `
+            <div class="mb-4 border border-blue-400 bg-blue-50 p-3">
+                <h4 class="font-bold mb-2 text-blue-800">Lab Tests Requested for This Visit:</h4>
+                <div class="grid grid-cols-3 gap-2 text-xs">
+                    ${ordersForThis.map(order => {
+                        // try to find a result in labResultsMap by test name or normalized key
+                        const name = order.test_name || '';
+                        const norm = name.toLowerCase().replace(/\s+/g, '');
+                        const result = labResultsMap[name] || labResultsMap[name.toLowerCase()] || labResultsMap[norm] || null;
+                        if (result && (result.result_value || result.result_text || result.completed_at)) {
+                            const value = result.result_value || result.result_text || 'Completed';
+                            return `\n                                <div class="flex items-center">` +
+                                        `<input type="checkbox" checked disabled class="mr-2"><span class="text-green-700 font-semibold">${name}</span>` +
+                                        `<span class="ml-2 font-medium">${value}</span>` +
+                                    `</div>`;
+                        }
+                        if (order.result_completed_at) {
+                            return `\n                                <div class="flex items-center"><input type="checkbox" checked disabled class="mr-2"><span class="text-green-700 font-semibold">${name}</span></div>`;
+                        }
+                        if (order.status === 'in_progress') {
+                            return `\n                                <div class="flex items-center"><input type="checkbox" disabled class="mr-2"><span class="text-blue-600">${name} (In Progress)</span></div>`;
+                        }
+                        return `\n                            <div class="flex items-center"><input type="checkbox" disabled class="mr-2"><span class="text-gray-600">${name} (Pending)</span></div>`;
+                    }).join('')}
+                </div>
+            </div>
+            ` : ''}
+
+            <!-- Treatment Plan / Advice -->
+            <div class="text-sm">
+                <h4 class="font-medium mb-1">Treatment Plan & Advice</h4>
+                <div class="border border-gray-300 p-3 min-h-[60px]">${consultation.treatment_plan || consultation.notes || ''}</div>
             </div>
         </div>
     `;
-    
+
     document.getElementById('medicalFormContent').innerHTML = medicalFormHTML;
-    
+
     // Show modal and adjust positioning for different screen sizes
     const modal = document.getElementById('medicalFormModal');
     modal.classList.remove('hidden');
-    
+
     // Ensure proper focus management for accessibility
     const closeButton = modal.querySelector('button[onclick="closeMedicalFormModal()"]');
     if (closeButton) {

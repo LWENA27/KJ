@@ -1296,6 +1296,42 @@ class ReceptionistController extends BaseController
         $stmt->execute([$patient_id]);
         $vital_signs = $stmt->fetchAll();
 
+        // Normalize and augment vital signs so the view's JS can read common keys
+        $vital_signs_processed = [];
+        if (!empty($vital_signs) && is_array($vital_signs)) {
+            foreach ($vital_signs as $vs) {
+                $p = $vs;
+                // Build combined blood_pressure if systolic/diastolic present
+                if (!empty($vs['blood_pressure_systolic']) && !empty($vs['blood_pressure_diastolic'])) {
+                    $p['blood_pressure'] = $vs['blood_pressure_systolic'] . '/' . $vs['blood_pressure_diastolic'];
+                } elseif (!empty($vs['blood_pressure'])) {
+                    $p['blood_pressure'] = $vs['blood_pressure'];
+                }
+                // Normalize pulse field name
+                if (!empty($vs['pulse_rate'])) {
+                    $p['pulse'] = $vs['pulse_rate'];
+                } elseif (!empty($vs['pulse'])) {
+                    $p['pulse'] = $vs['pulse'];
+                }
+                // Normalize temperature
+                if (empty($p['temperature']) && !empty($vs['temp'])) {
+                    $p['temperature'] = $vs['temp'];
+                }
+                // Ensure consultation_id exists for mapping in the view
+                if (empty($p['consultation_id']) && !empty($p['visit_id'])) {
+                    $stmt2 = $this->pdo->prepare("SELECT id FROM consultations WHERE visit_id = ? LIMIT 1");
+                    $stmt2->execute([$p['visit_id']]);
+                    $crow = $stmt2->fetch();
+                    if ($crow && !empty($crow['id'])) {
+                        $p['consultation_id'] = $crow['id'];
+                    }
+                }
+                $vital_signs_processed[] = $p;
+            }
+        }
+        // Replace original for view consumption
+        $vital_signs = $vital_signs_processed;
+
         // Get payment history for this patient
         $stmt = $this->pdo->prepare("
             SELECT p.*, pv.visit_date
@@ -1320,12 +1356,30 @@ class ReceptionistController extends BaseController
         $stmt->execute([$patient_id]);
         $lab_orders = $stmt->fetchAll();
 
+        // Build a normalized map of latest lab results by test name for this patient
+        $lab_results_map = [];
+        $stmt = $this->pdo->prepare("\n                SELECT lr.*, lt.test_name\n                FROM lab_results lr\n                JOIN lab_test_orders lto ON lr.order_id = lto.id\n                JOIN lab_tests lt ON lr.test_id = lt.id\n                WHERE lto.patient_id = ?\n                ORDER BY lt.test_name ASC, lr.completed_at DESC\n            ");
+        $stmt->execute([$patient_id]);
+        $all_lab_results = $stmt->fetchAll();
+        foreach ($all_lab_results as $r) {
+            $name = $r['test_name'] ?? '';
+            if ($name === '') continue;
+            if (!isset($lab_results_map[$name])) {
+                $lab_results_map[$name] = $r;
+            }
+            $norm = strtolower(preg_replace('/\s+/', '', $name));
+            if (!isset($lab_results_map[$norm])) {
+                $lab_results_map[$norm] = $r;
+            }
+        }
+
         $this->render('receptionist/view_patient', [
             'patient' => $patient,
             'consultations' => $consultations,
             'vital_signs' => $vital_signs,
             'payments' => $payments,
             'lab_orders' => $lab_orders,
+            'lab_results_map' => $lab_results_map,
             'csrf_token' => $this->generateCSRF()
         ]);
     }
@@ -1431,15 +1485,20 @@ class ReceptionistController extends BaseController
 
                 // Record vital signs if provided (optional) - tie to this visit
                 $temperature = isset($_POST['temperature']) && $_POST['temperature'] !== '' ? floatval($_POST['temperature']) : null;
-                $bp_systolic = isset($_POST['blood_pressure_systolic']) && $_POST['blood_pressure_systolic'] !== '' ? intval($_POST['blood_pressure_systolic']) : null;
-                $bp_diastolic = isset($_POST['blood_pressure_diastolic']) && $_POST['blood_pressure_diastolic'] !== '' ? intval($_POST['blood_pressure_diastolic']) : null;
+                $bp_raw = isset($_POST['blood_pressure']) && $_POST['blood_pressure'] !== '' ? trim($_POST['blood_pressure']) : null; // expected format '120/80'
+                $bp_systolic = null; $bp_diastolic = null;
+                if ($bp_raw) {
+                    if (preg_match('/^(\d{2,3})\s*\/\s*(\d{2,3})$/', $bp_raw, $m)) {
+                        $bp_systolic = intval($m[1]);
+                        $bp_diastolic = intval($m[2]);
+                    }
+                }
                 $pulse_rate = isset($_POST['pulse_rate']) && $_POST['pulse_rate'] !== '' ? intval($_POST['pulse_rate']) : null;
-                $respiratory_rate = isset($_POST['respiratory_rate']) && $_POST['respiratory_rate'] !== '' ? intval($_POST['respiratory_rate']) : null;
-                $weight = isset($_POST['weight']) && $_POST['weight'] !== '' ? floatval($_POST['weight']) : null;
+                $weight = isset($_POST['body_weight']) && $_POST['body_weight'] !== '' ? floatval($_POST['body_weight']) : null;
                 $height = isset($_POST['height']) && $_POST['height'] !== '' ? floatval($_POST['height']) : null;
 
-                if ($temperature !== null || $bp_systolic !== null || $bp_diastolic !== null || $pulse_rate !== null || $respiratory_rate !== null || $weight !== null || $height !== null) {
-                    $stmt = $this->pdo->prepare("INSERT INTO vital_signs (visit_id, patient_id, temperature, blood_pressure_systolic, blood_pressure_diastolic, pulse_rate, respiratory_rate, weight, height, recorded_by, recorded_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())");
+                if ($temperature !== null || $bp_systolic !== null || $bp_diastolic !== null || $pulse_rate !== null || $weight !== null || $height !== null) {
+                    $stmt = $this->pdo->prepare("INSERT INTO vital_signs (visit_id, patient_id, temperature, blood_pressure_systolic, blood_pressure_diastolic, pulse_rate, weight, height, recorded_by, recorded_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())");
                     $stmt->execute([
                         $visit_id,
                         $patient_id,
@@ -1447,7 +1506,6 @@ class ReceptionistController extends BaseController
                         $bp_systolic,
                         $bp_diastolic,
                         $pulse_rate,
-                        $respiratory_rate,
                         $weight,
                         $height,
                         $_SESSION['user_id']

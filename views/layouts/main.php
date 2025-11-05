@@ -76,6 +76,12 @@
             --medical-secondary: #8b5cf6;
         }
 
+        html, body {
+            height: 100%;
+            margin: 0;
+            padding: 0;
+        }
+
         body {
             font-family: 'Inter', sans-serif;
             background-color: var(--neutral-50);
@@ -87,6 +93,39 @@
         .sidebar {
             transition: transform 0.3s ease-in-out;
             z-index: 30;
+            position: fixed; /* ensure sidebar sits under the header branding */
+            left: 0;
+            top: 0;
+        }
+
+        /* Branding area that sits at the top of the sidebar. This will be visible
+           beneath/alongside the top header on desktop and inside the overlay on mobile. */
+        .sidebar-branding {
+            height: var(--header-height);
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            padding: 0 1rem;
+            border-bottom: 1px solid var(--neutral-200);
+            background: linear-gradient(90deg, rgba(59,130,246,0.06), rgba(99,102,241,0.03));
+        }
+
+        .sidebar-branding .brand-logo {
+            width: 36px;
+            height: 36px;
+            border-radius: 8px;
+            background: linear-gradient(135deg, var(--primary-500), var(--primary-600));
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 16px;
+        }
+
+        .sidebar-branding .brand-text {
+            font-weight: 600;
+            color: var(--neutral-800);
+            font-size: 14px;
         }
 
         .sidebar-overlay {
@@ -199,6 +238,31 @@
             font-weight: 500;
             text-transform: uppercase;
             letter-spacing: 0.05em;
+        }
+
+        /* Fixed top header across all pages */
+        :root { --header-height: 64px; }
+        .top-header {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            z-index: 60;
+            background: white;
+            box-shadow: 0 1px 4px rgba(16,24,40,0.06);
+        }
+
+        /* Give the page content room below the fixed header; keep sidebar branding flush with top */
+        #contentWrapper {
+            padding-top: var(--header-height);
+        }
+        /* remove automatic top padding on sidebar so the branding area sits at the very top */
+        .sidebar {
+            /* no padding-top here; branding element provides the header-height space */
+        }
+        /* reduce inner padding so nav starts just below header */
+        .sidebar .flex-1 {
+            padding-top: 8px;
         }
 
         .status-pending {
@@ -685,13 +749,40 @@
         }
 
         /* Top Header Bar Styles */
+        /* Ensure the header is fixed to the very top of the viewport so there is no blank gap */
         .top-header {
-            position: sticky;
+            position: fixed;
             top: 0;
-            z-index: 40;
+            left: 0; /* mobile: full-bleed header */
+            right: 0;
+            height: var(--header-height);
+            z-index: 70;
             background: white;
             border-bottom: 1px solid var(--neutral-200);
-            box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06);
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
+        }
+
+        /* Make the header's inner container full height and vertically center its content */
+        .top-header > div {
+            height: 100%;
+            display: flex;
+            align-items: center;
+            padding-left: 1rem;
+            padding-right: 1rem;
+        }
+
+        /* On desktop keep the header aligned to the right of the sidebar so the
+           sidebar-top area can act as a branding panel. */
+        @media (min-width: 769px) {
+            .top-header {
+                left: 16rem; /* match sidebar width */
+                width: calc(100% - 16rem);
+            }
+            /* When the sidebar is collapsed/hidden, allow the header to expand to full width */
+            .top-header.header-expanded {
+                left: 0 !important;
+                width: 100% !important;
+            }
         }
 
         .header-action-btn {
@@ -976,25 +1067,13 @@
         <div id="sidebarOverlay" class="sidebar-overlay" onclick="toggleSidebar()"></div>
 
         <div class="flex min-h-screen">
-            <!-- Sidebar -->
+                <!-- Sidebar -->
             <div id="sidebar" class="sidebar w-64 bg-white shadow-xl min-h-screen flex flex-col border-r border-neutral-200">
-                <!-- Header -->
-                <div class="p-6 border-b border-neutral-200">
-                    <div class="flex items-center justify-between">
-                        <a href="<?php echo htmlspecialchars($BASE_PATH); ?>/" class="flex items-center space-x-3">
-                            <div class="w-10 h-10 bg-gradient-to-br from-primary-500 to-primary-600 rounded-xl flex items-center justify-center">
-                                <i class="fas fa-hospital-symbol text-white text-xl"></i>
-                            </div>
-                            <div>
-                                <span class="text-xl font-bold text-neutral-800"><?php echo htmlspecialchars($_ENV['APP_NAME'] ?? 'KJ'); ?></span>
-                                <div class="text-xs text-neutral-500">Healthcare System</div>
-                            </div>
-                        </a>
-                        <!-- Mobile close button -->
-                        <button id="closeSidebar" class="md:hidden p-2 rounded-lg hover:bg-neutral-100" onclick="toggleSidebar()">
-                            <i class="fas fa-times text-neutral-600"></i>
-                        </button>
-                    </div>
+
+                <!-- Branding area (top of sidebar) -->
+                <div class="sidebar-branding">
+                    <div class="brand-logo"><i class="fas fa-hospital-symbol"></i></div>
+                    <div class="brand-text"><?php echo htmlspecialchars($_ENV['APP_NAME'] ?? 'KJ'); ?></div>
                 </div>
 
                 <!-- Navigation -->
@@ -1300,6 +1379,7 @@
             const sidebar = document.getElementById('sidebar');
             const overlay = document.getElementById('sidebarOverlay');
             const mainContent = document.getElementById('contentWrapper');
+            const topHeader = document.querySelector('.top-header');
 
             if (!sidebar) return;
 
@@ -1318,6 +1398,10 @@
             sidebar.classList.toggle('collapsed');
             if (mainContent) {
                 mainContent.classList.toggle('fullwidth');
+                // expand header when content becomes full width
+                if (topHeader) {
+                    topHeader.classList.toggle('header-expanded', mainContent.classList.contains('fullwidth'));
+                }
             }
         }
 
@@ -1362,13 +1446,17 @@
                 // Ensure desktop layout margin reflects collapsed state
                 if (sidebar.classList.contains('collapsed')) {
                     if (mainContent) mainContent.classList.add('fullwidth');
+                    if (topHeader) topHeader.classList.add('header-expanded');
                 } else {
                     if (mainContent) mainContent.classList.remove('fullwidth');
+                    if (topHeader) topHeader.classList.remove('header-expanded');
                 }
             } else {
                 // On small screens always ensure sidebar isn't stuck collapsed (desktop-only)
                 sidebar.classList.remove('collapsed');
                 if (mainContent) mainContent.classList.remove('fullwidth');
+                const topHeader = document.querySelector('.top-header');
+                if (topHeader) topHeader.classList.remove('header-expanded');
             }
         });
 

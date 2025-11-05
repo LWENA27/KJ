@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: localhost:3306
--- Generation Time: Nov 04, 2025 at 12:44 PM
+-- Generation Time: Nov 05, 2025 at 08:52 AM
 -- Server version: 8.0.43-0ubuntu0.24.04.2
 -- PHP Version: 8.3.6
 
@@ -81,6 +81,8 @@ CREATE TABLE `consultations` (
   `history_of_present_illness` text COLLATE utf8mb4_general_ci,
   `on_examination` text COLLATE utf8mb4_general_ci,
   `diagnosis` text COLLATE utf8mb4_general_ci,
+  `preliminary_diagnosis` text CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci,
+  `final_diagnosis` text CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci,
   `treatment_plan` text COLLATE utf8mb4_general_ci,
   `notes` text COLLATE utf8mb4_general_ci,
   `follow_up_required` tinyint(1) DEFAULT '0',
@@ -100,30 +102,33 @@ CREATE TABLE `consultations` (
 -- Dumping data for table `consultations`
 --
 
-INSERT INTO `consultations` (`id`, `visit_id`, `patient_id`, `doctor_id`, `consultation_number`, `consultation_type`, `main_complaint`, `history_of_present_illness`, `on_examination`, `diagnosis`, `treatment_plan`, `notes`, `follow_up_required`, `follow_up_date`, `follow_up_instructions`, `referred_to`, `referral_reason`, `status`, `cancellation_reason`, `started_at`, `completed_at`, `created_at`, `updated_at`) VALUES
-(1, 1, 1, 3, 1, 'new', NULL, NULL, NULL, NULL, NULL, NULL, 0, NULL, NULL, NULL, NULL, 'in_progress', NULL, '2025-10-11 05:15:14', NULL, '2025-10-11 03:50:52', '2025-10-11 05:15:14'),
-(2, 2, 2, 3, 1, 'new', NULL, NULL, NULL, NULL, NULL, NULL, 0, NULL, NULL, NULL, NULL, 'in_progress', NULL, '2025-10-11 06:09:42', NULL, '2025-10-11 06:04:10', '2025-10-11 06:09:42'),
-(3, 3, 3, 1, 1, 'new', NULL, NULL, NULL, NULL, NULL, NULL, 0, NULL, NULL, NULL, NULL, 'pending', NULL, NULL, NULL, '2025-10-11 11:12:44', '2025-10-11 11:12:44'),
-(4, 4, 4, 3, 1, 'new', 'kichwa', NULL, 'ubongo', '', '', NULL, 0, NULL, NULL, NULL, NULL, 'completed', NULL, '2025-10-17 08:04:05', '2025-10-17 08:04:05', '2025-10-17 08:02:10', '2025-10-17 08:04:05'),
-(5, 5, 5, 1, 1, 'new', NULL, NULL, NULL, NULL, NULL, NULL, 0, NULL, NULL, NULL, NULL, 'pending', NULL, NULL, NULL, '2025-10-17 08:35:54', '2025-10-17 08:35:54'),
-(6, 6, 6, 3, 1, 'new', 'kichwa', NULL, 'snfh', '', '', NULL, 0, NULL, NULL, NULL, NULL, 'completed', NULL, '2025-10-18 05:14:25', '2025-10-18 05:14:25', '2025-10-18 05:02:27', '2025-10-18 05:14:25'),
-(7, 7, 1, 3, 1, '', 'null', NULL, 'null', 'null', 'nul', NULL, 0, NULL, NULL, NULL, NULL, 'completed', NULL, '2025-10-22 06:48:58', '2025-10-22 06:48:58', '2025-10-20 07:00:37', '2025-10-22 06:48:58'),
-(9, 9, 6, 1, 1, '', NULL, NULL, NULL, NULL, NULL, NULL, 0, NULL, NULL, NULL, NULL, 'pending', NULL, NULL, NULL, '2025-10-20 07:12:12', '2025-10-20 07:12:12'),
-(10, 10, 7, 1, 1, 'new', NULL, NULL, NULL, NULL, NULL, NULL, 0, NULL, NULL, NULL, NULL, 'pending', NULL, NULL, NULL, '2025-10-21 19:04:49', '2025-10-21 19:04:49'),
-(11, 11, 8, 3, 1, 'new', 'kichwa', NULL, 'kichwa', 'hdc', 'hjsd', NULL, 0, NULL, NULL, NULL, NULL, 'completed', NULL, '2025-10-21 19:21:27', '2025-10-21 19:21:27', '2025-10-21 19:08:48', '2025-10-21 19:21:27'),
-(12, 12, 9, 1, 1, 'new', NULL, NULL, NULL, NULL, NULL, NULL, 0, NULL, NULL, NULL, NULL, 'pending', NULL, NULL, NULL, '2025-10-21 19:18:47', '2025-10-21 19:18:47'),
-(13, 13, 10, 3, 1, 'new', 'null', NULL, 'null', 'null', 'fhjgsf', NULL, 0, NULL, NULL, NULL, NULL, 'completed', NULL, '2025-10-22 06:52:41', '2025-10-22 06:52:41', '2025-10-22 06:51:49', '2025-10-22 06:52:41'),
-(14, 14, 11, 1, 1, 'new', NULL, NULL, NULL, NULL, NULL, NULL, 0, NULL, NULL, NULL, NULL, 'pending', NULL, NULL, NULL, '2025-10-22 07:57:57', '2025-10-22 07:57:57'),
-(15, 15, 12, 3, 1, 'new', 'null', NULL, 'null', 'null', 'null', NULL, 0, NULL, NULL, NULL, NULL, 'completed', NULL, '2025-10-22 08:20:21', '2025-10-22 08:20:21', '2025-10-22 08:17:18', '2025-10-22 08:20:21'),
-(16, 16, 13, 3, 1, 'new', 'null', NULL, 'null', 'null', 'null', NULL, 0, NULL, NULL, NULL, NULL, 'completed', NULL, '2025-10-23 19:24:30', '2025-10-23 19:24:30', '2025-10-23 11:01:32', '2025-10-23 19:24:30'),
-(17, 17, 14, 3, 1, 'new', 'null', NULL, 'null', 'null', 'null', NULL, 0, NULL, NULL, NULL, NULL, 'completed', NULL, '2025-10-23 21:21:22', '2025-10-23 21:21:22', '2025-10-23 21:18:45', '2025-10-23 21:21:22'),
-(18, 18, 15, 3, 1, 'new', 'null', NULL, 'null', 'null', 'null', NULL, 0, NULL, NULL, NULL, NULL, 'completed', NULL, '2025-10-23 22:52:39', '2025-10-23 22:52:39', '2025-10-23 22:47:21', '2025-10-23 22:52:39'),
-(19, 29, 16, 1, 1, 'new', NULL, NULL, NULL, NULL, NULL, NULL, 0, NULL, NULL, NULL, NULL, 'pending', NULL, NULL, NULL, '2025-10-25 08:16:24', '2025-10-25 08:16:24'),
-(20, 30, 17, 1, 1, 'new', NULL, NULL, NULL, NULL, NULL, NULL, 0, NULL, NULL, NULL, NULL, 'pending', NULL, NULL, NULL, '2025-10-26 20:48:31', '2025-10-26 20:48:31'),
-(21, 31, 18, 1, 1, 'new', NULL, NULL, NULL, NULL, NULL, NULL, 0, NULL, NULL, NULL, NULL, 'pending', NULL, NULL, NULL, '2025-10-29 09:12:35', '2025-10-29 09:12:35'),
-(22, 32, 19, 1, 1, 'new', NULL, NULL, NULL, NULL, NULL, NULL, 0, NULL, NULL, NULL, NULL, 'pending', NULL, NULL, NULL, '2025-10-29 09:42:34', '2025-10-29 09:42:34'),
-(23, 33, 2, 1, 1, 'new', NULL, NULL, NULL, NULL, NULL, NULL, 0, NULL, NULL, NULL, NULL, 'pending', NULL, NULL, NULL, '2025-11-01 13:38:30', '2025-11-01 13:38:30'),
-(24, 34, 20, 1, 1, 'new', NULL, NULL, NULL, NULL, NULL, NULL, 0, NULL, NULL, NULL, NULL, 'pending', NULL, NULL, NULL, '2025-11-01 13:44:54', '2025-11-01 13:44:54');
+INSERT INTO `consultations` (`id`, `visit_id`, `patient_id`, `doctor_id`, `consultation_number`, `consultation_type`, `main_complaint`, `history_of_present_illness`, `on_examination`, `diagnosis`, `preliminary_diagnosis`, `final_diagnosis`, `treatment_plan`, `notes`, `follow_up_required`, `follow_up_date`, `follow_up_instructions`, `referred_to`, `referral_reason`, `status`, `cancellation_reason`, `started_at`, `completed_at`, `created_at`, `updated_at`) VALUES
+(1, 1, 1, 3, 1, 'new', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 0, NULL, NULL, NULL, NULL, 'in_progress', NULL, '2025-10-11 05:15:14', NULL, '2025-10-11 03:50:52', '2025-10-11 05:15:14'),
+(2, 2, 2, 3, 1, 'new', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 0, NULL, NULL, NULL, NULL, 'in_progress', NULL, '2025-10-11 06:09:42', NULL, '2025-10-11 06:04:10', '2025-10-11 06:09:42'),
+(3, 3, 3, 1, 1, 'new', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 0, NULL, NULL, NULL, NULL, 'pending', NULL, NULL, NULL, '2025-10-11 11:12:44', '2025-10-11 11:12:44'),
+(4, 4, 4, 3, 1, 'new', 'kichwa', NULL, 'ubongo', '', NULL, NULL, '', NULL, 0, NULL, NULL, NULL, NULL, 'completed', NULL, '2025-10-17 08:04:05', '2025-10-17 08:04:05', '2025-10-17 08:02:10', '2025-10-17 08:04:05'),
+(5, 5, 5, 1, 1, 'new', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 0, NULL, NULL, NULL, NULL, 'pending', NULL, NULL, NULL, '2025-10-17 08:35:54', '2025-10-17 08:35:54'),
+(6, 6, 6, 3, 1, 'new', 'kichwa', NULL, 'snfh', '', NULL, NULL, '', NULL, 0, NULL, NULL, NULL, NULL, 'completed', NULL, '2025-10-18 05:14:25', '2025-10-18 05:14:25', '2025-10-18 05:02:27', '2025-10-18 05:14:25'),
+(7, 7, 1, 3, 1, '', 'null', NULL, 'null', 'null', NULL, NULL, 'nul', NULL, 0, NULL, NULL, NULL, NULL, 'completed', NULL, '2025-10-22 06:48:58', '2025-10-22 06:48:58', '2025-10-20 07:00:37', '2025-10-22 06:48:58'),
+(9, 9, 6, 1, 1, '', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 0, NULL, NULL, NULL, NULL, 'pending', NULL, NULL, NULL, '2025-10-20 07:12:12', '2025-10-20 07:12:12'),
+(10, 10, 7, 1, 1, 'new', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 0, NULL, NULL, NULL, NULL, 'pending', NULL, NULL, NULL, '2025-10-21 19:04:49', '2025-10-21 19:04:49'),
+(11, 11, 8, 3, 1, 'new', 'kichwa', NULL, 'kichwa', 'hdc', NULL, NULL, 'hjsd', NULL, 0, NULL, NULL, NULL, NULL, 'completed', NULL, '2025-10-21 19:21:27', '2025-10-21 19:21:27', '2025-10-21 19:08:48', '2025-10-21 19:21:27'),
+(12, 12, 9, 1, 1, 'new', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 0, NULL, NULL, NULL, NULL, 'pending', NULL, NULL, NULL, '2025-10-21 19:18:47', '2025-10-21 19:18:47'),
+(13, 13, 10, 3, 1, 'new', 'null', NULL, 'null', 'null', NULL, NULL, 'fhjgsf', NULL, 0, NULL, NULL, NULL, NULL, 'completed', NULL, '2025-10-22 06:52:41', '2025-10-22 06:52:41', '2025-10-22 06:51:49', '2025-10-22 06:52:41'),
+(14, 14, 11, 1, 1, 'new', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 0, NULL, NULL, NULL, NULL, 'pending', NULL, NULL, NULL, '2025-10-22 07:57:57', '2025-10-22 07:57:57'),
+(15, 15, 12, 3, 1, 'new', 'null', NULL, 'null', 'null', NULL, NULL, 'null', NULL, 0, NULL, NULL, NULL, NULL, 'completed', NULL, '2025-10-22 08:20:21', '2025-10-22 08:20:21', '2025-10-22 08:17:18', '2025-10-22 08:20:21'),
+(16, 16, 13, 3, 1, 'new', 'null', NULL, 'null', 'null', NULL, NULL, 'null', NULL, 0, NULL, NULL, NULL, NULL, 'completed', NULL, '2025-10-23 19:24:30', '2025-10-23 19:24:30', '2025-10-23 11:01:32', '2025-10-23 19:24:30'),
+(17, 17, 14, 3, 1, 'new', 'null', NULL, 'null', 'null', NULL, NULL, 'null', NULL, 0, NULL, NULL, NULL, NULL, 'completed', NULL, '2025-10-23 21:21:22', '2025-10-23 21:21:22', '2025-10-23 21:18:45', '2025-10-23 21:21:22'),
+(18, 18, 15, 3, 1, 'new', 'null', NULL, 'null', 'null', NULL, NULL, 'null', NULL, 0, NULL, NULL, NULL, NULL, 'completed', NULL, '2025-10-23 22:52:39', '2025-10-23 22:52:39', '2025-10-23 22:47:21', '2025-10-23 22:52:39'),
+(19, 29, 16, 1, 1, 'new', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 0, NULL, NULL, NULL, NULL, 'pending', NULL, NULL, NULL, '2025-10-25 08:16:24', '2025-10-25 08:16:24'),
+(20, 30, 17, 1, 1, 'new', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 0, NULL, NULL, NULL, NULL, 'pending', NULL, NULL, NULL, '2025-10-26 20:48:31', '2025-10-26 20:48:31'),
+(21, 31, 18, 1, 1, 'new', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 0, NULL, NULL, NULL, NULL, 'pending', NULL, NULL, NULL, '2025-10-29 09:12:35', '2025-10-29 09:12:35'),
+(22, 32, 19, 1, 1, 'new', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 0, NULL, NULL, NULL, NULL, 'pending', NULL, NULL, NULL, '2025-10-29 09:42:34', '2025-10-29 09:42:34'),
+(23, 33, 2, 1, 1, 'new', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 0, NULL, NULL, NULL, NULL, 'pending', NULL, NULL, NULL, '2025-11-01 13:38:30', '2025-11-01 13:38:30'),
+(24, 34, 20, 1, 1, 'new', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 0, NULL, NULL, NULL, NULL, 'pending', NULL, NULL, NULL, '2025-11-01 13:44:54', '2025-11-01 13:44:54'),
+(25, 35, 21, 3, 1, 'new', 'mawazo', NULL, 'mawazo', 'not yet known', NULL, NULL, 'after lab test', NULL, 0, NULL, NULL, NULL, NULL, 'completed', NULL, '2025-11-04 14:12:24', '2025-11-04 14:12:24', '2025-11-04 14:10:05', '2025-11-04 14:12:24'),
+(26, 36, 21, 1, 1, 'new', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 0, NULL, NULL, NULL, NULL, 'pending', NULL, NULL, NULL, '2025-11-04 14:32:43', '2025-11-04 14:32:43'),
+(27, 39, 22, 1, 1, 'new', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 0, NULL, NULL, NULL, NULL, 'pending', NULL, NULL, NULL, '2025-11-05 08:45:25', '2025-11-05 08:45:25');
 
 -- --------------------------------------------------------
 
@@ -252,7 +257,8 @@ INSERT INTO `lab_results` (`id`, `order_id`, `patient_id`, `test_id`, `result_va
 (4, 5, 10, 14, '1.5', 'condition good', 'mg/dL', 0, 0, NULL, 6, NULL, '2025-10-22 03:53:00', NULL, NULL, NULL),
 (5, 6, 12, 3, '1.0', 'Test completed ', 'mg/dL', 1, 0, NULL, 6, NULL, '2025-10-22 05:21:00', NULL, NULL, NULL),
 (6, 9, 15, 4, '1.0', 'null', 'mg/dL', 0, 0, NULL, 6, NULL, '2025-10-23 19:56:00', NULL, NULL, NULL),
-(7, 7, 14, 4, '1.2', 'null', 'mg/dl', 0, 0, NULL, 6, NULL, '2025-11-03 06:09:00', NULL, NULL, NULL);
+(7, 7, 14, 4, '1.2', 'null', 'mg/dl', 0, 0, NULL, 6, NULL, '2025-11-03 06:09:00', NULL, NULL, NULL),
+(8, 10, 21, 21, '1.0', 'Test completed successfully.', 'mg/dL', 1, 0, NULL, 6, NULL, '2025-11-04 11:15:00', NULL, NULL, NULL);
 
 -- --------------------------------------------------------
 
@@ -294,7 +300,14 @@ INSERT INTO `lab_tests` (`id`, `test_name`, `test_code`, `category_id`, `price`,
 (12, 'Widal Test', 'WIDAL', 4, 12000.00, 'Non-reactive', '', 'Typhoid fever antibody test', NULL, 1, '2025-10-11 03:12:35', '2025-10-11 03:12:35'),
 (13, 'ESR', 'ESR', 1, 5000.00, 'Male: 0-15, Female: 0-20', 'mm/hr', 'Erythrocyte sedimentation rate', NULL, 1, '2025-10-11 03:12:35', '2025-10-11 03:12:35'),
 (14, 'Blood Group & Rh', 'BG-RH', 1, 8000.00, 'A/B/AB/O, Rh+/-', '', 'Blood typing and Rh factor', NULL, 1, '2025-10-11 03:12:35', '2025-10-11 03:12:35'),
-(15, 'X-Ray Chest', 'XRAY-C', 1, 30000.00, 'Normal', '', 'Chest radiography', NULL, 1, '2025-10-11 03:12:35', '2025-10-11 03:12:35');
+(15, 'X-Ray Chest', 'XRAY-C', 1, 30000.00, 'Normal', '', 'Chest radiography', NULL, 1, '2025-10-11 03:12:35', '2025-10-11 03:12:35'),
+(16, 'H. Pylori Antigen Test', 'HPYL-AG', 4, 12000.00, 'Negative', '', 'H. Pylori antigen detection', NULL, 1, '2025-11-04 13:43:11', '2025-11-04 13:43:11'),
+(17, 'H. Pylori Antibody Test', 'HPYL-AB', 4, 12000.00, 'Negative', '', 'H. Pylori antibody detection', NULL, 1, '2025-11-04 13:43:11', '2025-11-04 13:43:11'),
+(18, 'Syphilis Test (RPR)', 'RPR', 4, 10000.00, 'Non-reactive', '', 'Syphilis screening test', NULL, 1, '2025-11-04 13:43:11', '2025-11-04 13:43:11'),
+(19, 'Typhoid Antigen Test', 'TYPH-AG', 4, 15000.00, 'Negative', '', 'Salmonella typhi/paratyphi antigen', NULL, 1, '2025-11-04 13:43:11', '2025-11-04 13:43:11'),
+(20, 'Rheumatoid Factor', 'RF', 4, 8000.00, '<14 IU/mL', 'IU/mL', 'Rheumatoid arthritis screening', NULL, 1, '2025-11-04 13:43:11', '2025-11-04 13:43:11'),
+(21, 'Blood Uric Acid', 'UA', 2, 8000.00, 'Male: 3.4-7.0, Female: 2.4-6.0', 'mg/dL', 'Uric acid level test', NULL, 1, '2025-11-04 13:43:13', '2025-11-04 13:43:13'),
+(22, 'Hemoglobin Test', 'HB', 1, 5000.00, 'Male: 13.5-17.5, Female: 12.0-15.5', 'g/dL', 'Hemoglobin level', NULL, 1, '2025-11-04 13:43:13', '2025-11-04 13:43:13');
 
 -- --------------------------------------------------------
 
@@ -387,7 +400,8 @@ INSERT INTO `lab_test_orders` (`id`, `visit_id`, `patient_id`, `consultation_id`
 (6, 15, 12, 15, 3, 3, 4, 'normal', 'completed', NULL, NULL, NULL, NULL, '2025-10-22 08:20:21', '2025-10-22 08:21:17'),
 (7, 17, 14, 17, 4, 3, 4, 'normal', 'completed', NULL, NULL, NULL, NULL, '2025-10-23 21:21:22', '2025-11-03 09:09:57'),
 (8, 17, 14, 17, 5, 3, 4, 'normal', 'pending', NULL, NULL, NULL, NULL, '2025-10-23 21:21:22', '2025-10-23 21:21:22'),
-(9, 18, 15, 18, 4, 3, 4, 'normal', 'completed', NULL, NULL, NULL, NULL, '2025-10-23 22:52:39', '2025-10-23 22:56:54');
+(9, 18, 15, 18, 4, 3, 4, 'normal', 'completed', NULL, NULL, NULL, NULL, '2025-10-23 22:52:39', '2025-10-23 22:56:54'),
+(10, 35, 21, 25, 21, 3, 4, 'normal', 'completed', NULL, NULL, NULL, NULL, '2025-11-04 14:12:24', '2025-11-04 14:15:20');
 
 -- --------------------------------------------------------
 
@@ -458,13 +472,13 @@ CREATE TABLE `medicine_batches` (
 --
 
 INSERT INTO `medicine_batches` (`id`, `medicine_id`, `batch_number`, `quantity_received`, `quantity_remaining`, `expiry_date`, `supplier`, `cost_price`, `received_date`, `received_by`, `status`, `notes`, `created_at`, `updated_at`) VALUES
-(1, 1, 'PARA-2024-001', 1000, 950, '2026-12-31', 'MedSupply Ltd', 40.00, '2024-01-15', 1, 'active', NULL, '2025-10-11 03:12:35', '2025-11-03 09:01:59'),
+(1, 1, 'PARA-2024-001', 1000, 936, '2026-12-31', 'MedSupply Ltd', 40.00, '2024-01-15', 1, 'active', NULL, '2025-10-11 03:12:35', '2025-11-04 14:19:06'),
 (2, 2, 'AMOX-2024-001', 500, 500, '2026-06-30', 'MedSupply Ltd', 150.00, '2024-01-15', 1, 'active', NULL, '2025-10-11 03:12:35', '2025-10-11 03:12:35'),
 (3, 3, 'METRO-2024-001', 500, 500, '2026-08-31', 'PharmaDistrib', 120.00, '2024-01-15', 1, 'active', NULL, '2025-10-11 03:12:35', '2025-10-11 03:12:35'),
 (4, 4, 'IBU-2024-001', 800, 800, '2027-03-31', 'MedSupply Ltd', 80.00, '2024-01-15', 1, 'active', NULL, '2025-10-11 03:12:35', '2025-10-11 03:12:35'),
 (5, 5, 'CIPRO-2024-001', 300, 300, '2026-10-31', 'PharmaDistrib', 250.00, '2024-01-15', 1, 'active', NULL, '2025-10-11 03:12:35', '2025-10-11 03:12:35'),
 (6, 6, 'OMEP-2024-001', 400, 400, '2026-09-30', 'MedSupply Ltd', 200.00, '2024-01-15', 1, 'active', NULL, '2025-10-11 03:12:35', '2025-10-11 03:12:35'),
-(7, 7, 'CHL-2024-001', 1000, 990, '2027-12-31', 'PharmaDistrib', 80.00, '2024-01-15', 1, 'active', NULL, '2025-10-11 03:12:35', '2025-10-23 23:13:08'),
+(7, 7, 'CHL-2024-001', 1000, 980, '2027-12-31', 'PharmaDistrib', 80.00, '2024-01-15', 1, 'active', NULL, '2025-10-11 03:12:35', '2025-11-04 14:19:06'),
 (8, 8, 'AL-2024-001', 600, 600, '2026-11-30', 'Global Health', 400.00, '2024-01-15', 1, 'active', NULL, '2025-10-11 03:12:35', '2025-10-11 03:12:35'),
 (9, 9, 'MET-2024-001', 800, 790, '2027-06-30', 'MedSupply Ltd', 80.00, '2024-01-15', 1, 'active', NULL, '2025-10-11 03:12:35', '2025-10-23 23:13:12'),
 (10, 10, 'AML-2024-001', 500, 500, '2026-12-31', 'PharmaDistrib', 120.00, '2024-01-15', 1, 'active', NULL, '2025-10-11 03:12:35', '2025-10-11 03:12:35'),
@@ -576,7 +590,9 @@ INSERT INTO `patients` (`id`, `registration_number`, `first_name`, `last_name`, 
 (17, 'KJ20250017', 'kylian', 'mbappe', '2025-10-16', 'male', '542324564', 'cathy@gmail.com', '', NULL, 'fadghg', '655', NULL, NULL, NULL, NULL, NULL, '2025-10-26 20:48:31', '2025-10-26 20:48:31'),
 (18, 'KJ20250018', 'ester', 'lupolo', '2000-06-03', 'female', '645326345', '1abla@gmail.com', '', NULL, 'fadghg', '123453', NULL, NULL, NULL, NULL, NULL, '2025-10-29 09:12:35', '2025-10-29 09:12:35'),
 (19, 'KJ20250019', 'mariam', 'julius', '2002-03-05', 'female', '0612345678', 'ablaah1@gmail.com', 'mbeya', 'student', 'fadghg', '5643567', NULL, NULL, NULL, NULL, NULL, '2025-10-29 09:42:34', '2025-10-29 09:42:34'),
-(20, 'KJ20250020', 'nayoth', 'njovu', '1998-01-04', 'male', '989786545', 'nayoth@gmail.com', 'ruvuma', 'ujenzi', 'agress', '29875322', NULL, NULL, NULL, NULL, NULL, '2025-11-01 13:44:54', '2025-11-01 13:44:54');
+(20, 'KJ20250020', 'nayoth', 'njovu', '1998-01-04', 'male', '989786545', 'nayoth@gmail.com', 'ruvuma', 'ujenzi', 'agress', '29875322', NULL, NULL, NULL, NULL, NULL, '2025-11-01 13:44:54', '2025-11-01 13:44:54'),
+(21, 'KJ20250021', 'zuhura', 'magoto', '1982-04-02', 'female', '98964865', 'zuhura@gmail.com', 'ruvuma juu', 'ness', '5453576', 'kapela', NULL, NULL, NULL, NULL, NULL, '2025-11-04 14:10:05', '2025-11-04 14:10:05'),
+(22, 'KJ20250022', 'hapyness', 'sahani', '2002-04-06', 'female', '12345678609', 'happyness@gmail.com', 'shinyanga', 'student', 'masala', '4578977657', NULL, NULL, NULL, NULL, NULL, '2025-11-05 08:45:25', '2025-11-05 08:45:25');
 
 -- --------------------------------------------------------
 
@@ -643,7 +659,10 @@ INSERT INTO `patient_visits` (`id`, `patient_id`, `visit_number`, `visit_date`, 
 (31, 18, 1, '2025-10-29', 'consultation', NULL, 2, 'active', NULL, '2025-10-29 09:12:35', '2025-10-29 09:12:35'),
 (32, 19, 1, '2025-10-29', 'consultation', NULL, 2, 'active', NULL, '2025-10-29 09:42:34', '2025-10-29 09:42:34'),
 (33, 2, 2, '2025-11-01', 'consultation', NULL, 2, 'active', NULL, '2025-11-01 13:38:30', '2025-11-01 13:38:30'),
-(34, 20, 1, '2025-11-01', 'consultation', NULL, 2, 'active', NULL, '2025-11-01 13:44:54', '2025-11-01 13:44:54');
+(34, 20, 1, '2025-11-01', 'consultation', NULL, 2, 'active', NULL, '2025-11-01 13:44:54', '2025-11-01 13:44:54'),
+(35, 21, 1, '2025-11-04', 'consultation', NULL, 2, 'completed', NULL, '2025-11-04 14:10:05', '2025-11-04 14:19:06'),
+(36, 21, 2, '2025-11-04', 'consultation', NULL, 2, 'active', NULL, '2025-11-04 14:32:43', '2025-11-04 14:32:43'),
+(39, 22, 1, '2025-11-05', 'consultation', NULL, 2, 'active', NULL, '2025-11-05 08:45:25', '2025-11-05 08:45:25');
 
 -- --------------------------------------------------------
 
@@ -710,7 +729,13 @@ INSERT INTO `payments` (`id`, `visit_id`, `patient_id`, `payment_type`, `item_id
 (46, 32, 19, 'registration', NULL, NULL, 3000.00, 'cash', 'paid', NULL, 2, '2025-10-29 09:42:34', 'Initial consultation payment'),
 (47, 33, 2, 'registration', NULL, NULL, 3000.00, 'mobile_money', 'paid', NULL, 2, '2025-11-01 13:38:30', 'Revisit payment - Visit #2'),
 (48, 34, 20, 'registration', NULL, NULL, 3000.00, 'cash', 'paid', NULL, 2, '2025-11-01 13:44:54', 'Initial consultation payment'),
-(49, 18, 15, 'medicine', 11, 'prescription', 500.00, 'card', 'paid', '', 2, '2025-11-03 09:01:43', NULL);
+(49, 18, 15, 'medicine', 11, 'prescription', 500.00, 'card', 'paid', '', 2, '2025-11-03 09:01:43', NULL),
+(50, 35, 21, 'registration', NULL, NULL, 3000.00, 'insurance', 'paid', NULL, 2, '2025-11-04 14:10:05', 'Initial consultation payment'),
+(51, 35, 21, 'lab_test', 10, 'lab_order', 8000.00, 'insurance', 'paid', '', 2, '2025-11-04 14:14:54', NULL),
+(52, 35, 21, 'medicine', 13, 'prescription', 1000.00, 'insurance', 'paid', '', 2, '2025-11-04 14:17:48', NULL),
+(53, 35, 21, 'medicine', 12, 'prescription', 700.00, 'insurance', 'paid', '', 2, '2025-11-04 14:17:57', NULL),
+(54, 36, 21, 'registration', NULL, NULL, 3000.00, 'insurance', 'paid', NULL, 2, '2025-11-04 14:32:43', 'Revisit payment - Visit #2'),
+(55, 39, 22, 'registration', NULL, NULL, 3000.00, 'mobile_money', 'paid', NULL, 2, '2025-11-05 08:45:25', 'Initial consultation payment');
 
 -- --------------------------------------------------------
 
@@ -751,7 +776,9 @@ INSERT INTO `prescriptions` (`id`, `consultation_id`, `visit_id`, `patient_id`, 
 (8, 11, 11, 8, 3, 9, 10, 10, '1 tablet', 'Once daily', '1', '12', 'dispensed', NULL, 2, '2025-10-23 23:13:12', NULL, '2025-10-23 19:37:14', '2025-10-23 23:13:12'),
 (9, 18, 18, 15, 3, 1, 10, 10, '200g', 'as prescribed', '', '2 daily', 'dispensed', NULL, 2, '2025-10-23 23:13:08', NULL, '2025-10-23 22:52:39', '2025-10-23 23:13:08'),
 (10, 18, 18, 15, 3, 7, 10, 10, '2 daily', 'Once daily', '1', 'i', 'dispensed', NULL, 2, '2025-10-23 23:13:08', NULL, '2025-10-23 22:57:39', '2025-10-23 23:13:08'),
-(11, 18, 18, 15, 3, 1, 10, 10, '1 tablet', 'Once daily', '1', 'always', 'dispensed', NULL, 2, '2025-11-03 09:01:59', NULL, '2025-11-01 13:29:51', '2025-11-03 09:01:59');
+(11, 18, 18, 15, 3, 1, 10, 10, '1 tablet', 'Once daily', '1', 'always', 'dispensed', NULL, 2, '2025-11-03 09:01:59', NULL, '2025-11-01 13:29:51', '2025-11-03 09:01:59'),
+(12, 25, 35, 21, 3, 1, 14, 14, '200g', 'as prescribed', '', '2 daily', 'dispensed', NULL, 2, '2025-11-04 14:19:06', NULL, '2025-11-04 14:12:24', '2025-11-04 14:19:06'),
+(13, 25, 35, 21, 3, 7, 10, 10, '2 daily', 'Once daily', '10', 'every day', 'dispensed', NULL, 2, '2025-11-04 14:19:06', NULL, '2025-11-04 14:16:40', '2025-11-04 14:19:06');
 
 -- --------------------------------------------------------
 
@@ -899,7 +926,9 @@ INSERT INTO `vital_signs` (`id`, `visit_id`, `patient_id`, `temperature`, `blood
 (16, 30, 17, 36.0, 120, 80, 120, NULL, 56.0, 138.0, 2, '2025-10-26 20:48:31'),
 (17, 31, 18, 36.0, 120, 80, 120, NULL, 56.0, 120.0, 2, '2025-10-29 09:12:35'),
 (18, 32, 19, 36.0, 120, 80, 40, NULL, 68.0, 120.0, 2, '2025-10-29 09:42:34'),
-(19, 34, 20, 36.0, 129, 87, 40, NULL, 50.0, 123.0, 2, '2025-11-01 13:44:54');
+(19, 34, 20, 36.0, 129, 87, 40, NULL, 50.0, 123.0, 2, '2025-11-01 13:44:54'),
+(20, 35, 21, 36.0, 120, 80, 120, NULL, 68.0, 156.0, 2, '2025-11-04 14:10:05'),
+(21, 39, 22, 36.0, 119, 67, 80, NULL, 36.0, 178.0, 2, '2025-11-05 08:45:25');
 
 -- --------------------------------------------------------
 
@@ -1169,7 +1198,7 @@ ALTER TABLE `vital_signs`
 -- AUTO_INCREMENT for table `consultations`
 --
 ALTER TABLE `consultations`
-  MODIFY `id` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=25;
+  MODIFY `id` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=28;
 
 --
 -- AUTO_INCREMENT for table `lab_equipment`
@@ -1187,13 +1216,13 @@ ALTER TABLE `lab_inventory`
 -- AUTO_INCREMENT for table `lab_results`
 --
 ALTER TABLE `lab_results`
-  MODIFY `id` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=8;
+  MODIFY `id` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=9;
 
 --
 -- AUTO_INCREMENT for table `lab_tests`
 --
 ALTER TABLE `lab_tests`
-  MODIFY `id` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=16;
+  MODIFY `id` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=23;
 
 --
 -- AUTO_INCREMENT for table `lab_test_categories`
@@ -1211,7 +1240,7 @@ ALTER TABLE `lab_test_items`
 -- AUTO_INCREMENT for table `lab_test_orders`
 --
 ALTER TABLE `lab_test_orders`
-  MODIFY `id` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=10;
+  MODIFY `id` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=11;
 
 --
 -- AUTO_INCREMENT for table `medicines`
@@ -1235,25 +1264,25 @@ ALTER TABLE `medicine_dispensing`
 -- AUTO_INCREMENT for table `patients`
 --
 ALTER TABLE `patients`
-  MODIFY `id` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=21;
+  MODIFY `id` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=23;
 
 --
 -- AUTO_INCREMENT for table `patient_visits`
 --
 ALTER TABLE `patient_visits`
-  MODIFY `id` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=35;
+  MODIFY `id` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=40;
 
 --
 -- AUTO_INCREMENT for table `payments`
 --
 ALTER TABLE `payments`
-  MODIFY `id` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=50;
+  MODIFY `id` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=56;
 
 --
 -- AUTO_INCREMENT for table `prescriptions`
 --
 ALTER TABLE `prescriptions`
-  MODIFY `id` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=12;
+  MODIFY `id` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=14;
 
 --
 -- AUTO_INCREMENT for table `services`
@@ -1277,7 +1306,7 @@ ALTER TABLE `users`
 -- AUTO_INCREMENT for table `vital_signs`
 --
 ALTER TABLE `vital_signs`
-  MODIFY `id` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=20;
+  MODIFY `id` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=22;
 
 --
 -- Constraints for dumped tables

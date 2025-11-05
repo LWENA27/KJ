@@ -1,702 +1,647 @@
-<?php
-// medical_record_view.php - Enhanced view with real lab data integration
-
-// Assuming $patient_id is passed to this view
-// First, fetch all necessary data
-
-// 1. Get patient basic information (already exists in your code)
-// 2. Get latest consultation details
-// 3. Get all lab test orders for this patient
-// 4. Get lab results mapped to specific test categories
-
-// Presentation helper: find latest lab result from controller-provided map
-// Controller must pass: $lab_results_map (see DoctorController::view_patient)
-if (!isset($lab_results_map)) {
-    $lab_results_map = [];
-}
-
-// Test aliases for better matching between form and database
-$test_aliases = [
-    'mRDT' => 'Malaria Test',
-    'Blood Slide Smear' => 'Malaria Test', 
-    'UPT' => 'Pregnancy Test',
-    'RPP/Syphilis' => 'Syphilis Test (RPR)',
-    'Blood uric acid' => 'Blood Uric Acid'
-];
-
-function findLabResult($map, $testName) {
-    if (empty($map) || !$testName) return null;
-    global $test_aliases;
-    // try alias first
-    if (isset($test_aliases[$testName])) {
-        $alias = $test_aliases[$testName];
-        if (isset($map[$alias])) return $map[$alias];
-        $low_alias = strtolower($alias);
-        if (isset($map[$low_alias])) return $map[$low_alias];
-        $norm_alias = strtolower(preg_replace('/\s+/', '', $alias));
-        if (isset($map[$norm_alias])) return $map[$norm_alias];
-    }
-    // try exact
-    if (isset($map[$testName])) return $map[$testName];
-    // try lowercased
-    $low = strtolower($testName);
-    if (isset($map[$low])) return $map[$low];
-    // try normalized (no spaces)
-    $norm = strtolower(preg_replace('/\s+/', '', $testName));
-    if (isset($map[$norm])) return $map[$norm];
-    // try substring match on keys
-    foreach ($map as $k => $v) {
-        if (stripos($k, $testName) !== false || stripos($testName, $k) !== false) {
-            return $v;
-        }
-    }
-    return null;
-}
-
-// Build map of requested tests for checkboxes
-$requested_tests = [];
-if (!empty($lab_orders)) {
-    foreach ($lab_orders as $order) {
-        $name = $order['test_name'] ?? '';
-        if ($name) {
-            $requested_tests[$name] = $order;
-            // also normalize
-            $norm = strtolower(preg_replace('/\s+/', '', $name));
-            $requested_tests[$norm] = $order;
-        }
-    }
-}
-
-function isTestRequested($testName, $requested) {
-    if (empty($requested) || !$testName) return false;
-    // try exact
-    if (isset($requested[$testName])) return true;
-    // try normalized
-    $norm = strtolower(preg_replace('/\s+/', '', $testName));
-    if (isset($requested[$norm])) return true;
-    // try substring
-    foreach ($requested as $k => $v) {
-        if (stripos($k, $testName) !== false || stripos($testName, $k) !== false) {
-            return true;
-        }
-    }
-    return false;
-}
-?>
-
-<!-- Print Medical Record Form -->
+<!-- Enhanced Patient Dashboard for Returning Patients -->
 <div class="mb-6 no-print">
-    <div class="flex items-center justify-between">
-        <h1 class="text-3xl font-bold text-gray-900">Patient Medical Record</h1>
-        <div class="flex space-x-3">
-            <button onclick="printMedicalRecord()"
-                    class="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-md">
-                <i class="fas fa-print mr-2"></i>Print Record
+    <!-- Patient Overview Card -->
+    <div class="bg-gradient-to-r from-blue-600 to-blue-700 rounded-lg p-6 mb-6 text-white">
+        <div class="flex items-center justify-between">
+            <div class="flex items-center space-x-4">
+                <div class="w-16 h-16 bg-white bg-opacity-20 rounded-full flex items-center justify-center">
+                    <i class="fas fa-user text-2xl"></i>
+                </div>
+                <div>
+                    <h1 class="text-3xl font-bold"><?php echo htmlspecialchars($patient['first_name'] . ' ' . $patient['last_name']); ?></h1>
+                    <p class="text-blue-100">Reg: <?php echo htmlspecialchars($patient['registration_number']); ?> | 
+                        Age: <?php 
+                        $dob = $patient['date_of_birth'] ?? null;
+                        if (!empty($dob)) {
+                            echo date_diff(date_create($dob), date_create('today'))->y;
+                        } else {
+                            echo 'N/A';
+                        }
+                        ?> | 
+                        <?php echo htmlspecialchars($patient['phone'] ?? 'No phone'); ?>
+                    </p>
+                    <div class="flex items-center mt-2 space-x-4">
+                        <?php 
+                        $lastVisit = !empty($consultations) ? $consultations[0]['created_at'] : null;
+                        $visitCount = count($consultations ?? []);
+                        ?>
+                        <span class="bg-black bg-opacity-20 px-3 py-1 rounded-full text-sm">
+                            <i class="fas fa-calendar mr-1"></i>
+                            Last Visit: <?php echo $lastVisit ? date('d/m/Y', strtotime($lastVisit)) : 'First Visit'; ?>
+                        </span>
+                        <span class="bg-black bg-opacity-20 px-3 py-1 rounded-full text-sm">
+                            <i class="fas fa-history mr-1"></i>
+                            Total Visits: <?php echo $visitCount; ?>
+                        </span>
+                        <?php if ($visitCount > 1): ?>
+                        <span class="bg-green-500 bg-opacity-80 px-3 py-1 rounded-full text-sm font-medium">
+                            <i class="fas fa-star mr-1"></i>Returning Patient
+                        </span>
+                        <?php else: ?>
+                        <span class="bg-black-500 bg-opacity-80 px-3 py-1 rounded-full text-sm font-medium">
+                            <i class="fas fa-user-plus mr-1"></i>New Patient
+                        </span>
+                        <?php endif; ?>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Quick Status Indicators -->
+            <div class="text-right">
+                <div class="space-y-2">
+                    <?php 
+                    $hasUnpaidBills = false; // TODO: Calculate from payments
+                    $hasActivePresciption = !empty($latest_consultation['prescription']);
+                    $needsFollowup = true; // TODO: Check if follow-up is needed
+                    ?>
+                    
+                    <?php if ($hasUnpaidBills): ?>
+                    <div class="bg-red-500 bg-opacity-20 border border-red-300 px-3 py-1 rounded text-sm">
+                        <i class="fas fa-exclamation-triangle mr-1"></i>Outstanding Balance
+                    </div>
+                    <?php endif; ?>
+                    
+                    <?php if ($hasActivePresciption): ?>
+                    <div class="bg-purple-500 bg-opacity-20 border border-purple-300 px-3 py-1 rounded text-sm">
+                        <i class="fas fa-pills mr-1"></i>Active Prescription
+                    </div>
+                    <?php endif; ?>
+                    
+                    <?php if ($needsFollowup): ?>
+                    <div class="bg-orange-500 bg-opacity-20 border border-orange-300 px-3 py-1 rounded text-sm">
+                        <i class="fas fa-calendar-check mr-1"></i>Follow-up Due
+                    </div>
+                    <?php endif; ?>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Quick Actions Bar -->
+    <div class="bg-white rounded-lg shadow-lg p-4 mb-6">
+        <div class="flex items-center justify-between">
+            <h2 class="text-lg font-semibold text-gray-900 flex items-center">
+                <i class="fas fa-bolt mr-2 text-yellow-500"></i>Quick Actions
+            </h2>
+            <div class="flex space-x-2">
+                <button onclick="printMedicalRecord()"
+                        class="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-md text-sm transition-colors">
+                    <i class="fas fa-print mr-1"></i>Print Record
+                </button>
+                
+                <a href="<?php echo htmlspecialchars($BASE_PATH); ?>/receptionist/create_revisit?patient_id=<?php echo $patient['id']; ?>"
+                   class="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded-md text-sm transition-colors">
+                    <i class="fas fa-user-check mr-1"></i>Create Revisit
+                </a>
+                
+                <a href="<?php echo htmlspecialchars($BASE_PATH); ?>/receptionist/payments?patient_id=<?php echo $patient['id']; ?>&step=consultation"
+                   class="bg-orange-500 hover:bg-orange-600 text-white px-4 py-2 rounded-md text-sm transition-colors">
+                    <i class="fas fa-credit-card mr-1"></i>Process Payment
+                </a>
+                
+                <a href="<?php echo htmlspecialchars($BASE_PATH); ?>/receptionist/appointments?patient_id=<?php echo $patient['id']; ?>"
+                   class="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-md text-sm transition-colors">
+                    <i class="fas fa-calendar-plus mr-1"></i>New Appointment
+                </a>
+                
+                <a href="<?php echo htmlspecialchars($BASE_PATH); ?>/receptionist/dispense_medicines?patient_id=<?php echo $patient['id']; ?>"
+                   class="bg-purple-500 hover:bg-purple-600 text-white px-4 py-2 rounded-md text-sm transition-colors">
+                    <i class="fas fa-pills mr-1"></i>Dispense Medicine
+                </a>
+                
+                <button onclick="updateContactInfo()" 
+                        class="bg-orange-500 hover:bg-orange-600 text-white px-4 py-2 rounded-md text-sm transition-colors">
+                    <i class="fas fa-edit mr-1"></i>Update Info
+                </button>
+                
+                <a href="<?php echo htmlspecialchars($BASE_PATH); ?>/receptionist/patients" 
+                   class="bg-gray-500 hover:bg-gray-600 text-white px-4 py-2 rounded-md text-sm transition-colors">
+                    <i class="fas fa-arrow-left mr-1"></i>Back to Patients
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <!-- Visit History Timeline (for returning patients) -->
+    <?php if (count($consultations ?? []) > 1): ?>
+    <div class="bg-white rounded-lg shadow-lg p-6 mb-6">
+        <h2 class="text-xl font-bold text-gray-900 mb-4 flex items-center">
+            <i class="fas fa-history mr-3 text-blue-600"></i>
+            Recent Visit History
+        </h2>
+        <div class="space-y-4 max-h-60 overflow-y-auto">
+            <?php foreach (array_slice($consultations, 0, 5) as $index => $consultation): ?>
+            <div class="flex items-start space-x-4 p-3 <?php echo $index === 0 ? 'bg-blue-50 border-l-4 border-blue-500' : 'bg-gray-50'; ?> rounded-lg">
+                <div class="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center flex-shrink-0">
+                    <i class="fas fa-user-md text-blue-600"></i>
+                </div>
+                <div class="flex-1">
+                    <div class="flex items-center justify-between">
+                        <h4 class="font-medium text-gray-900">
+                            <?php echo $index === 0 ? 'Current Visit' : 'Visit #' . ($visitCount - $index); ?>
+                        </h4>
+                        <span class="text-sm text-gray-500">
+                            <?php echo date('d M Y', strtotime($consultation['created_at'])); ?>
+                        </span>
+                    </div>
+                    <p class="text-sm text-gray-600 mt-1">
+                        <strong>Chief Complaint:</strong> <?php echo htmlspecialchars($consultation['main_complaint'] ?? 'Not recorded'); ?>
+                    </p>
+                    <?php if (!empty($consultation['final_diagnosis'])): ?>
+                    <p class="text-sm text-gray-600">
+                        <strong>Diagnosis:</strong> <?php echo htmlspecialchars($consultation['final_diagnosis']); ?>
+                    </p>
+                    <?php endif; ?>
+                    <?php if (!empty($consultation['prescription'])): ?>
+                    <p class="text-sm text-gray-600">
+                        <strong>Treatment:</strong> <?php echo htmlspecialchars(substr($consultation['prescription'], 0, 100)); ?><?php echo strlen($consultation['prescription']) > 100 ? '...' : ''; ?>
+                    </p>
+                    <?php endif; ?>
+                </div>
+            </div>
+            <?php endforeach; ?>
+        </div>
+        
+        <?php if (count($consultations) > 5): ?>
+        <div class="mt-4 text-center">
+            <button onclick="showAllVisits()" class="text-blue-600 hover:text-blue-800 text-sm font-medium">
+                <i class="fas fa-chevron-down mr-1"></i>Show all <?php echo count($consultations); ?> visits
             </button>
-            <button onclick="window.location.href='<?php echo htmlspecialchars($BASE_PATH); ?>/doctor/attend_patient/<?php echo $patient['id']; ?>'"
-                    class="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded-md">
-                <i class="fas fa-stethoscope mr-2"></i>Attend Patient
-            </button>
-            <a href="<?php echo htmlspecialchars($BASE_PATH); ?>/doctor/view_lab_results/<?php echo $patient['id']; ?>"
-               class="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-md">
-                <i class="fas fa-vial mr-2"></i>View Lab Results
-            </a>
-            <a href="<?php echo htmlspecialchars($BASE_PATH); ?>/doctor/patient_journey/<?php echo $patient['id']; ?>"
-               class="bg-purple-500 hover:bg-purple-600 text-white px-4 py-2 rounded-md">
-                <i class="fas fa-route mr-2"></i>View Journey
-            </a>
-            <a href="<?php echo htmlspecialchars($BASE_PATH); ?>/doctor/patients" 
-               class="bg-gray-500 hover:bg-gray-600 text-white px-4 py-2 rounded-md">
-                <i class="fas fa-arrow-left mr-2"></i>Back to Patients
+        </div>
+        <?php endif; ?>
+    </div>
+    <?php endif; ?>
+</div>
+
+<!-- Visit History and Actions -->
+<div class="mb-6 no-print">
+    <div class="bg-white rounded-lg shadow-lg">
+        <div class="px-6 py-4 border-b border-gray-200 bg-gradient-to-r from-indigo-50 to-blue-50">
+            <h2 class="text-xl font-bold text-gray-900 flex items-center">
+                <i class="fas fa-history mr-3 text-indigo-600"></i>
+                Patient Visit History
+            </h2>
+            <p class="text-gray-600 mt-1">Complete record of all patient visits and consultations</p>
+        </div>
+
+        <?php if (!empty($consultations)): ?>
+        <div class="overflow-x-auto">
+            <table class="w-full">
+                <thead class="bg-gray-50">
+                    <tr>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Visit</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Chief Complaint</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Diagnosis</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Doctor</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                    </tr>
+                </thead>
+                <tbody class="bg-white divide-y divide-gray-200">
+                    <?php foreach ($consultations as $index => $consultation): ?>
+                    <tr class="hover:bg-gray-50 transition-colors">
+                        <td class="px-6 py-4 whitespace-nowrap">
+                            <div class="flex items-center">
+                                <div class="w-10 h-10 bg-gradient-to-br from-blue-500 to-blue-600 rounded-full flex items-center justify-center text-white font-bold shadow-sm">
+                                    <?php echo $index + 1; ?>
+                                </div>
+                                <div class="ml-3">
+                                    <div class="text-sm font-medium text-gray-900">
+                                        Visit #<?php echo $index + 1; ?>
+                                    </div>
+                                    <?php if ($index === 0): ?>
+                                    <div class="text-xs text-green-600 font-medium">Most Recent</div>
+                                    <?php endif; ?>
+                                </div>
+                            </div>
+                        </td>
+                        
+                        <td class="px-6 py-4 whitespace-nowrap">
+                            <div class="text-sm text-gray-900 font-medium">
+                                <?php echo date('d M Y', strtotime($consultation['created_at'])); ?>
+                            </div>
+                            <div class="text-xs text-gray-500">
+                                <?php echo date('H:i A', strtotime($consultation['created_at'])); ?>
+                            </div>
+                        </td>
+                        
+                        <td class="px-6 py-4">
+                            <div class="text-sm text-gray-900 max-w-xs">
+                                <?php echo htmlspecialchars(substr($consultation['main_complaint'] ?? 'Not recorded', 0, 80)); ?>
+                                <?php if (strlen($consultation['main_complaint'] ?? '') > 80): ?>...<?php endif; ?>
+                            </div>
+                        </td>
+                        
+                        <td class="px-6 py-4">
+                            <div class="text-sm text-gray-900 max-w-xs">
+                                <?php 
+                                $diagnosis = $consultation['final_diagnosis'] ?? $consultation['preliminary_diagnosis'] ?? 'Pending';
+                                echo htmlspecialchars(substr($diagnosis, 0, 60));
+                                if (strlen($diagnosis) > 60): ?>...<?php endif; ?>
+                            </div>
+                        </td>
+                        
+                        <td class="px-6 py-4 whitespace-nowrap">
+                            <div class="text-sm text-gray-900">
+                                <?php echo htmlspecialchars($consultation['doctor_name'] ?? 'Dr. Unknown'); ?>
+                            </div>
+                        </td>
+                        
+                        <td class="px-6 py-4 whitespace-nowrap">
+                            <?php 
+                            $hasVitalSigns = false;
+                            $hasPrescription = !empty($consultation['prescription']);
+                            $hasLabResults = !empty($consultation['lab_investigation']);
+                            
+                            // Check if vital signs exist for this consultation
+                            if (!empty($vital_signs)) {
+                                foreach ($vital_signs as $vs) {
+                                    if (is_array($vs) && isset($vs['consultation_id']) && $vs['consultation_id'] == $consultation['id']) {
+                                        $hasVitalSigns = true;
+                                        break;
+                                    }
+                                }
+                            }
+                            ?>
+                            <div class="flex flex-col space-y-1">
+                                <?php if ($hasVitalSigns): ?>
+                                <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-green-100 text-green-800">
+                                    <i class="fas fa-heartbeat mr-1"></i>Vitals Recorded
+                                </span>
+                                <?php endif; ?>
+                                
+                                <?php if ($hasPrescription): ?>
+                                <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-purple-100 text-purple-800">
+                                    <i class="fas fa-pills mr-1"></i>Prescribed
+                                </span>
+                                <?php endif; ?>
+                                
+                                <?php if ($hasLabResults): ?>
+                                <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-blue-100 text-blue-800">
+                                    <i class="fas fa-vial mr-1"></i>Lab Tests
+                                </span>
+                                <?php endif; ?>
+                            </div>
+                        </td>
+                        
+                        <td class="px-6 py-4 whitespace-nowrap">
+                            <div class="flex flex-col space-y-2">
+                                <!-- Link to full medical form page (new standalone page) -->
+                                <a href="<?php echo htmlspecialchars($BASE_PATH); ?>/doctor/view_patient_medicalform?id=<?php echo $patient['id']; ?>&consultation_id=<?php echo $consultation['id']; ?>" 
+                                   class="inline-flex items-center px-3 py-1 border border-blue-300 rounded-md text-xs font-medium text-blue-700 bg-blue-50 hover:bg-blue-100 transition-colors">
+                                    <i class="fas fa-file-medical mr-1"></i>View Medical Form
+                                </a>
+
+                                <!-- Open medical form page in new tab for printing -->
+                                <a target="_blank" href="<?php echo htmlspecialchars($BASE_PATH); ?>/doctor/view_patient_medicalform?id=<?php echo $patient['id']; ?>&consultation_id=<?php echo $consultation['id']; ?>&print=1" 
+                                   class="inline-flex items-center px-3 py-1 border border-green-300 rounded-md text-xs font-medium text-green-700 bg-green-50 hover:bg-green-100 transition-colors">
+                                    <i class="fas fa-print mr-1"></i>Print Form
+                                </a>
+
+                                <!-- View Details Button -->
+                                <button onclick="viewVisitDetails(<?php echo $consultation['id']; ?>)" 
+                                        class="inline-flex items-center px-3 py-1 border border-gray-300 rounded-md text-xs font-medium text-gray-700 bg-gray-50 hover:bg-gray-100 transition-colors">
+                                    <i class="fas fa-eye mr-1"></i>View Details
+                                </button>
+                            </div>
+                        </td>
+                    </tr>
+                    <?php endforeach; ?>
+                </tbody>
+            </table>
+        </div>
+        
+        <?php else: ?>
+        <div class="p-12 text-center">
+            <i class="fas fa-calendar-times text-gray-400 text-5xl mb-4"></i>
+            <h3 class="text-lg font-medium text-gray-900 mb-2">No Visit History</h3>
+            <p class="text-gray-500 mb-6">This patient hasn't had any consultations yet.</p>
+            <a href="<?php echo htmlspecialchars($BASE_PATH); ?>/receptionist/appointments?patient_id=<?php echo $patient['id']; ?>" 
+               class="bg-blue-500 hover:bg-blue-600 text-white px-6 py-3 rounded-lg font-medium transition-colors">
+                <i class="fas fa-plus mr-2"></i>Schedule First Appointment
             </a>
         </div>
+        <?php endif; ?>
     </div>
 </div>
 
-<!-- Medical Record Form (Printable) -->
-<div id="medicalRecord" class="bg-white border-2 border-gray-300 p-8 max-w-5xl mx-auto print:border-none print:p-4">
-    <!-- Header -->
-    <div class="text-center mb-6 border-b-2 border-gray-400 pb-4">
-        <h1 class="text-2xl font-bold text-gray-900 mb-2">KJ DISPENSARY</h1>
-        <p class="text-sm text-gray-700">P.O.BOX 149, MBEYA</p>
-        <p class="text-sm text-gray-700">PHONE 0776992746; centidispensary@gmail.com</p>
-        <div class="flex justify-between mt-4 text-sm">
-            <div>TOTAL………………………………………</div>
-            <div>CASH PAID………….……………………….</div>
-            <div>DEBIT………………………………………….</div>
-        </div>
-    </div>
+<!-- Medical form is now a separate standalone page: views/doctor/view_patient_medicalform.php -->
 
-    <!-- Patient Record Header -->
-    <div class="mb-6">
-        <h2 class="text-xl font-bold text-center mb-4 underline">PATIENT RECORD</h2>
-        
-        <div class="grid grid-cols-2 gap-4 mb-4 text-sm">
-            <div class="flex items-center">
-                <span class="font-medium mr-2">DATE:</span>
-                <span class="border-b border-gray-400 flex-1 px-2"><?php echo date('d/m/Y'); ?></span>
-            </div>
-            <div class="flex items-center">
-                <span class="font-medium mr-2">REG NO:</span>
-                <span class="border-b border-gray-400 flex-1 px-2"><?php echo htmlspecialchars($patient['registration_number']); ?></span>
-            </div>
-        </div>
-
-        <div class="grid grid-cols-3 gap-4 mb-4 text-sm">
-            <div class="col-span-2 flex items-center">
-                <span class="font-medium mr-2">PATIENT NAME:</span>
-                <span class="border-b border-gray-400 flex-1 px-2"><?php echo htmlspecialchars($patient['first_name'] . ' ' . $patient['last_name']); ?></span>
-            </div>
-            <div class="flex items-center">
-                <span class="font-medium mr-2">AGE:</span>
-                <span class="border-b border-gray-400 flex-1 px-2 mr-4">
-                    <?php
-                    $dob = $patient['date_of_birth'] ?? null;
-                    if (!empty($dob)) {
-                        $age = date_diff(date_create($dob), date_create('today'))->y;
-                        echo $age;
-                    } else {
-                        echo 'N/A';
-                    }
-                    ?>
-                </span>
-                <span class="font-medium mr-2">SEX:</span>
-                <span class="border-b border-gray-400 px-2"><?php echo strtoupper(substr($patient['gender'] ?? 'U', 0, 1)); ?></span>
-            </div>
-        </div>
-
-        <div class="grid grid-cols-3 gap-4 mb-6 text-sm">
-            <div class="flex items-center">
-                <span class="font-medium mr-2">ADDRESS:</span>
-                <span class="border-b border-gray-400 flex-1 px-2"><?php echo htmlspecialchars($patient['address'] ?? ''); ?></span>
-            </div>
-            <div class="flex items-center">
-                <span class="font-medium mr-2">OCCUPATION:</span>
-                <span class="border-b border-gray-400 flex-1 px-2"><?php echo htmlspecialchars($patient['occupation'] ?? ''); ?></span>
-            </div>
-            <div class="flex items-center">
-                <span class="font-medium mr-2">PHONE NO:</span>
-                <span class="border-b border-gray-400 flex-1 px-2"><?php echo htmlspecialchars($patient['phone'] ?? ''); ?></span>
-            </div>
-        </div>
-    </div>
-
-    <!-- Vital Signs -->
-    <div class="mb-6">
-        <div class="grid grid-cols-5 gap-4 text-sm">
-            <div class="text-center">
-                <div class="font-medium mb-1">Temperature</div>
-                <div class="border border-gray-400 h-10 p-2 text-center">
+<!-- Enhanced Payment History Section (Receptionist-focused) -->
+<div class="mb-6 no-print">
+    <div class="bg-white border border-gray-200 rounded-lg shadow-lg overflow-hidden">
+        <div class="bg-gradient-to-r from-green-50 to-green-100 px-6 py-4 border-b border-gray-200">
+            <div class="flex items-center justify-between">
+                <h2 class="text-xl font-bold text-gray-900 flex items-center">
+                    <i class="fas fa-credit-card mr-3 text-green-600"></i>
+                    Financial Summary
+                </h2>
+                
+                <!-- Financial Status Cards -->
+                <div class="flex space-x-4">
                     <?php 
-                    if (!empty($vital_signs['temperature'])) {
-                        echo htmlspecialchars($vital_signs['temperature']) . '°C';
+                    $totalPaid = 0;
+                    $totalPending = 0;
+                    foreach ($payments ?? [] as $payment) {
+                        if ($payment['payment_status'] === 'paid') {
+                            $totalPaid += $payment['amount'];
+                        } else {
+                            $totalPending += $payment['amount'];
+                        }
                     }
                     ?>
-                </div>
-            </div>
-            <div class="text-center">
-                <div class="font-medium mb-1">Blood Pressure</div>
-                <div class="border border-gray-400 h-10 p-2 text-center">
-                    <?php 
-                    if (!empty($vital_signs['blood_pressure_systolic']) && !empty($vital_signs['blood_pressure_diastolic'])) {
-                        echo htmlspecialchars($vital_signs['blood_pressure_systolic']) . '/' . htmlspecialchars($vital_signs['blood_pressure_diastolic']);
-                    }
-                    ?>
-                </div>
-            </div>
-            <div class="text-center">
-                <div class="font-medium mb-1">Pulse Rate</div>
-                <div class="border border-gray-400 h-10 p-2 text-center">
-                    <?php 
-                    if (!empty($vital_signs['pulse_rate'])) {
-                        echo htmlspecialchars($vital_signs['pulse_rate']) . ' bpm';
-                    }
-                    ?>
-                </div>
-            </div>
-            <div class="text-center">
-                <div class="font-medium mb-1">Body Weight</div>
-                <div class="border border-gray-400 h-10 p-2 text-center">
-                    <?php 
-                    if (!empty($vital_signs['weight'])) {
-                        echo htmlspecialchars($vital_signs['weight']) . ' kg';
-                    }
-                    ?>
-                </div>
-            </div>
-            <div class="text-center">
-                <div class="font-medium mb-1">Height</div>
-                <div class="border border-gray-400 h-10 p-2 text-center">
-                    <?php 
-                    if (!empty($vital_signs['height'])) {
-                        echo htmlspecialchars($vital_signs['height']) . ' cm';
-                    }
-                    ?>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Clinical Examination -->
-    <div class="mb-6">
-        <div class="grid grid-cols-1 gap-4 text-sm">
-            <?php
-            // Use controller-provided $latest_consultation (scoped to latest visit) when available.
-            if (!isset($latest_consultation)) {
-                $latest_consultation = null;
-                if (!empty($consultations)) {
-                    $latest_consultation = $consultations[0];
-                }
-            }
-            ?>
-            
-            <div class="grid grid-cols-2 gap-4">
-                <div>
-                    <div class="font-medium mb-1">M/C</div>
-                    <div class="border border-gray-400 h-16 p-2">
-                        <?php echo htmlspecialchars($latest_consultation['main_complaint'] ?? ''); ?>
+                    
+                    <div class="bg-white rounded-lg px-4 py-2 shadow-sm">
+                        <div class="text-sm text-gray-600">Total Paid</div>
+                        <div class="text-lg font-bold text-green-600">TZS <?php echo number_format($totalPaid, 2); ?></div>
                     </div>
-                </div>
-                <div>
-                    <div class="font-medium mb-1">O/E</div>
-                    <div class="border border-gray-400 h-16 p-2">
-                        <?php echo htmlspecialchars($latest_consultation['on_examination'] ?? ''); ?>
+                    
+                    <?php if ($totalPending > 0): ?>
+                    <div class="bg-white rounded-lg px-4 py-2 shadow-sm">
+                        <div class="text-sm text-gray-600">Outstanding</div>
+                        <div class="text-lg font-bold text-red-600">TZS <?php echo number_format($totalPending, 2); ?></div>
                     </div>
-                </div>
-            </div>
-            
-            <div class="grid grid-cols-2 gap-4">
-                <div>
-                    <div class="font-medium mb-1">Preliminary Dx</div>
-                    <div class="border border-gray-400 h-16 p-2">
-                        <?php echo htmlspecialchars($latest_consultation['preliminary_diagnosis'] ?? ''); ?>
-                    </div>
-                </div>
-                <div>
-                    <div class="font-medium mb-1">Final Dx</div>
-                    <div class="border border-gray-400 h-16 p-2">
-                        <?php echo htmlspecialchars($latest_consultation['final_diagnosis'] ?? ''); ?>
-                    </div>
-                </div>
-            </div>
-            
-            <div>
-                <div class="font-medium mb-1">Lab Investigation</div>
-                <div class="border border-gray-400 h-16 p-2">
-                    <?php echo htmlspecialchars($latest_consultation['lab_investigation'] ?? ''); ?>
-                </div>
-            </div>
-         
-            <div>
-                <div class="font-medium mb-1">RX</div>
-                <div class="border border-gray-400 h-20 p-2">
-                    <?php echo htmlspecialchars($latest_consultation['prescription'] ?? ''); ?>
+                    <?php endif; ?>
                 </div>
             </div>
         </div>
         
-        <div class="grid grid-cols-2 gap-4 mt-4 text-sm">
-            <div class="flex items-center">
-                <span class="font-medium mr-2">DATE:</span>
-                <span class="border-b border-gray-400 flex-1 px-2">
-                    <?php 
-                    $apt = $latest_consultation['appointment_date'] ?? $latest_consultation['visit_date'] ?? $latest_consultation['created_at'] ?? null; 
-                    echo $apt ? date('d/m/Y', strtotime($apt)) : ''; 
-                    ?>
-                </span>
-            </div>
-            <div class="flex items-center">
-                <span class="font-medium mr-2">Dr Signature:</span>
-                <span class="border-b border-gray-400 flex-1 px-2"></span>
-            </div>
-        </div>
-    </div>
-
-    <!-- Laboratory Results Grid with REAL DATA -->
-    <div class="mb-6 text-xs">
-        <div class="grid grid-cols-2 gap-6">
-            <!-- Left Column -->
-            <div class="space-y-4">
-                <!-- Parasitology -->
-                <div class="border border-gray-400 p-3">
-                    <h4 class="font-bold mb-2">Parasitology</h4>
-                    <div class="space-y-1">
-                        <?php
-                        // mRDT / Malaria Test
-                        $malaria_result = findLabResult($lab_results_map, 'Malaria');
-                        ?>
-                        <div class="flex items-center">
-                            <input type="checkbox" <?php echo isTestRequested('mRDT', $requested_tests) ? 'checked' : ''; ?> disabled class="mr-2">
-                            <span>• mRDT</span>
-                            <?php if ($malaria_result): ?>
-                                <span class="ml-2 font-semibold <?php echo $malaria_result['is_normal'] ? 'text-green-600' : 'text-red-600'; ?>">
-                                    <?php echo htmlspecialchars($malaria_result['result_value'] ?? $malaria_result['result_text']); ?>
-                                </span>
-                            <?php else: ?>
-                                <span class="flex-1 border-b border-gray-300 mx-2"></span>
-                            <?php endif; ?>
-                        </div>
-                        
-                        <div class="flex items-center">
-                            <input type="checkbox" <?php echo isTestRequested('Blood Slide Smear', $requested_tests) ? 'checked' : ''; ?> disabled class="mr-2">
-                            <span>• Blood Slide Smear</span><span class="border-b border-gray-300 ml-2 flex-1"></span>
-                        </div>
-                        
-                        <div class="mt-2">
-                            <div class="font-medium flex items-center">
-                                <input type="checkbox" <?php echo isTestRequested('Urine sedimentary', $requested_tests) ? 'checked' : ''; ?> disabled class="mr-2">
-                                <span>• Urine sedimentary</span>
-                            </div>
-                            <div class="flex items-center ml-4">
-                                <input type="checkbox" <?php echo isTestRequested('Urine appearance', $requested_tests) ? 'checked' : ''; ?> disabled class="mr-2">
-                                <span>Urine appearance</span><span class="border-b border-gray-300 ml-2 flex-1"></span>
-                            </div>
-                            <div class="flex items-center ml-4">
-                                <input type="checkbox" <?php echo isTestRequested('Urine microscopic report', $requested_tests) ? 'checked' : ''; ?> disabled class="mr-2">
-                                <span>Urine microscopic report</span><span class="border-b border-gray-300 ml-2 flex-1"></span>
-                            </div>
-                        </div>
-                        
-                        <div class="mt-2">
-                            <div class="font-medium flex items-center">
-                                <input type="checkbox" <?php echo isTestRequested('Urine Chemistry', $requested_tests) ? 'checked' : ''; ?> disabled class="mr-2">
-                                <span>• Urine Chemistry</span>
-                            </div>
-                            <div class="grid grid-cols-2 gap-2 mt-1 ml-4">
+        <?php if (!empty($payments)): ?>
+            <div class="overflow-x-auto">
+                <table class="w-full">
+                    <thead class="bg-gray-50">
+                        <tr>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Service Type</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Amount</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Payment Method</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody class="bg-white divide-y divide-gray-200">
+                        <?php foreach ($payments as $payment): ?>
+                        <tr class="hover:bg-gray-50 transition-colors">
+                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                                <?php echo safe_date('d M Y', $payment['payment_date']); ?>
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap">
                                 <div class="flex items-center">
-                                    <input type="checkbox" <?php echo isTestRequested('Leucocytes', $requested_tests) ? 'checked' : ''; ?> disabled class="mr-2">
-                                    <span>Leucocytes</span><span class="border-b border-gray-300 ml-1 flex-1"></span>
+                                    <i class="fas <?php echo $payment['payment_type'] === 'consultation' ? 'fa-user-md' : ($payment['payment_type'] === 'lab_tests' ? 'fa-vial' : 'fa-pills'); ?> mr-2 text-blue-500"></i>
+                                    <span class="text-sm text-gray-900"><?php echo htmlspecialchars(ucfirst(str_replace('_', ' ', $payment['payment_type']))); ?></span>
                                 </div>
-                                <div class="flex items-center">
-                                    <input type="checkbox" <?php echo isTestRequested('PH', $requested_tests) ? 'checked' : ''; ?> disabled class="mr-2">
-                                    <span>PH</span><span class="border-b border-gray-300 ml-1 flex-1"></span>
-                                </div>
-                                <div class="flex items-center">
-                                    <input type="checkbox" <?php echo isTestRequested('Protein', $requested_tests) ? 'checked' : ''; ?> disabled class="mr-2">
-                                    <span>Protein</span><span class="border-b border-gray-300 ml-1 flex-1"></span>
-                                </div>
-                                <div class="flex items-center">
-                                    <input type="checkbox" <?php echo isTestRequested('Blood', $requested_tests) ? 'checked' : ''; ?> disabled class="mr-2">
-                                    <span>Blood</span><span class="border-b border-gray-300 ml-1 flex-1"></span>
-                                </div>
-                            </div>
-                        </div>
-                        
-                        <div class="mt-2">
-                            <div class="font-medium flex items-center">
-                                <input type="checkbox" <?php echo isTestRequested('Stool analysis', $requested_tests) ? 'checked' : ''; ?> disabled class="mr-2">
-                                <span>• Stool analysis</span>
-                            </div>
-                            <div class="flex items-center ml-4">
-                                <input type="checkbox" <?php echo isTestRequested('Stool appearance', $requested_tests) ? 'checked' : ''; ?> disabled class="mr-2">
-                                <span>Stool appearance</span><span class="border-b border-gray-300 ml-2 flex-1"></span>
-                            </div>
-                            <div class="flex items-center ml-4">
-                                <input type="checkbox" <?php echo isTestRequested('Stool microscopic report', $requested_tests) ? 'checked' : ''; ?> disabled class="mr-2">
-                                <span>Stool microscopic report</span><span class="border-b border-gray-300 ml-2 flex-1"></span>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Hematology -->
-                <div class="border border-gray-400 p-3">
-                    <h4 class="font-bold mb-2">Hematology</h4>
-                    <div class="space-y-1">
-                        <?php
-                        $hb_result = findLabResult($lab_results_map, 'Hemoglobin');
-                        $esr_result = findLabResult($lab_results_map, 'ESR');
-                        $cbc_result = findLabResult($lab_results_map, 'Complete Blood Count');
-                        ?>
-                        <div class="flex items-center">
-                            <input type="checkbox" <?php echo isTestRequested('Hemoglobin', $requested_tests) ? 'checked' : ''; ?> disabled class="mr-2">
-                            <span>• Hemoglobin</span>
-                            <?php if ($hb_result): ?>
-                                <span class="ml-2 font-semibold <?php echo $hb_result['is_normal'] ? 'text-green-600' : 'text-red-600'; ?>">
-                                    <?php echo htmlspecialchars($hb_result['result_value']); ?> g/dL
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                                <span class="<?php echo $payment['payment_status'] === 'paid' ? 'text-green-600' : 'text-red-600'; ?>">
+                                    TZS <?php echo number_format($payment['amount'], 2); ?>
                                 </span>
-                            <?php else: ?>
-                                <span class="flex-1 border-b border-gray-300 mx-2"></span>
-                                <span>g/dL</span>
-                            <?php endif; ?>
-                        </div>
-                        
-                        <div class="flex items-center">
-                            <input type="checkbox" <?php echo isTestRequested('ESR', $requested_tests) ? 'checked' : ''; ?> disabled class="mr-2">
-                            <span>• ESR</span>
-                            <?php if ($esr_result): ?>
-                                <span class="ml-2 font-semibold <?php echo $esr_result['is_normal'] ? 'text-green-600' : 'text-red-600'; ?>">
-                                    <?php echo htmlspecialchars($esr_result['result_value']); ?>
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                                <?php echo htmlspecialchars(ucfirst(str_replace('_', ' ', $payment['payment_method']))); ?>
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap">
+                                <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium
+                                    <?php 
+                                    if ($payment['payment_status'] === 'paid') {
+                                        echo 'bg-green-100 text-green-800 border border-green-200';
+                                    } elseif ($payment['payment_status'] === 'pending') {
+                                        echo 'bg-yellow-100 text-yellow-800 border border-yellow-200';
+                                    } else {
+                                        echo 'bg-red-100 text-red-800 border border-red-200';
+                                    }
+                                    ?>">
+                                    <?php if ($payment['payment_status'] === 'paid'): ?>
+                                        <i class="fas fa-check-circle mr-1"></i>
+                                    <?php elseif ($payment['payment_status'] === 'pending'): ?>
+                                        <i class="fas fa-clock mr-1"></i>
+                                    <?php else: ?>
+                                        <i class="fas fa-exclamation-triangle mr-1"></i>
+                                    <?php endif; ?>
+                                    <?php echo htmlspecialchars(ucfirst($payment['payment_status'])); ?>
                                 </span>
-                            <?php else: ?>
-                                <span class="flex-1 border-b border-gray-300 mx-2"></span>
-                            <?php endif; ?>
-                        </div>
-                        
-                        <div class="flex items-center">
-                            <input type="checkbox" <?php echo isTestRequested('Full blood picture', $requested_tests) ? 'checked' : ''; ?> disabled class="mr-2">
-                            <span>• Full blood picture</span>
-                            <?php if ($cbc_result): ?>
-                                <span class="ml-2 font-semibold text-blue-600">
-                                    <?php echo htmlspecialchars($cbc_result['result_value'] ?? 'Completed'); ?>
-                                </span>
-                            <?php else: ?>
-                                <span class="flex-1 border-b border-gray-300 mx-2"></span>
-                            <?php endif; ?>
-                        </div>
-                        
-                        <div class="flex items-center">
-                            <input type="checkbox" <?php echo isTestRequested('Others', $requested_tests) ? 'checked' : ''; ?> disabled class="mr-2">
-                            <span>Others</span><span class="border-b border-gray-300 ml-2 flex-1"></span>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Clinical Chemistry -->
-                <div class="border border-gray-400 p-3">
-                    <h4 class="font-bold mb-2">Clinical chemistry</h4>
-                    <div class="space-y-1">
-                        <?php
-                        $bs_result = findLabResult($lab_results_map, 'Blood Sugar');
-                        $uric_result = findLabResult($lab_results_map, 'uric acid');
-                        $rf_result = findLabResult($lab_results_map, 'Rheumatoid');
-                        ?>
-                        <div class="flex items-center">
-                            <input type="checkbox" <?php echo isTestRequested('Blood sugar', $requested_tests) ? 'checked' : ''; ?> disabled class="mr-2">
-                            <span>• Blood sugar</span>
-                            <?php if ($bs_result): ?>
-                                <span class="ml-2 font-semibold <?php echo $bs_result['is_normal'] ? 'text-green-600' : 'text-red-600'; ?>">
-                                    <?php echo htmlspecialchars($bs_result['result_value']); ?> mmol/L
-                                </span>
-                            <?php else: ?>
-                                <span class="flex-1 border-b border-gray-300 mx-2"></span>
-                                <span>mmol/L</span>
-                            <?php endif; ?>
-                        </div>
-                        
-                        <div class="flex items-center">
-                            <input type="checkbox" <?php echo isTestRequested('Blood uric acid', $requested_tests) ? 'checked' : ''; ?> disabled class="mr-2">
-                            <span>• Blood uric acid</span>
-                            <?php if ($uric_result): ?>
-                                <span class="ml-2 font-semibold">
-                                    <?php echo htmlspecialchars($uric_result['result_value']); ?>
-                                </span>
-                            <?php else: ?>
-                                <span class="flex-1 border-b border-gray-300 mx-2"></span>
-                            <?php endif; ?>
-                        </div>
-                        
-                        <div class="flex items-center">
-                            <input type="checkbox" <?php echo isTestRequested('Rheumatoid factor', $requested_tests) ? 'checked' : ''; ?> disabled class="mr-2">
-                            <span>• Rheumatoid factor</span>
-                            <?php if ($rf_result): ?>
-                                <span class="ml-2 font-semibold">
-                                    <?php echo htmlspecialchars($rf_result['result_value']); ?>
-                                </span>
-                            <?php else: ?>
-                                <span class="flex-1 border-b border-gray-300 mx-2"></span>
-                            <?php endif; ?>
-                        </div>
-                        
-                        <div class="flex items-center">
-                            <input type="checkbox" <?php echo isTestRequested('Others', $requested_tests) ? 'checked' : ''; ?> disabled class="mr-2">
-                            <span>• Others</span><span class="border-b border-gray-300 ml-2 flex-1"></span>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Right Column -->
-            <div class="space-y-4">
-                <!-- Serology -->
-                <div class="border border-gray-400 p-3">
-                    <h4 class="font-bold mb-2">Serology</h4>
-                    <div class="space-y-1">
-                        <?php
-                        $hpylori_ag = findLabResult($lab_results_map, 'H.Pylori antigen');
-                        $hpylori_ab = findLabResult($lab_results_map, 'H.Pylori antibody');
-                        $syphilis = findLabResult($lab_results_map, 'Syphilis');
-                        $pregnancy = findLabResult($lab_results_map, 'Pregnancy');
-                        $typhoid = findLabResult($lab_results_map, 'Typhoid');
-                        ?>
-                        <div class="flex items-center">
-                            <input type="checkbox" <?php echo isTestRequested('H.Pylori antigen', $requested_tests) ? 'checked' : ''; ?> disabled class="mr-2">
-                            <span>• H.Pylori antigen</span>
-                            <?php if ($hpylori_ag): ?>
-                                <span class="ml-2 font-semibold">
-                                    <?php echo htmlspecialchars($hpylori_ag['result_value']); ?>
-                                </span>
-                            <?php else: ?>
-                                <span class="flex-1 border-b border-gray-300 mx-2"></span>
-                            <?php endif; ?>
-                        </div>
-                        
-                        <div class="flex items-center">
-                            <input type="checkbox" <?php echo isTestRequested('H.Pylori antibody', $requested_tests) ? 'checked' : ''; ?> disabled class="mr-2">
-                            <span>• H.Pylori antibody</span>
-                            <?php if ($hpylori_ab): ?>
-                                <span class="ml-2 font-semibold">
-                                    <?php echo htmlspecialchars($hpylori_ab['result_value']); ?>
-                                </span>
-                            <?php else: ?>
-                                <span class="flex-1 border-b border-gray-300 mx-2"></span>
-                            <?php endif; ?>
-                        </div>
-                        
-                        <div class="flex items-center">
-                            <input type="checkbox" <?php echo isTestRequested('RPP/Syphilis', $requested_tests) ? 'checked' : ''; ?> disabled class="mr-2">
-                            <span>• RPP/Syphilis</span>
-                            <?php if ($syphilis): ?>
-                                <span class="ml-2 font-semibold <?php echo $syphilis['is_normal'] ? 'text-green-600' : 'text-red-600'; ?>">
-                                    <?php echo htmlspecialchars($syphilis['result_value']); ?>
-                                </span>
-                            <?php else: ?>
-                                <span class="flex-1 border-b border-gray-300 mx-2"></span>
-                            <?php endif; ?>
-                        </div>
-                        
-                        <div class="flex items-center">
-                            <input type="checkbox" <?php echo isTestRequested('UPT', $requested_tests) ? 'checked' : ''; ?> disabled class="mr-2">
-                            <span>• UPT</span>
-                            <?php if ($pregnancy): ?>
-                                <span class="ml-2 font-semibold <?php echo $pregnancy['result_value'] == 'Positive' ? 'text-blue-600' : 'text-green-600'; ?>">
-                                    <?php echo htmlspecialchars($pregnancy['result_value']); ?>
-                                </span>
-                            <?php else: ?>
-                                <span class="flex-1 border-b border-gray-300 mx-2"></span>
-                            <?php endif; ?>
-                        </div>
-                        
-                        <div class="flex items-center">
-                            <input type="checkbox" <?php echo isTestRequested('Salmonella typhi/paratyphi antigen', $requested_tests) ? 'checked' : ''; ?> disabled class="mr-2">
-                            <span>• Salmonella typhi/paratyphi antigen</span>
-                            <?php if ($typhoid): ?>
-                                <span class="ml-2 font-semibold">
-                                    <?php echo htmlspecialchars($typhoid['result_value']); ?>
-                                </span>
-                            <?php else: ?>
-                                <span class="flex-1 border-b border-gray-300 mx-2"></span>
-                            <?php endif; ?>
-                        </div>
-                        
-                        <div class="grid grid-cols-2 gap-2 mt-1">
-                            <div class="flex items-center">
-                                <input type="checkbox" <?php echo isTestRequested('STO', $requested_tests) ? 'checked' : ''; ?> disabled class="mr-2">
-                                <span>• STO</span><span class="border-b border-gray-300 ml-1 flex-1"></span>
-                            </div>
-                            <div class="flex items-center">
-                                <input type="checkbox" <?php echo isTestRequested('STH', $requested_tests) ? 'checked' : ''; ?> disabled class="mr-2">
-                                <span>STH</span><span class="border-b border-gray-300 ml-1 flex-1"></span>
-                            </div>
-                        </div>
-                        
-                        <div class="flex items-center">
-                            <input type="checkbox" <?php echo isTestRequested('Rheumatoid Factor', $requested_tests) ? 'checked' : ''; ?> disabled class="mr-2">
-                            <span>• Rheumatoid Factor</span><span class="border-b border-gray-300 ml-2 flex-1"></span>
-                        </div>
-                        <div class="flex items-center">
-                            <input type="checkbox" <?php echo isTestRequested('Others', $requested_tests) ? 'checked' : ''; ?> disabled class="mr-2">
-                            <span>Others</span><span class="border-b border-gray-300 ml-2 flex-1"></span>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Blood Transfusion -->
-                <div class="border border-gray-400 p-3">
-                    <h4 class="font-bold mb-2">Blood transfusion</h4>
-                    <div class="space-y-1">
-                        <?php
-                        $blood_group = findLabResult($lab_results_map, 'Blood Group');
-                        ?>
-                        <div class="grid grid-cols-2 gap-2">
-                            <div class="flex items-center">
-                                <input type="checkbox" <?php echo isTestRequested('Blood group', $requested_tests) ? 'checked' : ''; ?> disabled class="mr-2">
-                                <span>• Blood group</span>
-                                <?php if ($blood_group): ?>
-                                    <span class="ml-2 font-semibold text-blue-600">
-                                        <?php echo htmlspecialchars($blood_group['result_value']); ?>
-                                    </span>
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                                <?php if ($payment['payment_status'] !== 'paid'): ?>
+                                    <button onclick="processPayment(<?php echo $payment['id']; ?>, '<?php echo htmlspecialchars($payment['payment_type']); ?>')" 
+                                            class="text-green-600 hover:text-green-900 font-medium">
+                                        <i class="fas fa-credit-card mr-1"></i>Collect Payment
+                                    </button>
                                 <?php else: ?>
-                                    <span class="flex-1 border-b border-gray-300 mx-1"></span>
+                                    <button onclick="printReceipt(<?php echo $payment['id']; ?>)" 
+                                            class="text-blue-600 hover:text-blue-900 font-medium">
+                                        <i class="fas fa-receipt mr-1"></i>Print Receipt
+                                    </button>
                                 <?php endif; ?>
-                            </div>
-                            <div class="flex items-center">
-                                <input type="checkbox" <?php echo isTestRequested('Rhesus', $requested_tests) ? 'checked' : ''; ?> disabled class="mr-2">
-                                <span>Rhesus</span>
-                                <?php if ($blood_group && strpos($blood_group['result_value'], '+') !== false): ?>
-                                    <span class="ml-2 font-semibold text-blue-600">+</span>
-                                <?php elseif ($blood_group && strpos($blood_group['result_value'], '-') !== false): ?>
-                                    <span class="ml-2 font-semibold text-blue-600">-</span>
-                                <?php else: ?>
-                                    <span class="flex-1 border-b border-gray-300 mx-1"></span>
-                                <?php endif; ?>
-                            </div>
-                        </div>
-                        <div class="flex items-center">
-                            <input type="checkbox" <?php echo isTestRequested('Others', $requested_tests) ? 'checked' : ''; ?> disabled class="mr-2">
-                            <span>Others</span><span class="border-b border-gray-300 ml-2 flex-1"></span>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Test Signature -->
-                <div class="border border-gray-400 p-3">
-                    <div class="grid grid-cols-2 gap-2 text-sm">
-                        <div class="flex items-center">
-                            <span>Test performed by</span><span class="border-b border-gray-300 ml-2 flex-1"></span>
-                        </div>
-                        <div class="flex items-center">
-                            <span>Signature</span><span class="border-b border-gray-300 ml-2 flex-1"></span>
-                        </div>
-                    </div>
-                </div>
+                            </td>
+                        </tr>
+                        <?php endforeach; ?>
+                    </tbody>
+                </table>
             </div>
-        </div>
+        <?php else: ?>
+            <div class="text-center py-12">
+                <i class="fas fa-credit-card text-gray-400 text-5xl mb-4"></i>
+                <h3 class="text-lg font-medium text-gray-900 mb-2">No Payment History</h3>
+                <p class="text-gray-500 mb-6">This patient hasn't made any payments yet.</p>
+                <a href="<?php echo htmlspecialchars($BASE_PATH); ?>/receptionist/payments?patient_id=<?php echo $patient['id']; ?>" 
+                   class="bg-green-500 hover:bg-green-600 text-white px-6 py-3 rounded-lg font-medium transition-colors">
+                    <i class="fas fa-plus mr-2"></i>Create First Payment Record
+                </a>
+            </div>
+        <?php endif; ?>
     </div>
 </div>
+
+<!-- JavaScript for Enhanced Functionality -->
+<script>
+// Lab orders data for real-time updates
+const labOrders = <?php echo json_encode($lab_orders ?? []); ?>;
+// Lab results map (normalized keys) provided by controller so receptionist view can show actual results
+const labResultsMap = <?php echo json_encode($lab_results_map ?? []); ?>;
+// Consultations, patient and vitals data for rendering medical forms like the doctor view
+const consultationsData = <?php echo json_encode($consultations ?? []); ?>;
+const patientData = <?php echo json_encode($patient ?? []); ?>;
+const vitalSignsData = <?php echo json_encode($vital_signs ?? []); ?>;
+
+// Medical form is now provided via a standalone page; links in the actions column open that page instead of a modal.
+
+function viewVisitDetails(consultationId) {
+    // Navigate to detailed consultation view
+    window.location.href = `<?php echo htmlspecialchars($BASE_PATH); ?>/receptionist/consultation_details?id=${consultationId}`;
+}
+
+function updateContactInfo() {
+    // Create a modal to update patient contact information
+    const modal = `
+        <div id="contactModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+            <div class="bg-white rounded-lg p-6 w-full max-w-md">
+                <h3 class="text-lg font-bold mb-4">Update Contact Information</h3>
+                <form id="contactForm">
+                    <div class="space-y-4">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Phone Number</label>
+                            <input type="tel" id="phone" value="<?php echo htmlspecialchars($patient['phone'] ?? ''); ?>" 
+                                   class="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Email Address</label>
+                            <input type="email" id="email" value="<?php echo htmlspecialchars($patient['email'] ?? ''); ?>" 
+                                   class="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Address</label>
+                            <textarea id="address" rows="3" 
+                                      class="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"><?php echo htmlspecialchars($patient['address'] ?? ''); ?></textarea>
+                        </div>
+                    </div>
+                    <div class="flex space-x-3 mt-6">
+                        <button type="button" onclick="closeContactModal()" 
+                                class="flex-1 bg-gray-300 text-gray-700 py-2 px-4 rounded-md hover:bg-gray-400">
+                            Cancel
+                        </button>
+                        <button type="submit" 
+                                class="flex-1 bg-blue-500 text-white py-2 px-4 rounded-md hover:bg-blue-600">
+                            Update
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    `;
+    
+    document.body.insertAdjacentHTML('beforeend', modal);
+    
+    // Handle form submission
+    document.getElementById('contactForm').addEventListener('submit', function(e) {
+        e.preventDefault();
+        showToast('Contact information updated successfully!', 'success');
+        closeContactModal();
+    });
+}
+
+function closeContactModal() {
+    const modal = document.getElementById('contactModal');
+    if (modal) {
+        modal.remove();
+    }
+}
+
+function showAllVisits() {
+    window.location.href = '<?php echo htmlspecialchars($BASE_PATH); ?>/receptionist/patient_history?id=<?php echo $patient['id']; ?>';
+}
+
+function processPayment(paymentId, paymentType) {
+    window.location.href = `<?php echo htmlspecialchars($BASE_PATH); ?>/receptionist/payments?payment_id=${paymentId}&type=${paymentType}`;
+}
+
+function printReceipt(paymentId) {
+    window.open(`<?php echo htmlspecialchars($BASE_PATH); ?>/receptionist/print_receipt?payment_id=${paymentId}`, '_blank');
+}
+
+// Show toast notification function
+function showToast(message, type = 'info') {
+    const toast = document.createElement('div');
+    toast.className = `fixed top-4 right-4 z-50 p-4 rounded-lg shadow-lg text-white max-w-sm`;
+    
+    const bgColors = {
+        success: 'bg-green-500',
+        error: 'bg-red-500',
+        warning: 'bg-yellow-500',
+        info: 'bg-blue-500'
+    };
+    
+    toast.classList.add(bgColors[type] || bgColors.info);
+    toast.innerHTML = `
+        <div class="flex items-center space-x-3">
+            <span>${message}</span>
+            <button onclick="this.parentElement.parentElement.remove()" class="ml-auto">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+    `;
+    
+    document.body.appendChild(toast);
+    
+    setTimeout(() => {
+        if (toast.parentNode) {
+            toast.remove();
+        }
+    }, 5000);
+}
+
+// Close modal when clicking outside
+document.addEventListener('click', function(e) {
+    const modal = document.getElementById('medicalFormModal');
+    if (e.target === modal) {
+        closeMedicalFormModal();
+    }
+});
+</script>
 
 <style>
+/* Responsive modal positioning */
+#medicalFormModal {
+    z-index: 9999;
+}
+
+/* Mobile devices (up to 768px) */
+@media (max-width: 768px) {
+    #medicalFormModal .bg-white {
+        margin: 1rem !important;
+        max-width: calc(100vw - 2rem) !important;
+        max-height: calc(100vh - 2rem) !important;
+    }
+}
+
+/* Tablet devices (769px to 1023px) */
+@media (min-width: 769px) and (max-width: 1023px) {
+    #medicalFormModal .bg-white {
+        margin-left: 2rem !important;
+        margin-right: 2rem !important;
+        max-width: calc(100vw - 4rem) !important;
+    }
+}
+
+/* Desktop with sidebar (1024px and up) */
+@media (min-width: 1024px) {
+    #medicalFormModal .bg-white {
+        margin-left: 18rem !important; /* Account for sidebar width (256px + padding) */
+        margin-right: 2rem !important;
+        max-width: calc(100vw - 20rem) !important;
+    }
+}
+
+/* Large screens */
+@media (min-width: 1440px) {
+    #medicalFormModal .bg-white {
+        margin-left: 18rem !important;
+        margin-right: 4rem !important;
+        max-width: calc(100vw - 22rem) !important;
+    }
+}
+
+/* Ensure modal content is scrollable */
+#medicalFormContent {
+    max-height: calc(95vh - 140px); /* Subtract header and button heights */
+    overflow-y: auto;
+}
+
+/* Print styles */
 @media print {
-    /* Ensure consistent black colors */
-    * { color: #000 !important; }
+    #medicalFormModal {
+        position: static !important;
+        background: transparent !important;
+    }
+    
+    #medicalFormModal .bg-white {
+        margin: 0 !important;
+        max-width: 100% !important;
+        max-height: none !important;
+        box-shadow: none !important;
+    }
     
     .no-print {
         display: none !important;
     }
-    
-    body {
-        print-color-adjust: exact;
-        -webkit-print-color-adjust: exact;
-    }
-    
-    #medicalRecord {
-        border: 2px solid #000 !important;
-        page-break-inside: avoid;
-    }
-    
-    .border-gray-400 {
-        border-color: #000 !important;
-    }
-    
-    .text-green-600 {
-        color: #16a34a !important;
-    }
-    
-    .text-red-600 {
-        color: #dc2626 !important;
-    }
-    
-    .text-blue-600 {
-        color: #2563eb !important;
-    }
-    
-    /* Better page breaks */
-    .page-break { page-break-before: always; }
 }
-</style>
-
-<script>
-function printMedicalRecord() {
-    window.print();
-}
-</script>

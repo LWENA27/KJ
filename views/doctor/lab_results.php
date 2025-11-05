@@ -290,14 +290,10 @@ function validatePrescriptionForm() {
         if (!medicine) return;
 
         const qtyInput = div.querySelector('input[name$="[quantity]"]');
-    const dosageInput = div.querySelector('input[name$="[dosage]"]');
-    const frequencyInput = div.querySelector('input[name$="[frequency]"]');
-    const durationInput = div.querySelector('input[name$="[duration]"]');
-        const instrInput = div.querySelector('input[name$="[instructions]"]');
+        const textInput = div.querySelector('input[type="text"]');
 
         const qty = Number(qtyInput?.value);
-        const dosage = dosageInput?.value?.trim();
-        const instructions = instrInput?.value?.trim();
+        const combined = textInput?.value?.trim();
 
         // Validate each field
         if (isNaN(qty) || qty < 1) {
@@ -306,28 +302,8 @@ function validatePrescriptionForm() {
             return;
         }
 
-        if (!dosage) {
-            alert(`Please specify dosage for ${medicine.name}`);
-            validationPassed = false;
-            return;
-        }
-
-        // Frequency & duration validation (new required fields)
-        const frequency = frequencyInput?.value?.trim();
-        const duration = durationInput?.value?.trim();
-        if (!frequency) {
-            alert(`Please specify frequency for ${medicine.name}`);
-            validationPassed = false;
-            return;
-        }
-        if (!duration || isNaN(Number(duration)) || Number(duration) <= 0) {
-            alert(`Please specify valid duration (days) for ${medicine.name}`);
-            validationPassed = false;
-            return;
-        }
-
-        if (!instructions) {
-            alert(`Please specify instructions for ${medicine.name}`);
+        if (!combined) {
+            alert(`Please specify dosage/instructions for ${medicine.name}`);
             validationPassed = false;
             return;
         }
@@ -338,15 +314,15 @@ function validatePrescriptionForm() {
             return;
         }
 
-        // Add validated data
+        // Build controller-compatible entry (provide sensible defaults)
         medicineData.push({
             id: medicine.id,
             name: medicine.name,
             quantity: qty,
-            dosage: dosage,
-            frequency: frequency,
-            duration: Number(duration),
-            instructions: instructions,
+            dosage: combined,
+            frequency: medicine.frequency || 'Once daily',
+            duration: medicine.duration || 1,
+            instructions: '' ,
             unit_price: medicine.unit_price
         });
     });
@@ -364,7 +340,7 @@ function validatePrescriptionForm() {
 function handlePrescriptionSubmit() {
     // Sync data from DOM first
     syncSelectedMedicinesFromDOM();
-    
+
     // Validate the form
     if (!validatePrescriptionForm()) {
         return false; // Stop submission if validation fails
@@ -392,18 +368,16 @@ function syncSelectedMedicinesFromDOM() {
             if (!div) return m;
 
             const qtyInput = div.querySelector('input[name$="[quantity]"]');
-            const dosageInput = div.querySelector('input[name$="[dosage]"]');
-            const frequencyInput = div.querySelector('input[name$="[frequency]"]');
-            const durationInput = div.querySelector('input[name$="[duration]"]');
-            const instrInput = div.querySelector('input[name$="[instructions]"]');
+            const textInput = div.querySelector('input[type="text"]');
 
             return {
                 ...m,
                 quantity: qtyInput ? Number(qtyInput.value) : m.quantity,
-                dosage: dosageInput ? dosageInput.value : m.dosage,
-                frequency: frequencyInput ? frequencyInput.value : (m.frequency || 'Once daily'),
-                duration: durationInput ? Number(durationInput.value) : (m.duration || 1),
-                instructions: instrInput ? instrInput.value : m.instructions
+                // combined dosage/instructions stored in dosage property
+                dosage: textInput ? textInput.value : m.dosage,
+                frequency: m.frequency || 'Once daily',
+                duration: m.duration || 1,
+                instructions: ''
             };
         });
     } catch (e) {
@@ -504,7 +478,16 @@ function addMedicine(medicine) {
         
         // Update both the UI and hidden input
         updateSelectedMedicinesList();
-        document.getElementById('selectedMedicinesJson').value = JSON.stringify(selectedMedicines);
+        // keep the hidden input synced with controller-compatible defaults
+        const payload = selectedMedicines.map(m => ({
+            id: m.id,
+            quantity: m.quantity,
+            dosage: m.dosage || '',
+            frequency: m.frequency || 'Once daily',
+            duration: m.duration || 1,
+            instructions: ''
+        }));
+        document.getElementById('selectedMedicinesJson').value = JSON.stringify(payload);
         
         // Clear search
         document.getElementById('medicineResults').classList.add('hidden');
@@ -576,7 +559,7 @@ function updateSelectedMedicinesList() {
                     <i class="fas fa-times"></i>
                 </button>
             </div>
-            <div class="grid grid-cols-1 md:grid-cols-4 gap-2">
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-2">
                 <div>
                     <label class="block text-xs text-gray-600">Quantity</label>
                     <input type="number" name="medicines[${medicine.id}][quantity]" 
@@ -585,35 +568,12 @@ function updateSelectedMedicinesList() {
                            onchange="updateMedicineDetails(${medicine.id}, 'quantity', this.value)">
                 </div>
                 <div>
-                    <label class="block text-xs text-gray-600">Dosage</label>
+                    <label class="block text-xs text-gray-600">Dosage / Instructions</label>
                     <input type="text" name="medicines[${medicine.id}][dosage]" 
                            value="${medicine.dosage}"
-                           placeholder="e.g., 1 tablet"
+                           placeholder="e.g., 500mg, 1 tab twice daily after meals"
                            class="w-full px-2 py-1 border border-gray-300 rounded text-sm"
                            onchange="updateMedicineDetails(${medicine.id}, 'dosage', this.value)">
-                </div>
-                    <div>
-                        <label class="block text-xs text-gray-600">Frequency</label>
-                        <input type="text" name="medicines[${medicine.id}][frequency]" 
-                               value="${medicine.frequency || 'Once daily'}"
-                               placeholder="e.g., Twice daily"
-                               class="w-full px-2 py-1 border border-gray-300 rounded text-sm"
-                               onchange="updateMedicineDetails(${medicine.id}, 'frequency', this.value)">
-                    </div>
-                    <div>
-                        <label class="block text-xs text-gray-600">Duration (days)</label>
-                        <input type="number" name="medicines[${medicine.id}][duration]" 
-                               min="1" value="${medicine.duration || 1}"
-                               class="w-full px-2 py-1 border border-gray-300 rounded text-sm"
-                               onchange="updateMedicineDetails(${medicine.id}, 'duration', this.value)">
-                    </div>
-                <div>
-                    <label class="block text-xs text-gray-600">Instructions</label>
-                    <input type="text" name="medicines[${medicine.id}][instructions]" 
-                           value="${medicine.instructions}"
-                           placeholder="e.g., Take 3 times daily after meals"
-                           class="w-full px-2 py-1 border border-gray-300 rounded text-sm"
-                           onchange="updateMedicineDetails(${medicine.id}, 'instructions', this.value)">
                 </div>
             </div>
         `;
