@@ -6,9 +6,31 @@
     #modal_amount_paid_container { display: none !important; }
 
     /* Ensure the payment modal overlays the page header and other content */
-    #paymentModal { z-index: 99999 !important; }
+    /* Keep a very high z-index so modal overlays header/sidebar (use !important to avoid conflicts) */
+    #paymentModal { z-index: 999999 !important; }
     /* Ensure the modal dialog content creates its own stacking context above overlay */
-    #paymentModal > .bg-white { position: relative; z-index: 100000; }
+    #paymentModal > .bg-white, #paymentModal .modal-dialog { position: relative; z-index: 1000000; }
+
+    /* Modal layout: keep modal below the app header on small screens, center on large screens */
+    #paymentModal { display: none; padding: 0 1rem; align-items: flex-start; }
+    #paymentModal.flex { display: flex; }
+
+    /* Dialog sizing — reserve space for header + comfortable margins */
+    .modal-dialog {
+        max-width: 640px; /* ~md width */
+        width: 100%;
+        max-height: calc(100vh - 120px); /* leave room for header and some breathing room */
+        overflow-y: auto;
+        margin: 1.25rem auto; /* small vertical offset on mobile */
+        border-radius: .5rem;
+    }
+
+    /* On large screens, center vertically (header usually not too tall) */
+    @media (min-width: 1024px) {
+        #paymentModal { align-items: center; padding: 0 2rem; }
+        .modal-dialog { margin: 0 auto; }
+    }
+
     /* Improve visibility of Record Payment buttons across the page */
     .record-payment-btn {
         font-weight: 600;
@@ -500,10 +522,10 @@
 </div>
 
 <!-- Payment Recording Modal -->
-<div id="paymentModal" class="fixed inset-0 bg-black bg-opacity-50 hidden items-center justify-center z-50">
-    <div class="bg-white rounded-lg shadow-xl max-w-md w-full m-4 transform transition-all">
+<div id="paymentModal" class="fixed inset-0 bg-black bg-opacity-50 hidden justify-center z-50" aria-hidden="true">
+    <div class="bg-white rounded-lg shadow-xl max-w-md w-full m-4 transform transition-all modal-dialog" role="dialog" aria-modal="true" aria-labelledby="paymentModalTitle">
         <div class="bg-gradient-to-r from-purple-600 to-indigo-600 px-6 py-4 rounded-t-lg">
-            <h3 class="text-xl font-bold text-white flex items-center">
+            <h3 id="paymentModalTitle" class="text-xl font-bold text-white flex items-center">
                 <i class="fas fa-cash-register mr-3"></i>
                 Record Payment
             </h3>
@@ -649,8 +671,21 @@ function openPaymentModal(patientId, visitId, paymentType, totalCost, amountPaid
     }
 
     const modal = document.getElementById('paymentModal');
+    // Prevent background scroll while modal is open
+    document.body.style.overflow = 'hidden';
+
+    // Show modal
     modal.classList.remove('hidden');
     modal.classList.add('flex');
+
+    // Positioning: on small screens keep modal below header (align-items: flex-start),
+    // on large screens center vertically. We update inline style to be defensive
+    // against varying header heights.
+    if (window.innerWidth >= 1024) {
+        modal.style.alignItems = 'center';
+    } else {
+        modal.style.alignItems = 'flex-start';
+    }
 }
 
 function closePaymentModal() {
@@ -662,6 +697,8 @@ function closePaymentModal() {
     document.getElementById('paymentForm').reset();
     document.getElementById('modal_total_cost_container').classList.add('hidden');
     document.getElementById('modal_amount_paid_container').classList.add('hidden');
+    // Restore page scrolling
+    document.body.style.overflow = '';
 }
 
 // Close modal on ESC key
@@ -675,6 +712,19 @@ document.addEventListener('keydown', function(event) {
 document.getElementById('paymentModal').addEventListener('click', function(event) {
     if (event.target === this) {
         closePaymentModal();
+    }
+});
+
+// Keep modal alignment updated on resize when visible
+window.addEventListener('resize', function() {
+    var modal = document.getElementById('paymentModal');
+    if (!modal) return;
+    if (modal.classList.contains('flex') && !modal.classList.contains('hidden')) {
+        if (window.innerWidth >= 1024) {
+            modal.style.alignItems = 'center';
+        } else {
+            modal.style.alignItems = 'flex-start';
+        }
     }
 });
 // Defensive re-hide: ensure the amount-paid container remains hidden even if other scripts try to show it
