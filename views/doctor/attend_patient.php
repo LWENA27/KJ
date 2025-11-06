@@ -191,8 +191,10 @@
 
     <!-- Keep your existing JavaScript -->
     <script>
-        // Use layout-provided BASE_PATH when available to keep fetch URLs correct
-        const BASE_PATH = (typeof window !== 'undefined' && window.BASE_PATH) ? window.BASE_PATH : '/KJ';
+    // Use layout-provided BASE_PATH when available to keep fetch URLs correct
+    // Default to empty string (root) instead of hard-coded '/KJ' so routes work
+    // whether the app is served from the root or a subfolder.
+    const BASE_PATH = (typeof window !== 'undefined' && window.BASE_PATH) ? window.BASE_PATH : '';
 
         let selectedTests = [];
         let selectedMedicines = [];
