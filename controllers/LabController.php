@@ -78,6 +78,117 @@ class LabController extends BaseController {
         'stats' => $stats
     ]);
 }
+
+    /**
+     * Show tasks assigned to the current lab technician
+     */
+    public function tasks()
+    {
+        $user_id = $_SESSION['user_id'];
+
+        // Get tasks from service_orders where this lab tech is assigned
+        try {
+            $stmt = $this->pdo->prepare("
+                SELECT 
+                    so.id,
+                    so.patient_id,
+                    so.visit_id,
+                    so.status,
+                    so.notes,
+                    so.created_at,
+                    so.updated_at,
+                    so.performed_at,
+                    p.first_name,
+                    p.last_name,
+                    p.registration_number,
+                    pv.visit_date,
+                    s.service_name,
+                    s.description as service_description,
+                    s.price,
+                    u.first_name as ordered_by_first,
+                    u.last_name as ordered_by_last
+                FROM service_orders so
+                JOIN patients p ON so.patient_id = p.id
+                JOIN services s ON so.service_id = s.id
+                LEFT JOIN patient_visits pv ON so.visit_id = pv.id
+                LEFT JOIN users u ON so.ordered_by = u.id
+                WHERE so.performed_by = ? 
+                AND so.status IN ('pending', 'in_progress')
+                ORDER BY so.created_at DESC
+            ");
+            $stmt->execute([$user_id]);
+            $tasks = $stmt->fetchAll();
+        } catch (Exception $e) {
+            error_log('tasks() service_orders query failed: ' . $e->getMessage());
+            $tasks = [];
+        }
+
+        $this->render('lab/tasks', [
+            'tasks' => $tasks,
+            'csrf_token' => $this->generateCSRF()
+        ]);
+    }
+
+    /**
+     * AJAX endpoint to update a task status (start / in_progress / completed / cancelled)
+     * Expects POST: task_id, status, notes (optional)
+     */
+    public function update_task_status()
+    {
+        if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+            http_response_code(405);
+            echo json_encode(['error' => 'Method not allowed']);
+            exit;
+        }
+
+        $this->validateCSRF($_POST['csrf_token'] ?? null);
+
+        $task_id = filter_input(INPUT_POST, 'task_id', FILTER_VALIDATE_INT);
+        $status = trim($_POST['status'] ?? '');
+        $notes = trim($_POST['notes'] ?? '');
+
+        if (!$task_id || $status === '') {
+            http_response_code(400);
+            echo json_encode(['error' => 'Invalid parameters']);
+            exit;
+        }
+
+        try {
+            $this->pdo->beginTransaction();
+
+            $allowed = ['pending', 'in_progress', 'completed', 'cancelled'];
+            if (!in_array($status, $allowed)) {
+                throw new Exception('Invalid status');
+            }
+
+            // Update service_order status
+            $note_entry = '';
+            if ($notes !== '') {
+                $timestamp = date('Y-m-d H:i:s');
+                $note_entry = "[{$timestamp}] {$notes}\n";
+            }
+            
+            $stmt = $this->pdo->prepare("
+                UPDATE service_orders 
+                SET status = ?,
+                    notes = CONCAT(COALESCE(notes, ''), ?),
+                    updated_at = NOW(),
+                    performed_at = CASE WHEN ? = 'completed' THEN NOW() ELSE performed_at END
+                WHERE id = ?
+            ");
+            $stmt->execute([$status, $note_entry, $status, $task_id]);
+
+            $this->pdo->commit();
+            echo json_encode(['success' => true, 'message' => 'Task updated successfully']);
+        } catch (Exception $e) {
+            $this->pdo->rollBack();
+            error_log('update_task_status error: ' . $e->getMessage());
+            http_response_code(500);
+            echo json_encode(['error' => 'Failed to update task: ' . $e->getMessage()]);
+        }
+        exit;
+    }
+
     public function tests() {
         // Modify query to join with payments table to check payment status
         $stmt = $this->pdo->prepare("

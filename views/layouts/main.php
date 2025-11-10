@@ -1120,6 +1120,7 @@
                         } elseif ($role === 'lab_technician') {
                             $menu_items = [
                                 ['url' => 'lab/dashboard', 'icon' => 'fas fa-chart-line', 'text' => 'Dashboard', 'badge' => '', 'color' => 'blue'],
+                                ['url' => 'lab/tasks', 'icon' => 'fas fa-clipboard-list', 'text' => 'My Tasks', 'badge' => '', 'color' => 'cyan'],
                                 ['url' => 'lab/tests', 'icon' => 'fas fa-vial', 'text' => 'Test Queue', 'badge' => '3', 'color' => 'yellow'],
                                 ['url' => 'lab/results', 'icon' => 'fas fa-clipboard-check', 'text' => 'Record Results', 'badge' => '', 'color' => 'green'],
                                 ['url' => 'lab/samples', 'icon' => 'fas fa-test-tube', 'text' => 'Sample Collection', 'badge' => '2', 'color' => 'purple'],
