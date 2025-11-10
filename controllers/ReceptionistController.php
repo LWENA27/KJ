@@ -1936,8 +1936,35 @@ class ReceptionistController extends BaseController
         }
 
         // GET request - display the medicine page
-        // Query raw pending prescriptions with amounts paid per prescription
-        $stmt = $this->pdo->prepare("\n            SELECT pr.id as prescription_id, pr.visit_id, pr.patient_id, pr.quantity_prescribed, pr.quantity_dispensed, pr.created_at as prescribed_at,\n                   p.first_name, p.last_name, p.registration_number, pr.medicine_id, m.unit_price, m.name as medicine_name,\n                   COALESCE((SELECT SUM(pay.amount) FROM payments pay WHERE pay.visit_id = pr.visit_id AND pay.patient_id = pr.patient_id AND pay.payment_type = 'medicine' AND pay.item_id = pr.id AND pay.item_type = 'prescription' AND pay.payment_status = 'paid'), 0) as amount_paid_for_this_prescription\n            FROM prescriptions pr\n            JOIN patients p ON pr.patient_id = p.id\n            JOIN medicines m ON pr.medicine_id = m.id\n            WHERE pr.status IN ('pending', 'partial')\n            ORDER BY pr.created_at ASC\n        ");
+        // Query pending prescriptions and total medicine payments per patient
+        $stmt = $this->pdo->prepare("
+            SELECT 
+                pr.id as prescription_id,
+                pr.visit_id,
+                pr.patient_id,
+                pr.quantity_prescribed,
+                pr.quantity_dispensed,
+                pr.created_at as prescribed_at,
+                p.first_name,
+                p.last_name,
+                p.registration_number,
+                pr.medicine_id,
+                m.unit_price,
+                m.name as medicine_name,
+                (
+                    SELECT COALESCE(SUM(pay.amount), 0)
+                    FROM payments pay
+                    WHERE pay.patient_id = pr.patient_id 
+                    AND pay.payment_type = 'medicine'
+                    AND pay.payment_status = 'paid'
+                ) as total_medicine_payments,
+                (pr.quantity_prescribed * m.unit_price) as prescription_cost
+            FROM prescriptions pr
+            JOIN patients p ON pr.patient_id = p.id
+            JOIN medicines m ON pr.medicine_id = m.id
+            WHERE pr.status IN ('pending', 'partial')
+            ORDER BY pr.created_at ASC
+        ");
         $stmt->execute();
         $raw_pending_prescriptions = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
@@ -1947,25 +1974,23 @@ class ReceptionistController extends BaseController
             $patient_id = $prescription['patient_id'];
             if (!isset($pending_patients_grouped[$patient_id])) {
                 $pending_patients_grouped[$patient_id] = [
-                    'id' => $patient_id, // Add 'id' key for view compatibility
+                    'id' => $patient_id,
                     'patient_id' => $patient_id,
                     'first_name' => $prescription['first_name'],
                     'last_name' => $prescription['last_name'],
                     'registration_number' => $prescription['registration_number'],
                     'visit_id' => $prescription['visit_id'],
-                    'visit_date' => null,
                     'prescribed_at' => $prescription['prescribed_at'],
-                    'total_prescribed_cost' => 0,
-                    'total_paid_for_patient' => 0,
-                    'medicine_count' => 0, // Initialize medicine count
+                    'total_cost' => 0, // This will be total cost of prescribed medicines
+                    'total_paid' => $prescription['total_medicine_payments'], // Total amount paid for medicines
+                    'medicine_count' => 0,
                     'prescriptions' => []
                 ];
             }
-            $prescription_cost = $prescription['quantity_prescribed'] * $prescription['unit_price'];
-            $pending_patients_grouped[$patient_id]['total_prescribed_cost'] += $prescription_cost;
-            $pending_patients_grouped[$patient_id]['total_paid_for_patient'] += $prescription['amount_paid_for_this_prescription'];
+            // Add prescription cost to total
+            $pending_patients_grouped[$patient_id]['total_cost'] += $prescription['prescription_cost'];
             $pending_patients_grouped[$patient_id]['prescriptions'][] = $prescription;
-            $pending_patients_grouped[$patient_id]['medicine_count'] = count($pending_patients_grouped[$patient_id]['prescriptions']); // Update count
+            $pending_patients_grouped[$patient_id]['medicine_count'] = count($pending_patients_grouped[$patient_id]['prescriptions']);
         }
 
         $pending_patients = array_values($pending_patients_grouped);
@@ -2013,13 +2038,16 @@ class ReceptionistController extends BaseController
         $stmt->execute();
         $recent_transactions = $stmt->fetchAll();
 
+        // NOTE: keep $pending_patients computed above from grouped prescriptions.
+        // Removed duplicated/overwriting query that used an undefined $this->db property.
+
+        // Pass to view (existing render call - extend data passed)
         $this->render('receptionist/medicine', [
             'pending_patients' => $pending_patients,
             'medicines' => $medicines,
             'categories' => $categories,
             'recent_transactions' => $recent_transactions,
             'csrf_token' => $this->generateCSRF(),
-            'notifications' => $notifications,
             'sidebar_data' => $this->getSidebarData()
         ]);
     }
@@ -2027,6 +2055,7 @@ class ReceptionistController extends BaseController
     /**
      * Handle dispensing all medicines for a patient
      */
+   
     private function handleDispensePatientMedicine()
     {
         $patient_id = $_POST['patient_id'] ?? null;
@@ -2073,4 +2102,54 @@ class ReceptionistController extends BaseController
         // Call the existing dispensing method
         $this->process_medicine_dispensing();
     }
+
+   public function prescription_details() 
+{
+    if ($_SERVER['REQUEST_METHOD'] !== 'GET') {
+        http_response_code(405);
+        echo json_encode(['error' => 'Method not allowed']);
+        exit;
+    }
+
+    $patient_id = isset($_GET['patient_id']) ? (int)$_GET['patient_id'] : 0;
+    if (!$patient_id) {
+        http_response_code(400);
+        echo json_encode(['error' => 'Missing patient_id']);
+        exit;
+    }
+
+    try {
+        // Get medicines prescribed for this patient that are pending/partial
+        $stmt = $this->pdo->prepare("
+            SELECT 
+                m.name as medicine_name,
+                pr.quantity_prescribed,
+                m.unit_price,
+                (pr.quantity_prescribed * m.unit_price) as medicine_cost
+            FROM prescriptions pr
+            JOIN medicines m ON pr.medicine_id = m.id
+            WHERE pr.patient_id = ?
+            AND pr.status IN ('pending', 'partial')
+            ORDER BY pr.created_at DESC
+        ");
+        
+        $stmt->execute([$patient_id]);
+        $medicines = $stmt->fetchAll(PDO::FETCH_ASSOC);
+        
+        $total_cost = array_sum(array_column($medicines, 'medicine_cost'));
+
+        header('Content-Type: application/json');
+        echo json_encode([
+            'medicines' => $medicines,
+            'total_cost' => $total_cost
+        ]);
+        exit;
+
+    } catch (Exception $e) {
+        error_log("Error in prescription_details: " . $e->getMessage());
+        http_response_code(500);
+        echo json_encode(['error' => 'Server error: ' . $e->getMessage()]);
+        exit;
+    }
+}
 }
