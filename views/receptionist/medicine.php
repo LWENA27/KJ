@@ -1,4 +1,4 @@
-<?php 
+<?php
 $pageTitle = 'Medicine Management';
 $userRole = 'receptionist';
 
@@ -26,8 +26,8 @@ $recentTransactions = $recent_transactions ?? [];
                     <h1 class="text-3xl font-bold text-primary-900">Medicine Management</h1>
                     <p class="text-primary-600 mt-1">Comprehensive medicine inventory and patient dispensing</p>
                 </div>
-                <button onclick="showAddMedicineModal()" 
-                        class="btn btn-primary">
+                <button onclick="showAddMedicineModal()"
+                    class="btn btn-primary">
                     <i class="fas fa-plus mr-2"></i>Add Medicine
                 </button>
             </div>
@@ -46,7 +46,7 @@ $recentTransactions = $recent_transactions ?? [];
                     </div>
                 </div>
             </div>
-            
+
             <div class="stats-card">
                 <div class="flex items-center">
                     <div class="p-3 rounded-full bg-green-100 text-green-600">
@@ -58,7 +58,7 @@ $recentTransactions = $recent_transactions ?? [];
                     </div>
                 </div>
             </div>
-            
+
             <div class="stats-card">
                 <div class="flex items-center">
                     <div class="p-3 rounded-full bg-orange-100 text-orange-600">
@@ -67,12 +67,14 @@ $recentTransactions = $recent_transactions ?? [];
                     <div class="ml-4">
                         <p class="text-sm text-gray-600">Low Stock</p>
                         <p class="text-2xl font-bold text-gray-900">
-                            <?= count(array_filter($medicines, function($m) { return $m['stock_quantity'] <= 10; })) ?>
+                            <?= count(array_filter($medicines, function ($m) {
+                                return $m['stock_quantity'] <= 10;
+                            })) ?>
                         </p>
                     </div>
                 </div>
             </div>
-            
+
             <div class="stats-card">
                 <div class="flex items-center">
                     <div class="p-3 rounded-full bg-purple-100 text-purple-600">
@@ -90,18 +92,18 @@ $recentTransactions = $recent_transactions ?? [];
         <div class="card mb-6">
             <div class="border-b border-gray-200">
                 <nav class="-mb-px flex space-x-8" aria-label="Tabs">
-                    <button onclick="switchTab('dispensing')" id="tab-dispensing" 
-                            class="tab-button active py-2 px-1 border-b-2 font-medium text-sm">
+                    <button onclick="switchTab('dispensing')" id="tab-dispensing"
+                        class="tab-button active py-2 px-1 border-b-2 font-medium text-sm">
                         <i class="fas fa-hand-holding-medical mr-2"></i>
                         Patient Dispensing
                     </button>
-                    <button onclick="switchTab('inventory')" id="tab-inventory" 
-                            class="tab-button py-2 px-1 border-b-2 font-medium text-sm">
+                    <button onclick="switchTab('inventory')" id="tab-inventory"
+                        class="tab-button py-2 px-1 border-b-2 font-medium text-sm">
                         <i class="fas fa-warehouse mr-2"></i>
                         Inventory Management
                     </button>
-                    <button onclick="switchTab('transactions')" id="tab-transactions" 
-                            class="tab-button py-2 px-1 border-b-2 font-medium text-sm">
+                    <button onclick="switchTab('transactions')" id="tab-transactions"
+                        class="tab-button py-2 px-1 border-b-2 font-medium text-sm">
                         <i class="fas fa-history mr-2"></i>
                         Transaction History
                     </button>
@@ -153,7 +155,7 @@ $recentTransactions = $recent_transactions ?? [];
                                                         <div class="text-sm font-medium text-gray-900">
                                                             <?= htmlspecialchars(($patient['first_name'] ?? '') . ' ' . ($patient['last_name'] ?? '')) ?>
                                                         </div>
-                                                        <div class="text-sm text-gray-500">ID: <?= htmlspecialchars($patient['patient_id'] ?? '') ?></div>
+                                                        <div class="text-sm text-gray-500">REG NO: <?= htmlspecialchars($patient['registration_number'] ?? '') ?></div>
                                                     </div>
                                                 </div>
                                             </td>
@@ -161,14 +163,17 @@ $recentTransactions = $recent_transactions ?? [];
                                                 <div class="text-sm text-gray-900">
                                                     <?= htmlspecialchars($patient['medicine_count'] ?? 0) ?> medicine(s)
                                                 </div>
-                        <button onclick="viewPrescriptionDetails(<?= (int)($patient['id'] ?? 0) ?>)" 
-                            class="text-blue-600 hover:text-blue-800 text-sm">
+                                                <button onclick="viewPrescriptionDetails(<?= (int)($patient['patient_id'] ?? $patient['id'] ?? 0) ?>)"
+                                                    class="text-blue-600 hover:text-blue-800 text-sm">
                                                     View details →
                                                 </button>
                                             </td>
                                             <td class="table-cell">
                                                 <span class="text-lg font-semibold text-gray-900">
-                                                    <?= format_tsh($patient['total_cost'] ?? ($patient['total_amount'] ?? 0), 0) ?>
+                                                    <!-- make span updatable, show fallback / formatted value -->
+                                                    <span class="patient-total-cost" data-patient-id="<?= (int)($patient['patient_id'] ?? $patient['id'] ?? 0) ?>">
+                                                        <?= format_tsh($patient['total_cost'] ?? ($patient['total_amount'] ?? 0), 0) ?>
+                                                    </span>
                                                 </span>
                                             </td>
                                             <td class="table-cell">
@@ -187,9 +192,9 @@ $recentTransactions = $recent_transactions ?? [];
                                                     <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($_SESSION['csrf_token']) ?>">
                                                     <input type="hidden" name="action" value="dispense_patient_medicine">
                                                     <input type="hidden" name="patient_id" value="<?= htmlspecialchars($patient['id'] ?? '') ?>">
-                                                    <button type="submit" 
-                                                            class="btn btn-success btn-sm"
-                                                            onclick="return confirm('Confirm dispensing all prescribed medicines to this patient?')">
+                                                    <button type="submit"
+                                                        class="btn btn-success btn-sm"
+                                                        onclick="return confirm('Confirm dispensing all prescribed medicines to this patient?')">
                                                         <i class="fas fa-hand-holding-medical mr-1"></i>
                                                         Dispense
                                                     </button>
@@ -232,7 +237,7 @@ $recentTransactions = $recent_transactions ?? [];
                                     </div>
                                     <span class="category-badge"><?= htmlspecialchars($medicine['category'] ?? '') ?></span>
                                 </div>
-                                
+
                                 <div class="flex justify-between items-center mb-3">
                                     <div>
                                         <span class="text-2xl font-bold text-gray-900"><?= $medicine['stock_quantity'] ?></span>
@@ -246,22 +251,22 @@ $recentTransactions = $recent_transactions ?? [];
                                     </div>
                                 </div>
 
-                                    <?php if (!empty($medicine['expiry_date'])): ?>
-                                        <?php 
-                                            $expDate = new DateTime($medicine['expiry_date']);
-                                            $today = new DateTime('today');
-                                            $days = (int)$today->diff($expDate)->format('%r%a');
-                                        ?>
-                                        <div class="mb-3 flex items-center justify-between">
-                                            <div class="text-sm text-gray-600">Expiry</div>
-                                            <div class="text-sm font-medium <?= $days < 0 ? 'text-red-600' : ($days <= 30 ? 'text-yellow-600' : 'text-gray-800') ?>">
-                                                <?= htmlspecialchars($medicine['expiry_date']) ?>
-                                                <span class="ml-2 text-xs <?= $days < 0 ? 'text-red-600' : ($days <= 30 ? 'text-yellow-600' : 'text-gray-500') ?>">
-                                                    (<?= $days < 0 ? ('expired ' . abs($days) . 'd ago') : ('in ' . $days . 'd') ?>)
-                                                </span>
-                                            </div>
+                                <?php if (!empty($medicine['expiry_date'])): ?>
+                                    <?php
+                                    $expDate = new DateTime($medicine['expiry_date']);
+                                    $today = new DateTime('today');
+                                    $days = (int)$today->diff($expDate)->format('%r%a');
+                                    ?>
+                                    <div class="mb-3 flex items-center justify-between">
+                                        <div class="text-sm text-gray-600">Expiry</div>
+                                        <div class="text-sm font-medium <?= $days < 0 ? 'text-red-600' : ($days <= 30 ? 'text-yellow-600' : 'text-gray-800') ?>">
+                                            <?= htmlspecialchars($medicine['expiry_date']) ?>
+                                            <span class="ml-2 text-xs <?= $days < 0 ? 'text-red-600' : ($days <= 30 ? 'text-yellow-600' : 'text-gray-500') ?>">
+                                                (<?= $days < 0 ? ('expired ' . abs($days) . 'd ago') : ('in ' . $days . 'd') ?>)
+                                            </span>
                                         </div>
-                                    <?php endif; ?>
+                                    </div>
+                                <?php endif; ?>
 
                                 <?php if ($medicine['stock_quantity'] <= 10): ?>
                                     <div class="bg-red-50 border border-red-200 rounded-lg p-2 mb-3">
@@ -273,12 +278,12 @@ $recentTransactions = $recent_transactions ?? [];
                                 <?php endif; ?>
 
                                 <div class="flex gap-2">
-                                    <button onclick="showStockUpdateModal(<?= $medicine['id'] ?>, '<?= htmlspecialchars($medicine['name'] ?? '') ?>', <?= $medicine['stock_quantity'] ?>)" 
-                                            class="btn btn-primary btn-sm flex-1">
+                                    <button onclick="showStockUpdateModal(<?= $medicine['id'] ?>, '<?= htmlspecialchars($medicine['name'] ?? '') ?>', <?= $medicine['stock_quantity'] ?>)"
+                                        class="btn btn-primary btn-sm flex-1">
                                         <i class="fas fa-plus mr-1"></i>Update Stock
                                     </button>
-                                    <button onclick="editMedicine(<?= $medicine['id'] ?>)" 
-                                            class="btn btn-secondary btn-sm">
+                                    <button onclick="editMedicine(<?= $medicine['id'] ?>)"
+                                        class="btn btn-secondary btn-sm">
                                         <i class="fas fa-edit"></i>
                                     </button>
                                 </div>
@@ -370,17 +375,17 @@ $recentTransactions = $recent_transactions ?? [];
         <form method="POST" action="medicine" class="modal-body">
             <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($_SESSION['csrf_token']) ?>">
             <input type="hidden" name="action" value="add_medicine">
-            
+
             <div class="form-group">
                 <label class="form-label">Medicine Name *</label>
                 <input type="text" name="name" class="form-input" required>
             </div>
-            
+
             <div class="form-group">
                 <label class="form-label">Generic Name</label>
                 <input type="text" name="generic_name" class="form-input">
             </div>
-            
+
             <div class="form-group">
                 <label class="form-label">Category *</label>
                 <select name="category" class="form-select" required>
@@ -394,7 +399,7 @@ $recentTransactions = $recent_transactions ?? [];
                     <option value="Other">Other</option>
                 </select>
             </div>
-            
+
             <div class="grid grid-cols-2 gap-4">
                 <div class="form-group">
                     <label class="form-label">Expiry Date</label>
@@ -412,18 +417,18 @@ $recentTransactions = $recent_transactions ?? [];
                     <label class="form-label">Unit Price (TSh) *</label>
                     <input type="number" name="unit_price" step="0.01" min="0" class="form-input" required>
                 </div>
-                
+
                 <div class="form-group">
                     <label class="form-label">Initial Stock *</label>
                     <input type="number" name="stock_quantity" min="0" class="form-input" required>
                 </div>
             </div>
-            
+
             <div class="form-group">
                 <label class="form-label">Description</label>
                 <textarea name="description" rows="3" class="form-textarea"></textarea>
             </div>
-            
+
             <div class="modal-footer">
                 <button type="button" onclick="hideModal('addMedicineModal')" class="btn btn-secondary">Cancel</button>
                 <button type="submit" class="btn btn-primary">Add Medicine</button>
@@ -445,12 +450,12 @@ $recentTransactions = $recent_transactions ?? [];
             <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($_SESSION['csrf_token']) ?>">
             <input type="hidden" name="action" value="update_medicine_stock">
             <input type="hidden" name="medicine_id" id="stock_medicine_id">
-            
+
             <div class="bg-gray-50 rounded-lg p-4 mb-4">
                 <h4 class="font-medium text-gray-900" id="stock_medicine_name"></h4>
                 <p class="text-sm text-gray-600">Current Stock: <span id="current_stock" class="font-medium"></span> units</p>
             </div>
-            
+
             <div class="form-group">
                 <label class="form-label">Action</label>
                 <div class="flex gap-4">
@@ -464,12 +469,12 @@ $recentTransactions = $recent_transactions ?? [];
                     </label>
                 </div>
             </div>
-            
+
             <div class="form-group">
                 <label class="form-label">Quantity</label>
                 <input type="number" name="new_quantity" min="0" class="form-input" required>
             </div>
-            
+
             <div class="modal-footer">
                 <button type="button" onclick="hideModal('stockUpdateModal')" class="btn btn-secondary">Cancel</button>
                 <button type="submit" class="btn btn-primary">Update Stock</button>
@@ -478,120 +483,260 @@ $recentTransactions = $recent_transactions ?? [];
     </div>
 </div>
 
+<!-- Add Prescription Details Modal -->
+<div id="prescriptionDetailsModal" class="modal" style="display:none;">
+    <div class="modal-content max-w-2xl">
+        <div class="modal-header">
+            <h3 class="modal-title">Prescribed Medicines</h3>
+            <button onclick="hideModal('prescriptionDetailsModal')" class="modal-close">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+        <div class="modal-body p-4">
+            <div class="overflow-x-auto">
+                <table class="min-w-full divide-y divide-gray-200">
+                    <thead class="bg-gray-50">
+                        <tr>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Medicine</th>
+                            <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Quantity</th>
+                            <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Unit Price</th>
+                            <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Total</th>
+                        </tr>
+                    </thead>
+                    <tbody id="prescriptionItemsContainer" class="bg-white divide-y divide-gray-200">
+                        <!-- Filled by JS -->
+                    </tbody>
+                    <tfoot>
+                        <tr class="bg-gray-50">
+                            <td colspan="3" class="px-6 py-4 text-right font-medium">Total Cost:</td>
+                            <td class="px-6 py-4 text-right font-bold" id="prescriptionTotal">TSh 0</td>
+                        </tr>
+                    </tfoot>
+                </table>
+            </div>
+        </div>
+        <div class="modal-footer">
+            <button type="button" onclick="hideModal('prescriptionDetailsModal')" class="btn btn-secondary">Close</button>
+        </div>
+    </div>
+</div>
+
 <script>
-function switchTab(tabName) {
-    // Hide all tab contents
-    document.querySelectorAll('.tab-content').forEach(content => {
-        content.style.display = 'none';
-    });
-    
-    // Remove active class from all tab buttons
-    document.querySelectorAll('.tab-button').forEach(button => {
-        button.classList.remove('active');
-    });
-    
-    // Show selected tab content and mark button as active
-    document.getElementById('content-' + tabName).style.display = 'block';
-    document.getElementById('tab-' + tabName).classList.add('active');
-}
+    function switchTab(tabName) {
+        // Hide all tab contents
+        document.querySelectorAll('.tab-content').forEach(content => {
+            content.style.display = 'none';
+        });
 
-// Modal management functions
-/**
- * Show modal while ensuring header/title remains visible when app has fixed top bars.
- * - Computes heights of any fixed top elements and applies padding-top to modal so it sits below them.
- * - Resets modal content scroll and focuses the first input for accessibility.
- */
-function showModal(modalId) {
-    const modal = document.getElementById(modalId);
-    if (!modal) return;
+        // Remove active class from all tab buttons
+        document.querySelectorAll('.tab-button').forEach(button => {
+            button.classList.remove('active');
+        });
 
-    // Find all visible fixed elements anchored at the top and sum their heights
-    let topOffset = 0;
-    document.querySelectorAll('body *').forEach(el => {
-        try {
-            const style = window.getComputedStyle(el);
-            if (style.position === 'fixed' && parseFloat(style.top || 0) === 0) {
-                const rect = el.getBoundingClientRect();
-                if (rect.width > 0 && rect.height > 0) topOffset += rect.height;
+        // Show selected tab content and mark button as active
+        document.getElementById('content-' + tabName).style.display = 'block';
+        document.getElementById('tab-' + tabName).classList.add('active');
+    }
+
+    // Modal management functions
+    /**
+     * Show modal while ensuring header/title remains visible when app has fixed top bars.
+     * - Computes heights of any fixed top elements and applies padding-top to modal so it sits below them.
+     * - Resets modal content scroll and focuses the first input for accessibility.
+     */
+    function showModal(modalId) {
+        const modal = document.getElementById(modalId);
+        if (!modal) return;
+
+        // Find all visible fixed elements anchored at the top and sum their heights
+        let topOffset = 0;
+        document.querySelectorAll('body *').forEach(el => {
+            try {
+                const style = window.getComputedStyle(el);
+                if (style.position === 'fixed' && parseFloat(style.top || 0) === 0) {
+                    const rect = el.getBoundingClientRect();
+                    if (rect.width > 0 && rect.height > 0) topOffset += rect.height;
+                }
+            } catch (e) {
+                // ignore
             }
-        } catch (e) {
-            // ignore
+        });
+
+        // Responsive minimum safe offset so modal doesn't stick to the very top
+        // on larger screens leave more space for the fixed header/breadcrumb bar.
+        const minOffset = window.innerWidth >= 1024 ? 84 : 28;
+        if (topOffset < minOffset) topOffset = minOffset;
+
+        modal.style.display = 'flex';
+        modal.classList.add('show');
+        modal.style.alignItems = 'flex-start';
+        modal.style.paddingTop = topOffset + 'px';
+        document.body.style.overflow = 'hidden'; // Prevent background scrolling
+
+        // Reset inner scroll and focus first input for keyboard users
+        const content = modal.querySelector('.modal-content');
+        if (content) {
+            const body = content.querySelector('.modal-body');
+            if (body) body.scrollTop = 0;
+            // focus first form control
+            const firstInput = content.querySelector('input, select, textarea, button');
+            if (firstInput) firstInput.focus();
         }
-    });
-
-    // Responsive minimum safe offset so modal doesn't stick to the very top
-    // on larger screens leave more space for the fixed header/breadcrumb bar.
-    const minOffset = window.innerWidth >= 1024 ? 84 : 28;
-    if (topOffset < minOffset) topOffset = minOffset;
-
-    modal.style.display = 'flex';
-    modal.classList.add('show');
-    modal.style.alignItems = 'flex-start';
-    modal.style.paddingTop = topOffset + 'px';
-    document.body.style.overflow = 'hidden'; // Prevent background scrolling
-
-    // Reset inner scroll and focus first input for keyboard users
-    const content = modal.querySelector('.modal-content');
-    if (content) {
-        const body = content.querySelector('.modal-body');
-        if (body) body.scrollTop = 0;
-        // focus first form control
-        const firstInput = content.querySelector('input, select, textarea, button');
-        if (firstInput) firstInput.focus();
     }
-}
 
-function hideModal(modalId) {
-    const modal = document.getElementById(modalId);
-    if (!modal) return;
-    modal.classList.remove('show');
-    modal.style.display = 'none';
-    modal.style.alignItems = '';
-    modal.style.paddingTop = '';
-    document.body.style.overflow = ''; // Restore scrolling
-}
-
-// Close modal when clicking outside of it
-window.onclick = function(event) {
-    if (event.target.classList.contains('modal')) {
-        hideModal(event.target.id);
+    function hideModal(modalId) {
+        const modal = document.getElementById(modalId);
+        if (!modal) return;
+        modal.classList.remove('show');
+        modal.style.display = 'none';
+        modal.style.alignItems = '';
+        modal.style.paddingTop = '';
+        document.body.style.overflow = ''; // Restore scrolling
     }
-}
 
-function showAddMedicineModal() {
-    showModal('addMedicineModal');
-}
-
-function showStockUpdateModal(medicineId, medicineName, currentStock) {
-    document.getElementById('stock_medicine_id').value = medicineId;
-    document.getElementById('stock_medicine_name').textContent = medicineName;
-    document.getElementById('current_stock').textContent = currentStock;
-    showModal('stockUpdateModal');
-}
-
-function filterByCategory(category) {
-    const cards = document.querySelectorAll('.medicine-card');
-    cards.forEach(card => {
-        if (!category || card.dataset.category === category) {
-            card.style.display = 'block';
-        } else {
-            card.style.display = 'none';
+    // Close modal when clicking outside of it
+    window.onclick = function(event) {
+        if (event.target.classList.contains('modal')) {
+            hideModal(event.target.id);
         }
+    }
+
+    function showAddMedicineModal() {
+        showModal('addMedicineModal');
+    }
+
+    function showStockUpdateModal(medicineId, medicineName, currentStock) {
+        document.getElementById('stock_medicine_id').value = medicineId;
+        document.getElementById('stock_medicine_name').textContent = medicineName;
+        document.getElementById('current_stock').textContent = currentStock;
+        showModal('stockUpdateModal');
+    }
+
+    function filterByCategory(category) {
+        const cards = document.querySelectorAll('.medicine-card');
+        cards.forEach(card => {
+            if (!category || card.dataset.category === category) {
+                card.style.display = 'block';
+            } else {
+                card.style.display = 'none';
+            }
+        });
+    }
+
+    // Define BASE_PATH for AJAX calls
+    const BASE_PATH = '<?= $BASE_PATH ?? '' ?>';
+    
+    function formatTsh(amount) {
+        return 'TSh ' + parseFloat(amount).toLocaleString();
+    }
+
+   function viewPrescriptionDetails(patientId) {
+    if (!patientId) {
+        alert('Invalid patient');
+        return;
+    }
+
+    const container = document.getElementById('prescriptionItemsContainer');
+    const totalEl = document.getElementById('prescriptionTotal');
+
+    container.innerHTML = '<tr><td colspan="4" class="px-6 py-4 text-center text-sm text-gray-500">Loading...</td></tr>';
+    totalEl.textContent = 'TSh 0';
+    showModal('prescriptionDetailsModal');
+
+    console.log('Fetching details for patient:', patientId);
+
+    fetch(BASE_PATH + '/receptionist/prescription_details?patient_id=' + encodeURIComponent(patientId))
+    .then(response => {
+        console.log('Response status:', response.status);
+        if (!response.ok) {
+            return response.text().then(text => {
+                throw new Error('Server response: ' + text);
+            });
+        }
+        return response.json();
+    })
+    .then(data => {
+        console.log('Received data:', data);
+        
+        if (data.error) {
+            container.innerHTML = '<tr><td colspan="4" class="px-6 py-4 text-center text-sm text-red-600">' + 
+                data.error + '</td></tr>';
+            return;
+        }
+
+        if (!data.medicines || data.medicines.length === 0) {
+            container.innerHTML = '<tr><td colspan="4" class="px-6 py-4 text-center text-sm text-gray-500">' + 
+                'No pending medicines prescribed</td></tr>';
+            return;
+        }
+
+        // Build the table rows
+        container.innerHTML = data.medicines.map(medicine => `
+            <tr>
+                <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                    ${escapeHtml(medicine.medicine_name || 'Unknown')}
+                </td>
+                <td class="px-6 py-4 whitespace-nowrap text-sm text-right text-gray-900">
+                    ${medicine.quantity_prescribed || 0}
+                </td>
+                <td class="px-6 py-4 whitespace-nowrap text-sm text-right text-gray-900">
+                    ${formatTsh(medicine.unit_price || 0)}
+                </td>
+                <td class="px-6 py-4 whitespace-nowrap text-sm text-right font-medium text-gray-900">
+                    ${formatTsh(medicine.medicine_cost || 0)}
+                </td>
+            </tr>
+        `).join('');
+
+        // Update total
+        totalEl.textContent = formatTsh(data.total_cost || 0);
+
+    }).catch(err => {
+        console.error('Error:', err);
+        container.innerHTML = '<tr><td colspan="4" class="px-6 py-4 text-center text-sm text-red-600">' +
+            'Error loading details: ' + (err.message || 'Unknown error') + '</td></tr>';
+        totalEl.textContent = 'TSh 0';
     });
 }
 
-function viewPrescriptionDetails(patientId) {
-    // Implementation for viewing prescription details modal
-    alert('Prescription details modal - To be implemented');
+// Add these helper functions if they don't exist
+function escapeHtml(unsafe) {
+    return unsafe
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#039;");
 }
 
-function editMedicine(medicineId) {
-    // Implementation for editing medicine modal
-    alert('Edit medicine modal - To be implemented');
+function formatTsh(amount) {
+    const num = parseFloat(amount) || 0;
+    return 'TSh ' + num.toLocaleString('en-TZ');
 }
 
-function showBulkUpdateModal() {
-    // Implementation for bulk stock update modal
-    alert('Bulk update modal - To be implemented');
-}
+    function formatTsh(amount) {
+        // simple formatting; adjust as needed
+        amount = Number(amount) || 0;
+        return 'TSh ' + amount.toLocaleString();
+    }
+
+    function escapeHtml(unsafe) {
+        return (unsafe + '').replace(/[&<"'>]/g, function(m) { return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[m]; });
+    }
+
+    // Reuse existing modal helpers in this file:
+    function showModal(modalId) {
+        const modal = document.getElementById(modalId);
+        if (!modal) return;
+        modal.style.display = 'flex';
+        modal.classList.add('show');
+        document.body.style.overflow = 'hidden';
+    }
+    function hideModal(modalId) {
+        const modal = document.getElementById(modalId);
+        if (!modal) return;
+        modal.style.display = 'none';
+        modal.classList.remove('show');
+        document.body.style.overflow = '';
+    }
 </script>
