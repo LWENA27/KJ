@@ -43,13 +43,14 @@
 
         <!-- Main Consultation Form -->
         <div class="bg-white rounded-lg shadow">
-            <form id="attendForm" method="POST" action="/KJ/doctor/start_consultation" 
-                  onsubmit="console.log('🚀 FORM SUBMITTING NOW...'); return validateConsultationForm();" class="p-6 space-y-6">
+        <form id="attendForm" method="POST" action="/KJ/doctor/start_consultation" 
+            onsubmit="syncSelectedMedicinesFromDOM(); syncSelectedAllocationsFromDOM(); console.log('🚀 FORM SUBMITTING NOW...'); return validateConsultationForm();" class="p-6 space-y-6">
                 
                 <input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars($csrf_token); ?>">
                 <input type="hidden" name="patient_id" value="<?php echo $patient['id']; ?>">
                 <input type="hidden" id="selectedTests" name="selected_tests" value="">
                 <input type="hidden" id="selectedMedicines" name="selected_medicines" value="">
+                <input type="hidden" id="selectedAllocations" name="selected_allocations" value="">
 
                 <!-- Examination Section -->
                 <div class="bg-blue-50 p-4 rounded-lg">
@@ -93,22 +94,30 @@
                 <div class="bg-yellow-50 p-4 rounded-lg">
                     <h4 class="text-lg font-medium text-yellow-900 mb-4">Next Steps Decision</h4>
                     <div class="space-y-4">
-                        <div class="flex space-x-4">
+                        <div class="grid grid-cols-2 md:grid-cols-3 gap-3">
                             <label class="flex items-center">
                                 <input type="radio" name="next_step" value="lab_tests" class="mr-2" onchange="toggleSection('lab_tests')">
-                                <span class="text-sm font-medium">Send to Lab for Tests</span>
+                                <span class="text-sm font-medium">Lab Tests</span>
                             </label>
                             <label class="flex items-center">
                                 <input type="radio" name="next_step" value="medicine" class="mr-2" onchange="toggleSection('medicine')">
-                                <span class="text-sm font-medium">Prescribe Medicine</span>
+                                <span class="text-sm font-medium">Medicine</span>
                             </label>
                             <label class="flex items-center">
-                                <input type="radio" name="next_step" value="both" class="mr-2" onchange="toggleSection('both')">
-                                <span class="text-sm font-medium">Both Lab & Medicine</span>
+                                <input type="radio" name="next_step" value="allocation" class="mr-2" onchange="toggleSection('allocation')">
+                                <span class="text-sm font-medium">Allocate Services</span>
+                            </label>
+                            <label class="flex items-center">
+                                <input type="radio" name="next_step" value="lab_medicine" class="mr-2" onchange="toggleSection('lab_medicine')">
+                                <span class="text-sm font-medium">Lab & Medicine</span>
+                            </label>
+                            <label class="flex items-center">
+                                <input type="radio" name="next_step" value="all" class="mr-2" onchange="toggleSection('all')">
+                                <span class="text-sm font-medium">All (Lab, Med & Services)</span>
                             </label>
                             <label class="flex items-center">
                                 <input type="radio" name="next_step" value="discharge" class="mr-2" onchange="toggleSection('none')">
-                                <span class="text-sm font-medium">Discharge Patient</span>
+                                <span class="text-sm font-medium">Discharge</span>
                             </label>
                         </div>
                     </div>
@@ -158,6 +167,30 @@
                         </div>
                         <div id="selectedMedicinesList" class="space-y-2">
                             <!-- Selected medicines will appear here -->
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Allocation Section -->
+                <div id="allocationSection" class="bg-indigo-50 p-4 rounded-lg hidden">
+                    <h4 class="text-lg font-medium text-indigo-900 mb-4">Allocate Service(s)</h4>
+                    <div class="space-y-4">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Search & Select Services</label>
+                            <div class="relative">
+                                <div class="flex">
+                                    <input type="text" id="serviceSearchAlloc" placeholder="Type to search services..."
+                                        class="flex-1 px-3 py-2 border border-gray-300 rounded-l-md focus:outline-none focus:ring-2 focus:ring-indigo-500" autocomplete="off">
+                                    <button type="button" onclick="clearServiceSearch()" id="clearServiceSearch"
+                                        class="px-3 py-2 bg-gray-100 border border-l-0 border-gray-300 rounded-r-md hover:bg-gray-200 hidden">
+                                        <i class="fas fa-times"></i>
+                                    </button>
+                                </div>
+                                <div id="serviceResultsAlloc" class="absolute z-10 w-full bg-white border border-gray-300 rounded-md mt-1 hidden max-h-60 overflow-y-auto shadow-lg"></div>
+                            </div>
+                        </div>
+                        <div id="selectedAllocationsList" class="space-y-2">
+                            <!-- Selected allocations will appear here -->
                         </div>
                     </div>
                 </div>
@@ -214,15 +247,21 @@
                 return false;
             }
 
-            // Check if tests are selected when lab option is chosen
-            if ((nextStep.value === 'lab_tests' || nextStep.value === 'both') && selectedTests.length === 0) {
+            // Check if tests are selected when lab option is chosen (includes new combined options)
+            if ((nextStep.value === 'lab_tests' || nextStep.value === 'lab_medicine' || nextStep.value === 'all') && selectedTests.length === 0) {
                 alert('Please select at least one lab test');
                 return false;
             }
 
-            // Check if medicines are selected when medicine option is chosen
-            if ((nextStep.value === 'medicine' || nextStep.value === 'both') && selectedMedicines.length === 0) {
+            // Check if medicines are selected when medicine option is chosen (includes combined options)
+            if ((nextStep.value === 'medicine' || nextStep.value === 'lab_medicine' || nextStep.value === 'all') && selectedMedicines.length === 0) {
                 alert('Please select at least one medicine');
+                return false;
+            }
+
+            // Check if allocations are selected when allocation option is chosen
+            if ((nextStep.value === 'allocation' || nextStep.value === 'all') && selectedAllocations.length === 0) {
+                alert('Please select at least one service to allocate');
                 return false;
             }
             
@@ -252,7 +291,7 @@
             return true;
         }
 
-        // Ensure selectedMedicines contains the latest values from the DOM inputs
+    // Ensure selectedMedicines contains the latest values from the DOM inputs
         function syncSelectedMedicinesFromDOM() {
             try {
                 const listDiv = document.getElementById('selectedMedicinesList');
@@ -295,6 +334,138 @@
             }
         }
 
+        // --- Allocation support ---
+        let selectedAllocations = [];
+        let serviceSearchTimeout;
+
+        const serviceSearchElement2 = document.getElementById('serviceSearchAlloc');
+        if (serviceSearchElement2) {
+            serviceSearchElement2.addEventListener('input', function() {
+                clearTimeout(serviceSearchTimeout);
+                const q = this.value.trim();
+                const clearBtn = document.getElementById('clearServiceSearch');
+                if (q.length > 0) clearBtn.classList.remove('hidden'); else { clearBtn.classList.add('hidden'); document.getElementById('serviceResultsAlloc').classList.add('hidden'); }
+                if (q.length < 2) return;
+
+                serviceSearchTimeout = setTimeout(() => {
+                    fetch(`${BASE_PATH}/doctor/search_services?q=${encodeURIComponent(q)}`)
+                        .then(r => r.json())
+                        .then(services => displayServiceResults(services))
+                        .catch(e => console.error('service search error', e));
+                }, 250);
+            });
+        }
+
+        function displayServiceResults(services) {
+            const resultsDiv = document.getElementById('serviceResultsAlloc');
+            resultsDiv.innerHTML = '';
+            if (!Array.isArray(services) || services.length === 0) {
+                resultsDiv.innerHTML = '<div class="p-3 text-gray-500">No services found</div>';
+            } else {
+                services.forEach(s => {
+                    const isSelected = selectedAllocations.some(a => a.service_id === s.id);
+                    const div = document.createElement('div');
+                    div.className = `p-3 hover:bg-gray-100 cursor-pointer border-b ${isSelected? 'bg-indigo-50':''}`;
+                    div.innerHTML = `<div class="font-medium">${s.name}</div><div class="text-sm text-gray-600">${s.description || ''} - Tsh ${parseFloat(s.price||0).toLocaleString()}</div>`;
+                    if (!isSelected) div.addEventListener('click', () => addAllocation(s));
+                    resultsDiv.appendChild(div);
+                });
+            }
+            resultsDiv.classList.remove('hidden');
+        }
+
+        function addAllocation(service) {
+            if (selectedAllocations.some(a => a.service_id === service.id)) return;
+            selectedAllocations.push({ service_id: service.id, service_name: service.name, assigned_to: null, instructions: '' });
+            updateSelectedAllocationsList();
+            document.getElementById('serviceResultsAlloc').classList.add('hidden');
+            document.getElementById('serviceSearchAlloc').value = '';
+            document.getElementById('clearServiceSearch').classList.add('hidden');
+        }
+
+        function removeAllocation(serviceId) {
+            selectedAllocations = selectedAllocations.filter(a => a.service_id !== serviceId);
+            updateSelectedAllocationsList();
+        }
+
+        function updateAllocationField(serviceId, field, value) {
+            const a = selectedAllocations.find(x => x.service_id === serviceId);
+            if (!a) return;
+            // Only allow 'assigned_to' and 'instructions' as keys for backend compatibility
+            if (field === 'assigned_to' || field === 'instructions') {
+                a[field] = value;
+            }
+            document.getElementById('selectedAllocations').value = JSON.stringify(selectedAllocations);
+        }
+
+        function updateSelectedAllocationsList() {
+            const listDiv = document.getElementById('selectedAllocationsList');
+            if (!listDiv) return;
+            listDiv.innerHTML = '';
+            if (selectedAllocations.length === 0) {
+                listDiv.innerHTML = '<div class="text-gray-500 text-sm">No services selected</div>';
+            } else {
+                selectedAllocations.forEach(item => {
+                    const div = document.createElement('div');
+                    div.className = 'p-3 bg-white border rounded-md';
+                    div.innerHTML = `
+                        <div class="flex justify-between items-start mb-2">
+                            <div>
+                                <div class="font-medium">${item.service_name}</div>
+                                <div class="text-xs text-gray-500">Service ID: ${item.service_id}</div>
+                            </div>
+                            <button type="button" onclick="removeAllocation(${item.service_id})" class="text-red-600 hover:text-red-800"><i class="fas fa-times"></i></button>
+                        </div>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-2">
+                            <div>
+                                <label class="block text-xs text-gray-600">Assign to (staff id)</label>
+                                <input type="text" placeholder="Search staff by name or id" value="" oninput="fetchStaffSuggestions(this, ${item.service_id})" class="w-full px-2 py-1 border border-gray-300 rounded text-sm staff-search-input">
+                                <div class="staff-suggestions mt-1 text-xs text-gray-600"></div>
+                            </div>
+                            <div>
+                                <label class="block text-xs text-gray-600">Instructions</label>
+                                <input type="text" placeholder="e.g., start immediately" value="${item.instructions||''}" onchange="updateAllocationField(${item.service_id}, 'instructions', this.value)" class="w-full px-2 py-1 border border-gray-300 rounded text-sm">
+                            </div>
+                        </div>
+                    `;
+                    listDiv.appendChild(div);
+                });
+            }
+            document.getElementById('selectedAllocations').value = JSON.stringify(selectedAllocations);
+        }
+
+        function fetchStaffSuggestions(inputEl, serviceId) {
+            const q = inputEl.value.trim();
+            const suggestionsDiv = inputEl.closest('div').querySelector('.staff-suggestions');
+            if (q.length < 2) { suggestionsDiv.innerHTML = ''; return; }
+            fetch(`${BASE_PATH}/doctor/search_staff?q=${encodeURIComponent(q)}`)
+                .then(r => r.json())
+                .then(list => {
+                    suggestionsDiv.innerHTML = '';
+                    list.slice(0,8).forEach(s => {
+                        const node = document.createElement('div');
+                        node.className = 'p-1 hover:bg-gray-100 cursor-pointer';
+                        node.textContent = s.first_name + ' ' + s.last_name + ' (id:'+s.id+')';
+                        node.addEventListener('click', () => {
+                            updateAllocationField(serviceId, 'assigned_to', s.id);
+                            inputEl.value = s.first_name + ' ' + s.last_name + ' (id:'+s.id+')';
+                            suggestionsDiv.innerHTML = '';
+                        });
+                        suggestionsDiv.appendChild(node);
+                    });
+                }).catch(e => { console.error('staff search error', e); suggestionsDiv.innerHTML = ''; });
+        }
+
+        function clearServiceSearch() {
+            document.getElementById('serviceSearchAlloc').value = '';
+            document.getElementById('clearServiceSearch').classList.add('hidden');
+            document.getElementById('serviceResultsAlloc').classList.add('hidden');
+        }
+
+        function syncSelectedAllocationsFromDOM() {
+            try { document.getElementById('selectedAllocations').value = JSON.stringify(selectedAllocations); } catch (e) { console.warn(e); }
+        }
+
         function viewPatientDetails(patientId) {
             window.location.href = '/KJ/doctor/view_patient/' + patientId;
         }
@@ -312,30 +483,34 @@
         }
 
         function closeAttendModal() {
-            document.getElementById('attendModal').classList.add('hidden');
-            // Restore body scrolling
-            document.body.style.overflow = 'auto';
+            // Go back to patient view page
+            const patientId = document.querySelector('input[name="patient_id"]').value;
+            if (patientId) {
+                window.location.href = `${BASE_PATH}/doctor/view_patient/${patientId}`;
+            } else {
+                window.history.back();
+            }
         }
 
         function toggleSection(section) {
             const labSection = document.getElementById('labSection');
             const medicineSection = document.getElementById('medicineSection');
+            const allocationSection = document.getElementById('allocationSection');
 
             // Hide all sections first
-            labSection.classList.add('hidden');
-            medicineSection.classList.add('hidden');
+            if (labSection) labSection.classList.add('hidden');
+            if (medicineSection) medicineSection.classList.add('hidden');
+            if (allocationSection) allocationSection.classList.add('hidden');
 
-            // Show relevant sections
-            if (section === 'lab_tests' || section === 'both') {
-                labSection.classList.remove('hidden');
+            // Show relevant sections based on selection
+            if (section === 'lab_tests' || section === 'lab_medicine' || section === 'all') {
+                if (labSection) labSection.classList.remove('hidden');
             }
-            if (section === 'medicine' || section === 'both') {
-                medicineSection.classList.remove('hidden');
-                // if both selected, focus the medicine search box so the doctor can search medicines immediately
-                const medSearch = document.getElementById('medicineSearch');
-                if (medSearch && section === 'both') {
-                    medSearch.focus();
-                }
+            if (section === 'medicine' || section === 'lab_medicine' || section === 'all') {
+                if (medicineSection) medicineSection.classList.remove('hidden');
+            }
+            if (section === 'allocation' || section === 'all') {
+                if (allocationSection) allocationSection.classList.remove('hidden');
             }
         }
 

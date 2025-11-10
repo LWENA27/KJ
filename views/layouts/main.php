@@ -1102,6 +1102,7 @@
                             $menu_items = [
                                 ['url' => 'receptionist/dashboard', 'icon' => 'fas fa-chart-line', 'text' => 'Dashboard', 'badge' => '', 'color' => 'blue'],
                                 ['url' => 'receptionist/patients', 'icon' => 'fas fa-users', 'text' => 'Patients', 'badge' => isset($sidebar_data['pending_patients']) ? $sidebar_data['pending_patients'] : '0', 'color' => 'blue'],
+                                ['url' => 'receptionist/tasks', 'icon' => 'fas fa-tasks', 'text' => 'Tasks', 'badge' => isset($sidebar_data['pending_tasks']) ? $sidebar_data['pending_tasks'] : '', 'color' => 'orange'],
                                 ['url' => 'receptionist/appointments', 'icon' => 'fas fa-calendar-check', 'text' => 'Appointments', 'badge' => isset($sidebar_data['upcoming_appointments']) ? $sidebar_data['upcoming_appointments'] : '0', 'color' => 'green'],
                                 ['url' => 'receptionist/payments', 'icon' => 'fas fa-exclamation-circle', 'text' => 'Pending Payments', 'badge' => '', 'color' => 'red'],
                                 ['url' => 'receptionist/payment_history', 'icon' => 'fas fa-history', 'text' => 'Payment History', 'badge' => '', 'color' => 'purple'],

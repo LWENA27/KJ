@@ -84,41 +84,7 @@
         </div>
         <?php endif; ?>
 
-        <!-- Today's Completed Consultations -->
-        <?php if (!empty($today_completed)): ?>
-        <div class="card overflow-hidden">
-            <div class="px-6 py-4 border-b border-neutral-200">
-                <h3 class="text-lg font-semibold text-neutral-900">Today's Completed Consultations</h3>
-            </div>
-            <div class="p-6">
-                <div class="space-y-3">
-                    <?php foreach ($today_completed as $consultation): ?>
-                    <div class="flex items-center justify-between p-3 border border-success-200 bg-success-50 rounded-lg">
-                        <div class="flex items-center space-x-3">
-                            <div class="w-8 h-8 bg-success-500 rounded-full flex items-center justify-center text-white text-sm">
-                                <i class="fas fa-check"></i>
-                            </div>
-                            <div>
-                                <span class="font-medium text-neutral-900">
-                                    <?php echo htmlspecialchars($consultation['first_name'] . ' ' . $consultation['last_name']); ?>
-                                </span>
-                                    <span class="text-sm text-neutral-600 ml-2">
-                                    - Completed at <?php echo htmlspecialchars(safe_date('H:i', $consultation['created_at'], 'N/A')); ?>
-                                </span>
-                            </div>
-                        </div>
-                        <a href="<?php echo htmlspecialchars($BASE_PATH); ?>/doctor/view_patient?id=<?php echo $consultation['patient_id']; ?>" 
-                           class="text-success-600 hover:text-success-700">
-                            <i class="fas fa-eye"></i>
-                        </a>
-                    </div>
-                    <?php endforeach; ?>
-                </div>
-            </div>
-        </div>
-        <?php endif; ?>
-    </div>
-
+        
     <!-- Available Patients -->
     <!-- Available Patients for Consultation -->
 <div class="bg-white rounded-lg shadow mt-6">
@@ -197,6 +163,8 @@
     </div>
 </div>
 
+
+
     <!-- Recent Lab Results -->
     <div class="bg-white rounded-lg shadow">
         <div class="px-6 py-4 border-b border-gray-200">
@@ -254,6 +222,42 @@
         </div>
     </div>
 </div>
+
+<!-- Today's Completed Consultations -->
+        <?php if (!empty($today_completed)): ?>
+        <div class="card overflow-hidden">
+            <div class="px-6 py-4 border-b border-neutral-200">
+                <h3 class="text-lg font-semibold text-neutral-900">Today's Completed Consultations</h3>
+            </div>
+            <div class="p-6">
+                <div class="space-y-3">
+                    <?php foreach ($today_completed as $consultation): ?>
+                    <div class="flex items-center justify-between p-3 border border-success-200 bg-success-50 rounded-lg">
+                        <div class="flex items-center space-x-3">
+                            <div class="w-8 h-8 bg-success-500 rounded-full flex items-center justify-center text-white text-sm">
+                                <i class="fas fa-check"></i>
+                            </div>
+                            <div>
+                                <span class="font-medium text-neutral-900">
+                                    <?php echo htmlspecialchars($consultation['first_name'] . ' ' . $consultation['last_name']); ?>
+                                </span>
+                                    <span class="text-sm text-neutral-600 ml-2">
+                                    - Completed at <?php echo htmlspecialchars(safe_date('H:i', $consultation['created_at'], 'N/A')); ?>
+                                </span>
+                            </div>
+                        </div>
+                        <a href="<?php echo htmlspecialchars($BASE_PATH); ?>/doctor/view_patient?id=<?php echo $consultation['patient_id']; ?>" 
+                           class="text-success-600 hover:text-success-700">
+                            <i class="fas fa-eye"></i>
+                        </a>
+                    </div>
+                    <?php endforeach; ?>
+                </div>
+            </div>
+        </div>
+        <?php endif; ?>
+    </div>
+
 
 <script>
 function viewPatientDetails(patientId) {
