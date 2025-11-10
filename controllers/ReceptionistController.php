@@ -1144,7 +1144,7 @@ class ReceptionistController extends BaseController
         try {
             $medicine_id = intval($_POST['medicine_id']);
             $new_quantity = intval($_POST['new_quantity']);
-            $action = $_POST['action']; // 'add' or 'set'
+            $action = $_POST['stock_action']; // 'add' or 'set'
 
             if ($medicine_id <= 0 || $new_quantity < 0) {
                 throw new Exception('Invalid medicine ID or quantity');
@@ -1164,10 +1164,10 @@ class ReceptionistController extends BaseController
                 $batch_number = 'BATCH-' . date('Ymd-His') . '-' . str_pad($medicine_id, 4, '0', STR_PAD_LEFT);
                 $batch_stmt = $this->pdo->prepare("
                     INSERT INTO medicine_batches 
-                    (medicine_id, batch_number, quantity_received, quantity_remaining, unit_cost, received_date)
-                    VALUES (?, ?, ?, ?, ?, NOW())
+                    (medicine_id, batch_number, quantity_received, quantity_remaining, cost_price, expiry_date, received_date, received_by, status)
+                    VALUES (?, ?, ?, ?, ?, DATE_ADD(CURDATE(), INTERVAL 2 YEAR), NOW(), ?, 'active')
                 ");
-                $batch_stmt->execute([$medicine_id, $batch_number, $new_quantity, $new_quantity, $medicine['unit_price']]);
+                $batch_stmt->execute([$medicine_id, $batch_number, $new_quantity, $new_quantity, $medicine['unit_price'], $_SESSION['user_id'] ?? 1]);
             } else {
                 // 'set' action: adjust most recent batch
                 $batch_stmt = $this->pdo->prepare("
@@ -1191,10 +1191,10 @@ class ReceptionistController extends BaseController
                     $batch_number = 'BATCH-' . date('Ymd-His') . '-' . str_pad($medicine_id, 4, '0', STR_PAD_LEFT);
                     $create_stmt = $this->pdo->prepare("
                         INSERT INTO medicine_batches 
-                        (medicine_id, batch_number, quantity_received, quantity_remaining, unit_cost, received_date)
-                        VALUES (?, ?, ?, ?, ?, NOW())
+                        (medicine_id, batch_number, quantity_received, quantity_remaining, cost_price, expiry_date, received_date, received_by, status)
+                        VALUES (?, ?, ?, ?, ?, DATE_ADD(CURDATE(), INTERVAL 2 YEAR), NOW(), ?, 'active')
                     ");
-                    $create_stmt->execute([$medicine_id, $batch_number, $new_quantity, $new_quantity, $medicine['unit_price']]);
+                    $create_stmt->execute([$medicine_id, $batch_number, $new_quantity, $new_quantity, $medicine['unit_price'], $_SESSION['user_id'] ?? 1]);
                 }
             }
 

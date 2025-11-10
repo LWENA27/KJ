@@ -1,5 +1,4 @@
-<?php
-$pageTitle = 'Medicine Management';
+<?php $title = 'Medicine Management';
 $userRole = 'receptionist';
 
 if (!isset($_SESSION['user_id']) || $_SESSION['user_role'] !== 'receptionist') {
@@ -373,7 +372,7 @@ $recentTransactions = $recent_transactions ?? [];
             </button>
         </div>
         <form method="POST" action="medicine" class="modal-body">
-            <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($_SESSION['csrf_token']) ?>">
+            <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($csrf_token ?? $_SESSION['csrf_token'] ?? '') ?>">
             <input type="hidden" name="action" value="add_medicine">
 
             <div class="form-group">
@@ -447,7 +446,7 @@ $recentTransactions = $recent_transactions ?? [];
             </button>
         </div>
         <form method="POST" action="medicine" class="modal-body">
-            <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($_SESSION['csrf_token']) ?>">
+            <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($csrf_token ?? $_SESSION['csrf_token'] ?? '') ?>">
             <input type="hidden" name="action" value="update_medicine_stock">
             <input type="hidden" name="medicine_id" id="stock_medicine_id">
 
@@ -460,11 +459,11 @@ $recentTransactions = $recent_transactions ?? [];
                 <label class="form-label">Action</label>
                 <div class="flex gap-4">
                     <label class="flex items-center">
-                        <input type="radio" name="action" value="add" checked class="mr-2">
+                        <input type="radio" name="stock_action" value="add" checked class="mr-2">
                         Add to current stock
                     </label>
                     <label class="flex items-center">
-                        <input type="radio" name="action" value="set" class="mr-2">
+                        <input type="radio" name="stock_action" value="set" class="mr-2">
                         Set new stock level
                     </label>
                 </div>
@@ -714,29 +713,19 @@ function formatTsh(amount) {
     return 'TSh ' + num.toLocaleString('en-TZ');
 }
 
-    function formatTsh(amount) {
-        // simple formatting; adjust as needed
-        amount = Number(amount) || 0;
-        return 'TSh ' + amount.toLocaleString();
-    }
-
-    function escapeHtml(unsafe) {
-        return (unsafe + '').replace(/[&<"'>]/g, function(m) { return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[m]; });
-    }
-
-    // Reuse existing modal helpers in this file:
-    function showModal(modalId) {
-        const modal = document.getElementById(modalId);
-        if (!modal) return;
-        modal.style.display = 'flex';
-        modal.classList.add('show');
-        document.body.style.overflow = 'hidden';
-    }
-    function hideModal(modalId) {
-        const modal = document.getElementById(modalId);
-        if (!modal) return;
-        modal.style.display = 'none';
-        modal.classList.remove('show');
-        document.body.style.overflow = '';
-    }
+// Reuse existing modal helpers in this file:
+function showModal(modalId) {
+    const modal = document.getElementById(modalId);
+    if (!modal) return;
+    modal.style.display = 'flex';
+    modal.classList.add('show');
+    document.body.style.overflow = 'hidden';
+}
+function hideModal(modalId) {
+    const modal = document.getElementById(modalId);
+    if (!modal) return;
+    modal.style.display = 'none';
+    modal.classList.remove('show');
+    document.body.style.overflow = '';
+}
 </script>

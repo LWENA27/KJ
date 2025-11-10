@@ -493,12 +493,9 @@ document.getElementById('medicineModal')?.addEventListener('click', function(e) 
                 <label class="form-label">Medicine Prescriptions</label>
                 <div id="medicineList" class="space-y-3">
                     <div class="medicine-item grid grid-cols-1 md:grid-cols-3 gap-3 p-3 border border-neutral-200 rounded-lg">
-                        <select name="medicines[0][medicine_id]" class="form-input" required>
+                        <select name="medicines[0][medicine_id]" class="form-input medicine-select" required>
                             <option value="">Select Medicine</option>
-                            <option value="1">Paracetamol 500mg</option>
-                            <option value="2">Amoxicillin 250mg</option>
-                            <option value="3">Ibuprofen 400mg</option>
-                            <option value="4">Multivitamin</option>
+                            <!-- Options will be populated dynamically -->
                         </select>
                         <input type="text" name="medicines[0][quantity]" placeholder="Quantity" class="form-input" required>
                         <input type="text" name="medicines[0][dosage]" placeholder="Dosage instructions" class="form-input" required>
@@ -526,6 +523,65 @@ document.getElementById('medicineModal')?.addEventListener('click', function(e) 
 </div>
 
 <script>
+// Global variable to store loaded medicines
+let availableMedicines = [];
+
+// Load medicines from API on page load
+document.addEventListener('DOMContentLoaded', function() {
+    loadMedicines();
+});
+
+function loadMedicines() {
+    fetch('/KJ/doctor/search_medicines', {
+        method: 'GET',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-Requested-With': 'XMLHttpRequest'
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        availableMedicines = data;
+        // Populate all existing medicine selects
+        document.querySelectorAll('.medicine-select').forEach(select => {
+            populateMedicineSelect(select);
+        });
+    })
+    .catch(error => {
+        console.error('Error loading medicines:', error);
+        // Fallback: show error in selects
+        document.querySelectorAll('.medicine-select').forEach(select => {
+            select.innerHTML = '<option value="">Error loading medicines</option>';
+        });
+    });
+}
+
+function populateMedicineSelect(selectElement) {
+    if (!selectElement) return;
+    
+    // Keep the "Select Medicine" option
+    selectElement.innerHTML = '<option value="">Select Medicine</option>';
+    
+    // Add all available medicines
+    availableMedicines.forEach(medicine => {
+        const option = document.createElement('option');
+        option.value = medicine.id;
+        
+        // Format: "Name Strength (Stock: X)"
+        let displayName = medicine.name;
+        if (medicine.strength) {
+            displayName += ' ' + medicine.strength;
+        }
+        if (medicine.unit) {
+            displayName += medicine.unit;
+        }
+        displayName += ' (Stock: ' + (medicine.stock_quantity || 0) + ')';
+        
+        option.textContent = displayName;
+        selectElement.appendChild(option);
+    });
+}
+
 let medicineCounter = 1;
 
 function addMedicine() {
@@ -533,17 +589,18 @@ function addMedicine() {
     const medicineItem = document.createElement('div');
     medicineItem.className = 'medicine-item grid grid-cols-1 md:grid-cols-3 gap-3 p-3 border border-neutral-200 rounded-lg';
     medicineItem.innerHTML = `
-        <select name="medicines[${medicineCounter}][medicine_id]" class="form-input" required>
+        <select name="medicines[${medicineCounter}][medicine_id]" class="form-input medicine-select" required>
             <option value="">Select Medicine</option>
-            <option value="1">Paracetamol 500mg</option>
-            <option value="2">Amoxicillin 250mg</option>
-            <option value="3">Ibuprofen 400mg</option>
-            <option value="4">Multivitamin</option>
+            <!-- Options will be populated dynamically -->
         </select>
         <input type="text" name="medicines[${medicineCounter}][quantity]" placeholder="Quantity" class="form-input" required>
         <input type="text" name="medicines[${medicineCounter}][dosage]" placeholder="Dosage instructions" class="form-input" required>
     `;
     medicineList.appendChild(medicineItem);
+    
+    // Populate the new select with medicine options
+    populateMedicineSelect(medicineItem.querySelector('.medicine-select'));
+    
     medicineCounter++;
 }
 
