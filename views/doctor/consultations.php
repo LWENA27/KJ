@@ -1,3 +1,5 @@
+<?php $title = "Patient Consultations"; ?>
+
 <div class="space-y-6">
     <!-- Header Section -->
     <div class="bg-gradient-to-r from-blue-600 to-blue-700 rounded-lg shadow-lg p-6 text-white">

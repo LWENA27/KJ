@@ -702,37 +702,8 @@ class DoctorController extends BaseController {
                     
                     if (!$service) continue;
 
-                    // Create pending payment if service has a price
-                    if ($service['price'] > 0) {
-                        $stmt = $this->pdo->prepare("
-                            SELECT id FROM payments 
-                            WHERE visit_id = ? AND item_type = 'service' AND item_id = ?
-                            LIMIT 1
-                        ");
-                        $stmt->execute([$visit_id, $service_id]);
-                        $existing_payment = $stmt->fetch(PDO::FETCH_ASSOC);
-
-                        if (!$existing_payment) {
-                            $stmt = $this->pdo->prepare("
-                                INSERT INTO payments (
-                                    visit_id, patient_id, item_id, item_type, amount, 
-                                    payment_type, payment_method, payment_status, 
-                                    collected_by, payment_date
-                                ) VALUES (
-                                    ?, ?, ?, 'service', ?, 
-                                    'minor_service', 'cash', 'pending', 
-                                    ?, NOW()
-                                )
-                            ");
-                            $stmt->execute([
-                                $visit_id, 
-                                $patient_id, 
-                                $service_id, 
-                                $service['price'], 
-                                $doctor_id
-                            ]);
-                        }
-                    }
+                    // Don't create pending payment records - payments should only be created when actually received
+                    // The service_orders table is the source of truth for services that need payment
 
                     // Create service order
                     $stmt = $this->pdo->prepare("
@@ -1034,6 +1005,68 @@ class DoctorController extends BaseController {
 
         $this->render('doctor/lab_results', [
             'results' => $results,
+            'csrf_token' => $this->generateCSRF()
+        ]);
+    }
+
+    public function allocated_services() {
+        $doctor_id = $_SESSION['user_id'];
+
+        // Get all service orders allocated by this doctor
+        $stmt = $this->pdo->prepare("
+            SELECT 
+                so.id,
+                so.patient_id,
+                so.visit_id,
+                so.status,
+                so.notes,
+                so.created_at,
+                so.updated_at,
+                so.performed_at,
+                p.first_name,
+                p.last_name,
+                p.registration_number,
+                pv.visit_date,
+                s.service_name,
+                s.description as service_description,
+                s.price,
+                u.first_name as staff_first,
+                u.last_name as staff_last,
+                u.role as staff_role,
+                (SELECT COUNT(*) FROM payments 
+                 WHERE item_id = so.id 
+                 AND item_type = 'service_order' 
+                 AND payment_status = 'paid') as payment_count
+            FROM service_orders so
+            JOIN patients p ON so.patient_id = p.id
+            JOIN services s ON so.service_id = s.id
+            LEFT JOIN patient_visits pv ON so.visit_id = pv.id
+            LEFT JOIN users u ON so.performed_by = u.id
+            WHERE so.ordered_by = ?
+            ORDER BY so.created_at DESC
+        ");
+        $stmt->execute([$doctor_id]);
+        $allocations = $stmt->fetchAll();
+
+        // Count by status
+        $pending_count = 0;
+        $in_progress_count = 0;
+        $completed_count = 0;
+        $unpaid_count = 0;
+
+        foreach ($allocations as $allocation) {
+            if ($allocation['status'] === 'pending') $pending_count++;
+            if ($allocation['status'] === 'in_progress') $in_progress_count++;
+            if ($allocation['status'] === 'completed') $completed_count++;
+            if ($allocation['payment_count'] == 0) $unpaid_count++;
+        }
+
+        $this->render('doctor/allocated_services', [
+            'allocations' => $allocations,
+            'pending_count' => $pending_count,
+            'in_progress_count' => $in_progress_count,
+            'completed_count' => $completed_count,
+            'unpaid_count' => $unpaid_count,
             'csrf_token' => $this->generateCSRF()
         ]);
     }
@@ -1625,34 +1658,8 @@ class DoctorController extends BaseController {
                 continue;
             }
 
-            // Create pending payment if needed
-            if ($service['price'] > 0) {
-                $stmt = $this->pdo->prepare("
-                    SELECT id FROM payments 
-                    WHERE visit_id = ? AND item_type = 'service' AND item_id = ?
-                    LIMIT 1
-                ");
-                $stmt->execute([$visit_id, $service_id]);
-                $existing_payment = $stmt->fetch(PDO::FETCH_ASSOC);
-
-                if (!$existing_payment) {
-                    $stmt = $this->pdo->prepare("
-                        INSERT INTO payments (
-                            visit_id, patient_id, item_id, item_type, amount, 
-                            payment_type, payment_method, payment_status, 
-                            collected_by, payment_date
-                        ) VALUES (
-                            ?, ?, ?, 'service', ?, 
-                            'minor_service', 'cash', 'pending', 
-                            ?, NOW()
-                        )
-                    ");
-                    $stmt->execute([
-                        $visit_id, $patient_id, $service_id, 
-                        $service['price'], $doctor_id
-                    ]);
-                }
-            }
+            // Don't create pending payment records - payments should only be created when actually received
+            // The service_orders table is the source of truth for services that need payment
 
             // Verify staff if assigned
             $staff = null;

@@ -43,10 +43,25 @@
                                 <td class="px-4 py-3 text-sm text-gray-700"><?php echo $i + 1; ?></td>
                                 <td class="px-4 py-3 text-sm text-gray-800">
                                     <div class="font-medium"><?php echo htmlspecialchars($t['first_name'] . ' ' . $t['last_name']); ?></div>
-                                    <div class="text-xs text-gray-500">Patient ID: #<?php echo $t['patient_id']; ?></div>
+                                    <div class="text-xs text-gray-500">Reg: <?php echo htmlspecialchars($t['registration_number'] ?? 'N/A'); ?></div>
                                 </td>
                                 <td class="px-4 py-3 text-sm text-gray-700"><?php echo $t['visit_date'] ? date('M j, Y H:i', strtotime($t['visit_date'])) : 'N/A'; ?></td>
-                                <td class="px-4 py-3 text-sm text-gray-800"><?php echo htmlspecialchars($t['workflow_step']); ?><br><span class="text-xs text-gray-500"><?php echo nl2br(htmlspecialchars($t['notes'] ?? '')); ?></span></td>
+                                <td class="px-4 py-3 text-sm text-gray-800">
+                                    <div class="font-medium"><?php echo htmlspecialchars($t['service_name'] ?? 'Task'); ?></div>
+                                    <?php if (!empty($t['service_description'])): ?>
+                                        <div class="text-xs text-gray-500 mt-1"><?php echo htmlspecialchars($t['service_description']); ?></div>
+                                    <?php endif; ?>
+                                    <?php if (!empty($t['notes'])): ?>
+                                        <div class="text-xs text-gray-500 mt-1 border-t pt-1">
+                                            <strong>Notes:</strong><br><?php echo nl2br(htmlspecialchars($t['notes'])); ?>
+                                        </div>
+                                    <?php endif; ?>
+                                    <?php if (!empty($t['ordered_by_first'])): ?>
+                                        <div class="text-xs text-gray-400 mt-1">
+                                            Ordered by: <?php echo htmlspecialchars($t['ordered_by_first'] . ' ' . $t['ordered_by_last']); ?>
+                                        </div>
+                                    <?php endif; ?>
+                                </td>
                                 <td class="px-4 py-3 text-sm">
                                     <span class="px-2 py-1 rounded-full text-xs font-medium <?php echo ($t['status'] === 'pending') ? 'bg-yellow-100 text-yellow-800' : (($t['status'] === 'in_progress') ? 'bg-blue-100 text-blue-800' : 'bg-green-100 text-green-800'); ?>"><?php echo ucfirst($t['status']); ?></span>
                                 </td>

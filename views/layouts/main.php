@@ -1115,6 +1115,7 @@
                                 ['url' => 'doctor/consultations', 'icon' => 'fas fa-stethoscope', 'text' => 'Consultations'],
                                 ['url' => 'doctor/patients', 'icon' => 'fas fa-user-injured', 'text' => 'Patients'],
                                 ['url' => 'doctor/lab_results', 'icon' => 'fas fa-flask', 'text' => 'Lab Results'],
+                                ['url' => 'doctor/allocated_services', 'icon' => 'fas fa-tasks', 'text' => 'Allocated Services'],
                             ];
                         } elseif ($role === 'lab_technician') {
                             $menu_items = [
