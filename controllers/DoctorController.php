@@ -493,147 +493,315 @@ class DoctorController extends BaseController {
     }
 
     public function start_consultation() {
-        if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
-            $this->redirect('doctor/dashboard');
-        }
-
-        $this->validateCSRF();
-
-        $patient_id = $_POST['patient_id'];
-        $doctor_id = $_SESSION['user_id'];
-
-        // Determine latest visit for patient
-        $stmt = $this->pdo->prepare("SELECT id FROM patient_visits WHERE patient_id = ? ORDER BY created_at DESC LIMIT 1");
-        $stmt->execute([$patient_id]);
-        $row = $stmt->fetch();
-        $visit_id = $row['id'] ?? null;
-
-        if (!$visit_id) {
-            $_SESSION['error'] = 'No visit found for this patient';
-            $this->redirect('doctor/view_patient/' . $patient_id);
-        }
-
-        // Check if doctor can attend this visit
-        $can = $this->canAttend($visit_id);
-        if (!$can['ok']) {
-            $_SESSION['error'] = 'Cannot start consultation: ' . $can['reason'];
-            $this->redirect('doctor/view_patient/' . $patient_id);
-        }
-
-        // Start or resume consultation using BaseController helper
-        $start = $this->startConsultation($visit_id, $doctor_id);
-        if (!$start['ok']) {
-            $_SESSION['error'] = 'Failed to start consultation: ' . ($start['message'] ?? $start['reason'] ?? 'unknown');
-            $this->redirect('doctor/view_patient/' . $patient_id);
-        }
-
-        $consultation_id = $start['consultation_id'];
-
-        // Now proceed to handle submitted consultation details (lab tests, medicines, diagnosis)
-        try {
-            $this->pdo->beginTransaction();
-
-            // Update the consultation record with submitted data
-            $stmt = $this->pdo->prepare("UPDATE consultations SET main_complaint = ?, on_examination = ?, preliminary_diagnosis = ?, final_diagnosis = ?, treatment_plan = ?, status = 'completed', completed_at = NOW(), updated_at = NOW() WHERE id = ?");
-            $stmt->execute([
-                $_POST['main_complaint'] ?? '',
-                $_POST['on_examination'] ?? '',
-                $_POST['preliminary_diagnosis'] ?? '',
-                $_POST['final_diagnosis'] ?? ($_POST['diagnosis'] ?? ''),
-                $_POST['treatment_plan'] ?? '',
-                $consultation_id
-            ]);
-
-            // Handle selected lab tests - create lab test orders
-            if (!empty($_POST['selected_tests'])) {
-                $selected_tests = json_decode($_POST['selected_tests'], true);
-                if (is_array($selected_tests)) {
-                    // Find a lab technician for assignment
-                    $stmtTech = $this->pdo->prepare("SELECT id FROM users WHERE role = 'lab_technician' AND is_active = 1 LIMIT 1");
-                    $stmtTech->execute();
-                    $technician = $stmtTech->fetch();
-                    $technician_id = $technician['id'] ?? null;
-
-                    // Create lab test orders for each selected test
-                    $stmtOrder = $this->pdo->prepare("
-                        INSERT INTO lab_test_orders 
-                        (visit_id, patient_id, consultation_id, test_id, ordered_by, assigned_to, priority, status, created_at) 
-                        VALUES (?, ?, ?, ?, ?, ?, 'normal', 'pending', NOW())
-                    ");
-                    
-                    foreach ($selected_tests as $test_id) {
-                        $stmtOrder->execute([
-                            $visit_id,
-                            $patient_id,
-                            $consultation_id,
-                            $test_id,
-                            $doctor_id,
-                            $technician_id
-                        ]);
-                    }
-                    
-                    // Update workflow - patient needs to pay for lab tests
-                    $this->updateWorkflowStatus($patient_id, 'pending_payment', ['lab_tests_ordered' => true]);
-                }
-            }
-
-            // Handle selected medicines
-            if (!empty($_POST['selected_medicines'])) {
-                $selected_medicines = json_decode($_POST['selected_medicines'], true);
-                if (is_array($selected_medicines)) {
-                    // Create prescriptions for each selected medicine
-                    $stmtPrescription = $this->pdo->prepare("
-                        INSERT INTO prescriptions 
-                        (visit_id, patient_id, consultation_id, doctor_id, medicine_id, 
-                         quantity_prescribed, dosage, frequency, duration, instructions, status, created_at) 
-                        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending', NOW())
-                    ");
-                    
-                    foreach ($selected_medicines as $medicine_data) {
-                        $stmtPrescription->execute([
-                            $visit_id,
-                            $patient_id,
-                            $consultation_id,
-                            $doctor_id,
-                            $medicine_data['id'],
-                            $medicine_data['quantity'] ?? 1,
-                            $medicine_data['dosage'] ?? '',
-                            $medicine_data['frequency'] ?? 'as prescribed',
-                            $medicine_data['duration'] ?? '',
-                            $medicine_data['instructions'] ?? '',
-                        ]);
-                    }
-                    
-                    $this->updateWorkflowStatus($patient_id, 'pending_payment', ['medicine_prescribed' => true]);
-                }
-            }
-
-            // Final workflow update and determine where to redirect
-            $has_lab_tests = !empty($_POST['selected_tests']);
-            $has_medicines = !empty($_POST['selected_medicines']);
-            
-            if (!$has_lab_tests && !$has_medicines) {
-                $this->updateWorkflowStatus($patient_id, 'completed');
-            }
-
-            $this->pdo->commit();
-            
-            // Redirect based on what was ordered
-            if ($has_lab_tests || $has_medicines) {
-                $_SESSION['success'] = 'Consultation completed successfully. Patient needs to make payment for lab tests/medicines.';
-                // Redirect to receptionist payments page so receptionist can process payment
-                $this->redirect('receptionist/payments');
-            } else {
-                $_SESSION['success'] = 'Consultation completed successfully';
-                $this->redirect('doctor/view_patient/' . $patient_id);
-            }
-        } catch (Exception $e) {
-            $this->pdo->rollBack();
-            $_SESSION['error'] = 'Failed to complete consultation: ' . $e->getMessage();
-            $this->redirect('doctor/view_patient/' . $patient_id);
-        }
+    if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+        $this->redirect('doctor/dashboard');
     }
 
+    $this->validateCSRF();
+
+    $patient_id = $_POST['patient_id'];
+    $doctor_id = $_SESSION['user_id'];
+    $next_step = $_POST['next_step'] ?? '';
+
+    // Determine latest visit for patient
+    $stmt = $this->pdo->prepare("SELECT id FROM patient_visits WHERE patient_id = ? ORDER BY created_at DESC LIMIT 1");
+    $stmt->execute([$patient_id]);
+    $row = $stmt->fetch();
+    $visit_id = $row['id'] ?? null;
+
+    if (!$visit_id) {
+        $_SESSION['error'] = 'No visit found for this patient';
+        $this->redirect('doctor/view_patient/' . $patient_id);
+    }
+
+    // Check if doctor can attend this visit
+    $can = $this->canAttend($visit_id);
+    if (!$can['ok']) {
+        $_SESSION['error'] = 'Cannot start consultation: ' . $can['reason'];
+        $this->redirect('doctor/view_patient/' . $patient_id);
+    }
+
+    // Start or resume consultation using BaseController helper
+    $start = $this->startConsultation($visit_id, $doctor_id);
+    if (!$start['ok']) {
+        $_SESSION['error'] = 'Failed to start consultation: ' . ($start['message'] ?? $start['reason'] ?? 'unknown');
+        $this->redirect('doctor/view_patient/' . $patient_id);
+    }
+
+    $consultation_id = $start['consultation_id'];
+
+    // Debug logging: record incoming POST keys and selected_allocations payload for troubleshooting
+    try {
+        error_log('[start_consultation] POST keys: ' . json_encode(array_keys($_POST)));
+        if (isset($_POST['selected_allocations'])) {
+            error_log('[start_consultation] selected_allocations (raw): ' . $_POST['selected_allocations']);
+            $decodedAlloc = json_decode($_POST['selected_allocations'], true);
+            error_log('[start_consultation] selected_allocations (decoded): ' . json_encode($decodedAlloc));
+        } else {
+            error_log('[start_consultation] selected_allocations: <not set>');
+        }
+    } catch (Exception $e) {
+        error_log('[start_consultation] logging error: ' . $e->getMessage());
+    }
+
+    // Now proceed to handle submitted consultation details
+    try {
+        $this->pdo->beginTransaction();
+
+        // Update the consultation record with submitted data
+        // Use information_schema to avoid unknown-column errors on different schemas
+        $stmtCols = $this->pdo->prepare("SELECT COLUMN_NAME FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'consultations'");
+        $stmtCols->execute();
+        $cols = array_column($stmtCols->fetchAll(PDO::FETCH_ASSOC), 'COLUMN_NAME');
+
+        $updateParts = [];
+        $params = [];
+
+        if (in_array('main_complaint', $cols)) {
+            $updateParts[] = 'main_complaint = ?';
+            $params[] = $_POST['main_complaint'] ?? '';
+        }
+        if (in_array('on_examination', $cols)) {
+            $updateParts[] = 'on_examination = ?';
+            $params[] = $_POST['on_examination'] ?? '';
+        }
+
+        // preliminary_diagnosis may not exist on some databases; fall back to 'diagnosis' if needed
+        if (in_array('preliminary_diagnosis', $cols)) {
+            $updateParts[] = 'preliminary_diagnosis = ?';
+            $params[] = $_POST['preliminary_diagnosis'] ?? '';
+        } elseif (in_array('diagnosis', $cols) && !empty($_POST['preliminary_diagnosis'])) {
+            $updateParts[] = 'diagnosis = ?';
+            $params[] = $_POST['preliminary_diagnosis'];
+        }
+
+        if (in_array('final_diagnosis', $cols)) {
+            $updateParts[] = 'final_diagnosis = ?';
+            $params[] = $_POST['final_diagnosis'] ?? ($_POST['diagnosis'] ?? '');
+        } elseif (in_array('diagnosis', $cols) && empty($_POST['preliminary_diagnosis']) && !empty($_POST['final_diagnosis'])) {
+            // if preliminary wasn't provided but final is, and only 'diagnosis' exists, use it
+            $updateParts[] = 'diagnosis = ?';
+            $params[] = $_POST['final_diagnosis'];
+        }
+
+        if (in_array('treatment_plan', $cols)) {
+            $updateParts[] = 'treatment_plan = ?';
+            $params[] = $_POST['treatment_plan'] ?? '';
+        }
+
+        // Always try to set status/completed/updated if those columns exist
+        if (in_array('status', $cols)) {
+            $updateParts[] = "status = 'completed'";
+        }
+        if (in_array('completed_at', $cols)) {
+            $updateParts[] = 'completed_at = NOW()';
+        }
+        if (in_array('updated_at', $cols)) {
+            $updateParts[] = 'updated_at = NOW()';
+        }
+
+        if (!empty($updateParts)) {
+            $sql = 'UPDATE consultations SET ' . implode(', ', $updateParts) . ' WHERE id = ?';
+            $params[] = $consultation_id;
+            $stmt = $this->pdo->prepare($sql);
+            $stmt->execute($params);
+        }
+
+        // Handle selected lab tests
+        if (!empty($_POST['selected_tests']) && 
+            ($next_step === 'lab_tests' || $next_step === 'lab_medicine' || $next_step === 'all')) {
+            
+            $selected_tests = json_decode($_POST['selected_tests'], true);
+            if (is_array($selected_tests)) {
+                // Find a lab technician for assignment
+                $stmtTech = $this->pdo->prepare("
+                    SELECT id FROM users 
+                    WHERE role = 'lab_technician' AND is_active = 1 
+                    LIMIT 1
+                ");
+                $stmtTech->execute();
+                $technician = $stmtTech->fetch();
+                $technician_id = $technician['id'] ?? null;
+
+                // Create lab test orders
+                $stmtOrder = $this->pdo->prepare("
+                    INSERT INTO lab_test_orders 
+                    (visit_id, patient_id, consultation_id, test_id, ordered_by, assigned_to, priority, status, created_at) 
+                    VALUES (?, ?, ?, ?, ?, ?, 'normal', 'pending', NOW())
+                ");
+                
+                foreach ($selected_tests as $test_id) {
+                    $stmtOrder->execute([
+                        $visit_id,
+                        $patient_id,
+                        $consultation_id,
+                        $test_id,
+                        $doctor_id,
+                        $technician_id
+                    ]);
+                }
+                
+                $this->updateWorkflowStatus($patient_id, 'pending_payment', ['lab_tests_ordered' => true]);
+            }
+        }
+
+        // Handle selected medicines
+        if (!empty($_POST['selected_medicines']) && 
+            ($next_step === 'medicine' || $next_step === 'lab_medicine' || $next_step === 'all')) {
+            
+            $selected_medicines = json_decode($_POST['selected_medicines'], true);
+            if (is_array($selected_medicines)) {
+                $stmtPrescription = $this->pdo->prepare("
+                    INSERT INTO prescriptions 
+                    (visit_id, patient_id, consultation_id, doctor_id, medicine_id, 
+                     quantity_prescribed, dosage, frequency, duration, instructions, status, created_at) 
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending', NOW())
+                ");
+                
+                foreach ($selected_medicines as $medicine_data) {
+                    $stmtPrescription->execute([
+                        $visit_id,
+                        $patient_id,
+                        $consultation_id,
+                        $doctor_id,
+                        $medicine_data['id'],
+                        $medicine_data['quantity'] ?? 1,
+                        $medicine_data['dosage'] ?? '',
+                        $medicine_data['frequency'] ?? 'Once daily',
+                        $medicine_data['duration'] ?? 1,
+                        $medicine_data['instructions'] ?? '',
+                    ]);
+                }
+                
+                $this->updateWorkflowStatus($patient_id, 'pending_payment', ['medicine_prescribed' => true]);
+            }
+        }
+
+        // Handle service allocations (NEW FUNCTIONALITY)
+        if (!empty($_POST['selected_allocations']) && 
+            ($next_step === 'allocation' || $next_step === 'all')) {
+            
+            $selected_allocations = json_decode($_POST['selected_allocations'], true);
+            if (is_array($selected_allocations)) {
+                
+                foreach ($selected_allocations as $allocation) {
+                    $service_id = $allocation['service_id'] ?? null;
+                    $performed_by = $allocation['assigned_to'] ?? null;
+                    $notes = $allocation['instructions'] ?? '';
+
+                    if (!$service_id) continue;
+
+                    // Get service details for payment
+                    $stmt = $this->pdo->prepare("
+                        SELECT id, service_name, price 
+                        FROM services 
+                        WHERE id = ? AND is_active = 1
+                    ");
+                    $stmt->execute([$service_id]);
+                    $service = $stmt->fetch(PDO::FETCH_ASSOC);
+                    
+                    if (!$service) continue;
+
+                    // Create pending payment if service has a price
+                    if ($service['price'] > 0) {
+                        $stmt = $this->pdo->prepare("
+                            SELECT id FROM payments 
+                            WHERE visit_id = ? AND item_type = 'service' AND item_id = ?
+                            LIMIT 1
+                        ");
+                        $stmt->execute([$visit_id, $service_id]);
+                        $existing_payment = $stmt->fetch(PDO::FETCH_ASSOC);
+
+                        if (!$existing_payment) {
+                            $stmt = $this->pdo->prepare("
+                                INSERT INTO payments (
+                                    visit_id, patient_id, item_id, item_type, amount, 
+                                    payment_type, payment_method, payment_status, 
+                                    collected_by, payment_date
+                                ) VALUES (
+                                    ?, ?, ?, 'service', ?, 
+                                    'minor_service', 'cash', 'pending', 
+                                    ?, NOW()
+                                )
+                            ");
+                            $stmt->execute([
+                                $visit_id, 
+                                $patient_id, 
+                                $service_id, 
+                                $service['price'], 
+                                $doctor_id
+                            ]);
+                        }
+                    }
+
+                    // Create service order
+                    $stmt = $this->pdo->prepare("
+                        INSERT INTO service_orders (
+                            visit_id, patient_id, service_id, 
+                            ordered_by, performed_by, 
+                            status, notes, created_at, updated_at
+                        ) VALUES (
+                            ?, ?, ?, 
+                            ?, ?, 
+                            'pending', ?, NOW(), NOW()
+                        )
+                    ");
+                    $stmt->execute([
+                        $visit_id, 
+                        $patient_id, 
+                        $service_id,
+                        $doctor_id, 
+                        $performed_by,
+                        $notes
+                    ]);
+
+                    $order_id = $this->pdo->lastInsertId();
+                    
+                    // Send notification if staff assigned
+                    if ($performed_by) {
+                        $this->sendAllocationNotification([
+                            'id' => $order_id,
+                            'service_id' => $service_id,
+                            'service_name' => $service['service_name'],
+                            'performed_by' => $performed_by
+                        ], $patient_id);
+                    }
+                }
+                
+                $this->updateWorkflowStatus($patient_id, 'services_allocated');
+            }
+        }
+
+        // Final workflow update
+        $has_lab_tests = !empty($_POST['selected_tests']) && 
+                        ($next_step === 'lab_tests' || $next_step === 'lab_medicine' || $next_step === 'all');
+        $has_medicines = !empty($_POST['selected_medicines']) && 
+                        ($next_step === 'medicine' || $next_step === 'lab_medicine' || $next_step === 'all');
+        $has_allocations = !empty($_POST['selected_allocations']) && 
+                          ($next_step === 'allocation' || $next_step === 'all');
+        
+        if (!$has_lab_tests && !$has_medicines && !$has_allocations) {
+            $this->updateWorkflowStatus($patient_id, 'completed');
+        }
+
+        $this->pdo->commit();
+        
+        // Redirect based on what was ordered
+        if ($has_lab_tests || $has_medicines || $has_allocations) {
+            $_SESSION['success'] = 'Consultation completed successfully. Patient needs to make payment.';
+            $this->redirect('receptionist/payments');
+        } else {
+            $_SESSION['success'] = 'Consultation completed successfully';
+            $this->redirect('doctor/view_patient/' . $patient_id);
+        }
+        
+    } catch (Exception $e) {
+        $this->pdo->rollBack();
+        $_SESSION['error'] = 'Failed to complete consultation: ' . $e->getMessage();
+        error_log('Consultation error: ' . $e->getMessage());
+        $this->redirect('doctor/view_patient/' . $patient_id);
+    }
+}
     public function patient_journey($patient_id = null) {
         if ($patient_id === null) {
             $patient_id = filter_input(INPUT_GET, 'id', FILTER_VALIDATE_INT) ?: null;
@@ -748,6 +916,55 @@ class DoctorController extends BaseController {
             error_log('search_medicines error: ' . $e->getMessage());
             exit;
         }
+    }
+
+    /**
+     * Search services for allocation modal (AJAX JSON)
+     */
+    public function search_services() {
+        $q = trim($_GET['q'] ?? '');
+        try {
+            if ($q === '') {
+                $stmt = $this->pdo->prepare("SELECT id, service_name as name, price, description, service_code FROM services WHERE is_active = 1 ORDER BY service_name LIMIT 50");
+                $stmt->execute();
+            } else {
+                $term = '%' . str_replace('%','\\%',$q) . '%';
+                $stmt = $this->pdo->prepare("SELECT id, service_name as name, price, description, service_code FROM services WHERE is_active = 1 AND (service_name LIKE ? OR service_code LIKE ? OR description LIKE ?) ORDER BY service_name LIMIT 50");
+                $stmt->execute([$term, $term, $term]);
+            }
+            $services = $stmt->fetchAll(PDO::FETCH_ASSOC);
+            header('Content-Type: application/json; charset=utf-8');
+            echo json_encode($services);
+        } catch (Exception $e) {
+            header('Content-Type: application/json; charset=utf-8', true, 500);
+            echo json_encode(['error' => 'Failed to search services']);
+            error_log('search_services error: ' . $e->getMessage());
+        }
+        exit;
+    }
+
+    /**
+     * Search staff (users) by name or id for allocation suggestions (AJAX JSON)
+     */
+    public function search_staff() {
+        $q = trim($_GET['q'] ?? '');
+        try {
+            if ($q === '') {
+                echo json_encode([]);
+                exit;
+            }
+            $term = '%' . str_replace('%','\\%',$q) . '%';
+            $stmt = $this->pdo->prepare("SELECT id, first_name, last_name, role FROM users WHERE is_active = 1 AND (CONCAT(first_name, ' ', last_name) LIKE ? OR email LIKE ? OR id LIKE ?) ORDER BY first_name LIMIT 30");
+            $stmt->execute([$term, $term, $term]);
+            $users = $stmt->fetchAll(PDO::FETCH_ASSOC);
+            header('Content-Type: application/json; charset=utf-8');
+            echo json_encode($users);
+        } catch (Exception $e) {
+            header('Content-Type: application/json; charset=utf-8', true, 500);
+            echo json_encode(['error' => 'Failed to search staff']);
+            error_log('search_staff error: ' . $e->getMessage());
+        }
+        exit;
     }
 
     public function view_lab_results($patient_id = null) {
@@ -1131,9 +1348,16 @@ class DoctorController extends BaseController {
             return;
         }
 
+        // Find latest active visit for this patient to attach allocations/orders
+        $stmt = $this->pdo->prepare("SELECT id FROM patient_visits WHERE patient_id = ? ORDER BY created_at DESC LIMIT 1");
+        $stmt->execute([$patient_id]);
+        $latest_visit_row = $stmt->fetch();
+        $latest_visit_id = $latest_visit_row['id'] ?? null;
+
         $this->render('doctor/attend_patient', [
             'patient' => $patient,
-            'csrf_token' => $this->generateCSRF()
+            'csrf_token' => $this->generateCSRF(),
+            'visit_id' => $latest_visit_id
         ]);
     }
 
@@ -1345,154 +1569,183 @@ class DoctorController extends BaseController {
      * Process the allocation form and create service_orders records
      */
     public function save_allocation() {
-        // Validate CSRF (validateCSRF throws Exception on failure)
-        try {
-            $this->validateCSRF($_POST['csrf_token'] ?? null);
-        } catch (Exception $e) {
-            http_response_code(403);
-            echo json_encode(['error' => 'CSRF token invalid']);
-            exit;
-        }
+    // Set JSON header first
+    header('Content-Type: application/json');
+    
+    // Validate CSRF
+    try {
+        $this->validateCSRF($_POST['csrf_token'] ?? null);
+    } catch (Exception $e) {
+        http_response_code(403);
+        echo json_encode(['success' => false, 'error' => 'CSRF token invalid']);
+        exit;
+    }
 
-        $doctor_id = $_SESSION['user_id'];
-        $patient_id = filter_input(INPUT_POST, 'patient_id', FILTER_VALIDATE_INT);
-        $visit_id = filter_input(INPUT_POST, 'visit_id', FILTER_VALIDATE_INT);
-        $allocations = json_decode($_POST['allocations'] ?? '[]', true);
-        $notes = $_POST['notes'] ?? '';
+    $doctor_id = $_SESSION['user_id'];
+    $patient_id = filter_input(INPUT_POST, 'patient_id', FILTER_VALIDATE_INT);
+    $visit_id = filter_input(INPUT_POST, 'visit_id', FILTER_VALIDATE_INT);
+    $allocations = json_decode($_POST['allocations'] ?? '[]', true);
 
-        if (!$patient_id || !$visit_id) {
-            http_response_code(400);
-            echo json_encode(['error' => 'Missing required fields']);
-            exit;
-        }
+    if (!$patient_id || !$visit_id) {
+        http_response_code(400);
+        echo json_encode(['success' => false, 'error' => 'Missing required fields']);
+        exit;
+    }
 
-        // Log decoded allocations for debugging
-        error_log('[save_allocation] decoded allocations: ' . json_encode($allocations));
+    if (empty($allocations) || !is_array($allocations)) {
+        http_response_code(400);
+        echo json_encode(['success' => false, 'error' => 'No allocations provided']);
+        exit;
+    }
 
-        try {
-            $this->pdo->beginTransaction();
+    try {
+        $this->pdo->beginTransaction();
 
-            $created_orders = [];
+        $created_orders = [];
 
-            // Process each allocation
-            foreach ($allocations as $allocation) {
-                $service_id = filter_var($allocation['service_id'] ?? null, FILTER_VALIDATE_INT);
-                $performed_by = filter_var($allocation['performed_by'] ?? null, FILTER_VALIDATE_INT);
-                $service_notes = $allocation['notes'] ?? '';
+        foreach ($allocations as $allocation) {
+            $service_id = filter_var($allocation['service_id'] ?? null, FILTER_VALIDATE_INT);
+            $performed_by = filter_var($allocation['assigned_to'] ?? null, FILTER_VALIDATE_INT);
+            $service_notes = $allocation['instructions'] ?? '';
 
-                if (!$service_id || !$performed_by) {
-                    continue;
-                }
+            if (!$service_id) {
+                continue;
+            }
 
-                // Get service details (includes price)
-                $stmt = $this->pdo->prepare("SELECT id, service_name, price FROM services WHERE id = ? AND is_active = 1");
-                $stmt->execute([$service_id]);
-                $service = $stmt->fetch(PDO::FETCH_ASSOC);
-                if (!$service) {
-                    error_log("[save_allocation] Service ID $service_id not found or inactive");
-                    continue;
-                }
+            // Get service details
+            $stmt = $this->pdo->prepare("
+                SELECT id, service_name, price 
+                FROM services 
+                WHERE id = ? AND is_active = 1
+            ");
+            $stmt->execute([$service_id]);
+            $service = $stmt->fetch(PDO::FETCH_ASSOC);
+            
+            if (!$service) {
+                continue;
+            }
 
-                // Create pending payment record if service requires payment
-                if ($service['price'] > 0) {
-                    // Check if payment already exists for this service and visit
+            // Create pending payment if needed
+            if ($service['price'] > 0) {
+                $stmt = $this->pdo->prepare("
+                    SELECT id FROM payments 
+                    WHERE visit_id = ? AND item_type = 'service' AND item_id = ?
+                    LIMIT 1
+                ");
+                $stmt->execute([$visit_id, $service_id]);
+                $existing_payment = $stmt->fetch(PDO::FETCH_ASSOC);
+
+                if (!$existing_payment) {
                     $stmt = $this->pdo->prepare("
-                        SELECT id FROM payments 
-                        WHERE visit_id = ? AND item_type = 'service' AND item_id = ?
-                        LIMIT 1
+                        INSERT INTO payments (
+                            visit_id, patient_id, item_id, item_type, amount, 
+                            payment_type, payment_method, payment_status, 
+                            collected_by, payment_date
+                        ) VALUES (
+                            ?, ?, ?, 'service', ?, 
+                            'minor_service', 'cash', 'pending', 
+                            ?, NOW()
+                        )
                     ");
-                    $stmt->execute([$visit_id, $service_id]);
-                    $existing_payment = $stmt->fetch(PDO::FETCH_ASSOC);
-
-                    if (!$existing_payment) {
-                        // Create pending payment record for receptionist to process
-                        $stmt = $this->pdo->prepare("
-                            INSERT INTO payments (
-                                visit_id, patient_id, item_id, item_type, amount, 
-                                payment_type, payment_method, payment_status, 
-                                collected_by, payment_date
-                            ) VALUES (
-                                ?, ?, ?, 'service', ?, 
-                                'minor_service', 'cash', 'pending', 
-                                ?, NOW()
-                            )
-                        ");
-                        $stmt->execute([$visit_id, $patient_id, $service_id, $service['price'], $doctor_id]);
-                        error_log("[save_allocation] Created pending payment for service '{$service['service_name']}' (Amount: {$service['price']})");
-                    }
+                    $stmt->execute([
+                        $visit_id, $patient_id, $service_id, 
+                        $service['price'], $doctor_id
+                    ]);
                 }
+            }
 
-                // Verify staff member exists and is active
-                $stmt = $this->pdo->prepare("SELECT id, email, first_name, last_name FROM users WHERE id = ? AND is_active = 1");
+            // Verify staff if assigned
+            $staff = null;
+            if ($performed_by) {
+                $stmt = $this->pdo->prepare("
+                    SELECT id, email, first_name, last_name 
+                    FROM users 
+                    WHERE id = ? AND is_active = 1
+                ");
                 $stmt->execute([$performed_by]);
                 $staff = $stmt->fetch(PDO::FETCH_ASSOC);
-                if (!$staff) {
-                    error_log("[save_allocation] Staff ID $performed_by not found or inactive");
-                    continue;
-                }
+            }
 
-                // Create service order with status 'pending' (waiting for payment/execution)
-                $stmt = $this->pdo->prepare("
-                    INSERT INTO service_orders (
-                        visit_id, patient_id, service_id, 
-                        ordered_by, performed_by, 
-                        status, notes, created_at, updated_at
-                    ) VALUES (
-                        ?, ?, ?, 
-                        ?, ?, 
-                        'pending', ?, NOW(), NOW()
-                    )
-                ");
-                $stmt->execute([
-                    $visit_id, $patient_id, $service_id,
-                    $doctor_id, $performed_by,
-                    $service_notes
-                ]);
+            // Create service order
+            $stmt = $this->pdo->prepare("
+                INSERT INTO service_orders (
+                    visit_id, patient_id, service_id, 
+                    ordered_by, performed_by, 
+                    status, notes, created_at, updated_at
+                ) VALUES (
+                    ?, ?, ?, 
+                    ?, ?, 
+                    'pending', ?, NOW(), NOW()
+                )
+            ");
+            $stmt->execute([
+                $visit_id, $patient_id, $service_id,
+                $doctor_id, $performed_by,
+                $service_notes
+            ]);
 
-                $order_id = $this->pdo->lastInsertId();
-                error_log("[save_allocation] Created service_order ID: $order_id for service '{$service['service_name']}' assigned to staff ID: $performed_by");
-                $created_orders[] = [
+            $order_id = $this->pdo->lastInsertId();
+            
+            $created_orders[] = [
+                'id' => $order_id,
+                'service_id' => $service_id,
+                'service_name' => $service['service_name'],
+                'performed_by' => $performed_by,
+                'staff_email' => $staff['email'] ?? null,
+                'staff_name' => $staff ? ($staff['first_name'] . ' ' . $staff['last_name']) : null
+            ];
+
+            // Send notification if staff assigned
+            if ($staff) {
+                $this->sendAllocationNotification([
                     'id' => $order_id,
                     'service_id' => $service_id,
                     'service_name' => $service['service_name'],
                     'performed_by' => $performed_by,
                     'staff_email' => $staff['email'],
                     'staff_name' => $staff['first_name'] . ' ' . $staff['last_name']
-                ];
+                ], $patient_id);
             }
-
-            // Send notifications to allocated staff (if notifications table exists)
-            foreach ($created_orders as $order) {
-                $this->sendAllocationNotification($order, $patient_id);
-            }
-
-            // Update workflow status to reflect service allocation
-            $this->updateWorkflowStatus($patient_id, 'services_allocated', [
-                'allocated_count' => count($created_orders),
-                'allocated_by' => $doctor_id
-            ]);
-
-            $this->pdo->commit();
-
-            $response = [
-                'success' => true,
-                'message' => count($created_orders) . ' service(s) allocated successfully. Pending payments created for receptionist.',
-                'orders_created' => count($created_orders),
-                'patient_id' => $patient_id
-            ];
-
-            $_SESSION['success'] = $response['message'];
-            echo json_encode($response);
-
-        } catch (Exception $e) {
-            $this->pdo->rollBack();
-            $_SESSION['error'] = 'Failed to allocate services: ' . $e->getMessage();
-            http_response_code(500);
-            echo json_encode(['error' => $_SESSION['error']]);
         }
-        exit;
-    }
 
+        // Update workflow
+        $this->updateWorkflowStatus($patient_id, 'services_allocated', [
+            'allocated_count' => count($created_orders),
+            'allocated_by' => $doctor_id
+        ]);
+
+        $this->pdo->commit();
+
+        $message = count($created_orders) . ' service(s) allocated successfully.';
+        if (count($created_orders) > 0) {
+            $message .= ' Pending payments created for receptionist.';
+        }
+
+        $_SESSION['success'] = $message;
+        
+        echo json_encode([
+            'success' => true,
+            'message' => $message,
+            'orders_created' => count($created_orders),
+            'patient_id' => $patient_id
+        ]);
+
+    } catch (Exception $e) {
+        if ($this->pdo->inTransaction()) {
+            $this->pdo->rollBack();
+        }
+        
+        $_SESSION['error'] = 'Failed to allocate services: ' . $e->getMessage();
+        error_log('Allocation error: ' . $e->getMessage());
+        
+        http_response_code(500);
+        echo json_encode([
+            'success' => false,
+            'error' => 'Failed to allocate services: ' . $e->getMessage()
+        ]);
+    }
+    exit;
+}
     /**
      * Create a new service via AJAX
      */

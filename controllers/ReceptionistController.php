@@ -505,7 +505,7 @@ class ReceptionistController extends BaseController
         $stmt->execute();
         $pending_medicine_payments = $stmt->fetchAll();
 
-        // Get pending service payments (services allocated but not paid)
+        // Get pending service payments (services that haven't been paid for, regardless of service status)
         $stmt = $this->pdo->prepare("
             SELECT 
                 so.id AS order_id,
@@ -517,19 +517,45 @@ class ReceptionistController extends BaseController
                 pv.visit_date,
                 s.service_name,
                 s.price AS amount,
-                pay.payment_status,
-                pay.id AS payment_id
+                CASE 
+                    WHEN EXISTS (
+                        SELECT 1 FROM payments 
+                        WHERE item_id = so.id 
+                        AND item_type = 'service_order' 
+                        AND payment_status = 'paid'
+                    ) THEN 'paid'
+                    ELSE 'pending'
+                END as payment_status,
+                (SELECT id FROM payments 
+                 WHERE item_id = so.id 
+                 AND item_type = 'service_order' 
+                 AND payment_status = 'paid' 
+                 LIMIT 1) AS payment_id,
+                (SELECT COUNT(*) FROM payments 
+                 WHERE item_id = so.id 
+                 AND item_type = 'service_order' 
+                 AND payment_status = 'paid') as paid_count
             FROM service_orders so
             JOIN services s ON so.service_id = s.id
             JOIN patients p ON so.patient_id = p.id
             LEFT JOIN patient_visits pv ON so.visit_id = pv.id
-            LEFT JOIN payments pay ON so.visit_id = pay.visit_id 
-                                  AND pay.item_type = 'service' 
-                                  AND pay.item_id = s.id
-            WHERE so.status = 'pending'
-              AND (pay.payment_status = 'pending' OR pay.payment_status IS NULL)
+            HAVING paid_count = 0
             ORDER BY so.created_at DESC
         ");
+        
+        error_log('Fetching pending service payments...');
+        $stmt->execute();
+        $pending_service_payments = $stmt->fetchAll();
+        error_log('Found ' . count($pending_service_payments) . ' pending service payments');
+        foreach ($pending_service_payments as $payment) {
+            error_log(sprintf(
+                "Service payment: Patient=%s, Service=%s, Status=%s, Paid_Count=%d",
+                $payment['registration_number'],
+                $payment['service_name'],
+                $payment['payment_status'],
+                $payment['paid_count']
+            ));
+        }
         $stmt->execute();
         $pending_service_payments = $stmt->fetchAll();
 
@@ -725,8 +751,15 @@ class ReceptionistController extends BaseController
     $amount = floatval($_POST['amount'] ?? 0);
     $payment_method = $_POST['payment_method'] ?? 'cash';
     $reference_number = $_POST['reference_number'] ?? null;
-    $item_id = $_POST['item_id'] ?? null; // This will be prescription_id for medicine payments
-    $item_type = $_POST['item_type'] ?? null; // This will be 'prescription' for medicine payments
+    $item_id = $_POST['item_id'] ?? null;
+    $item_type = $_POST['item_type'] ?? null;
+    $service_id = $_POST['service_id'] ?? null; // Add service_id for service payments
+
+    // Debug log the payment information
+    error_log(sprintf(
+        "Recording payment - Patient: %d, Visit: %d, Type: %s, Amount: %f, Method: %s, ItemID: %s, ItemType: %s",
+        $patient_id, $visit_id, $payment_type, $amount, $payment_method, $item_id, $item_type
+    ));
 
     if (!$patient_id || !$visit_id || !$payment_type || $amount <= 0) {
         $_SESSION['error'] = 'Invalid payment details';
@@ -736,6 +769,17 @@ class ReceptionistController extends BaseController
 
     try {
         $this->pdo->beginTransaction();
+
+        // For service payments, use service_id as item_id
+        if ($payment_type === 'service' && $service_id) {
+            $item_id = $service_id;
+            $item_type = 'service';
+        }
+
+        error_log(sprintf(
+            "Recording payment: Patient=%d, Visit=%d, Type=%s, Amount=%f, ItemID=%s, ItemType=%s",
+            $patient_id, $visit_id, $payment_type, $amount, $item_id, $item_type
+        ));
 
         // Insert payment record
         $stmt = $this->pdo->prepare("
@@ -762,6 +806,69 @@ class ReceptionistController extends BaseController
         } elseif ($payment_type === 'medicine') {
             // Keep in medicine_dispensing status until actual dispensing happens
             $this->updateWorkflowStatus($patient_id, 'medicine_dispensing', ['medicine_payment_received' => true]);
+        } elseif ($payment_type === 'service') {
+            if (empty($item_id)) {
+                throw new Exception("Missing service order ID");
+            }
+
+            error_log(sprintf(
+                "Processing service payment - OrderID: %s, PatientID: %d",
+                $item_id, $patient_id
+            ));
+            
+            // For service payments, verify the service order exists
+            $stmt = $this->pdo->prepare("
+                SELECT so.id, so.service_id, so.visit_id, so.patient_id,
+                       s.price, s.service_name
+                FROM service_orders so
+                JOIN services s ON so.service_id = s.id
+                WHERE so.id = ? AND so.patient_id = ?
+            ");
+            $stmt->execute([$item_id, $patient_id]);
+            $service_order = $stmt->fetch();
+            
+            if ($service_order) {
+                error_log(sprintf(
+                    "Found service order - ID: %d, Service: %s, Price: %f",
+                    $service_order['id'],
+                    $service_order['service_name'],
+                    $service_order['price']
+                ));
+                
+                // The payment record will be our source of truth for payment status
+                // Update the payments table
+                $stmt = $this->pdo->prepare("
+                    INSERT INTO payments (
+                        visit_id, 
+                        patient_id, 
+                        payment_type,
+                        item_id,
+                        item_type,
+                        amount,
+                        payment_method,
+                        payment_status,
+                        reference_number,
+                        collected_by,
+                        payment_date
+                    ) VALUES (
+                        ?, ?, 'service', ?, 'service_order', ?, ?, 'paid', ?, ?, NOW()
+                    )
+                ");
+                $stmt->execute([
+                    $service_order['visit_id'],
+                    $patient_id,
+                    $service_order['id'],
+                    $amount,
+                    $payment_method,
+                    $reference_number,
+                    $_SESSION['user_id']
+                ]);
+                
+                error_log("Recorded payment for service order");
+            } else {
+                error_log("WARNING: Service order not found for ID: " . $item_id);
+                throw new Exception("Service order not found");
+            }
         }
 
         $this->pdo->commit();
@@ -1274,6 +1381,84 @@ class ReceptionistController extends BaseController
             'medicine_stats' => $medicine_stats,
             'sidebar_data' => $this->getSidebarData()
         ]);
+    }
+
+    /**
+     * Show tasks assigned to the current receptionist (or staff user)
+     */
+    public function tasks()
+    {
+        $user_id = $_SESSION['user_id'];
+
+        // Try to read from patient_workflow_status if table exists
+        try {
+            $stmt = $this->pdo->prepare(
+                "SELECT pws.*, p.first_name, p.last_name, pv.visit_date, pv.id as visit_id
+                FROM patient_workflow_status pws
+                JOIN patients p ON pws.patient_id = p.id
+                LEFT JOIN patient_visits pv ON pws.visit_id = pv.id
+                WHERE pws.assigned_to = ? AND pws.status != 'completed'
+                ORDER BY pws.created_at DESC"
+            );
+            $stmt->execute([$user_id]);
+            $tasks = $stmt->fetchAll();
+        } catch (Exception $e) {
+            // If the table doesn't exist or query fails, return an empty list
+            error_log('tasks() patient_workflow_status query failed: ' . $e->getMessage());
+            $tasks = [];
+        }
+
+        $this->render('receptionist/tasks', [
+            'tasks' => $tasks,
+            'csrf_token' => $this->generateCSRF()
+        ]);
+    }
+
+    /**
+     * AJAX endpoint to update a task status (start / in_progress / completed / cancelled)
+     * Expects POST: task_id, status, notes (optional)
+     */
+    public function update_task_status()
+    {
+        if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+            http_response_code(405);
+            echo json_encode(['error' => 'Method not allowed']);
+            exit;
+        }
+
+        $this->validateCSRF($_POST['csrf_token'] ?? null);
+
+        $task_id = filter_input(INPUT_POST, 'task_id', FILTER_VALIDATE_INT);
+        $status = trim($_POST['status'] ?? '');
+        $notes = trim($_POST['notes'] ?? '');
+
+        if (!$task_id || $status === '') {
+            http_response_code(400);
+            echo json_encode(['error' => 'Invalid parameters']);
+            exit;
+        }
+
+        try {
+            $this->pdo->beginTransaction();
+
+            $allowed = ['pending', 'in_progress', 'completed', 'cancelled'];
+            if (!in_array($status, $allowed)) {
+                throw new Exception('Invalid status');
+            }
+
+            $stmt = $this->pdo->prepare("UPDATE patient_workflow_status SET status = ?, notes = CONCAT(COALESCE(notes, ''), ?, '\\n'), updated_at = NOW(), completed_at = CASE WHEN ? = 'completed' THEN NOW() ELSE completed_at END WHERE id = ? AND assigned_to = ?");
+            $stmt->execute([$status, "[" . date('Y-m-d H:i:s') . "] " . $notes, $status, $task_id, $_SESSION['user_id']]);
+
+            $this->pdo->commit();
+            echo json_encode(['ok' => true]);
+            exit;
+        } catch (Exception $e) {
+            $this->pdo->rollBack();
+            error_log('update_task_status error: ' . $e->getMessage());
+            http_response_code(500);
+            echo json_encode(['error' => 'Failed to update task']);
+            exit;
+        }
     }
 
     public function view_patient($patient_id = null) {

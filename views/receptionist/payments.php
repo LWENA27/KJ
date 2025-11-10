@@ -498,12 +498,13 @@
                                     <button onclick="openPaymentModal(
                                                 <?php echo $payment['patient_id']; ?>, 
                                                 <?php echo $payment['visit_id']; ?>, 
-                                                'minor_service', 
+                                                'service', 
                                                 <?php echo $payment['amount']; ?>, 
                                                 0, 
                                                 '<?php echo htmlspecialchars($payment['first_name'] . ' ' . $payment['last_name'], ENT_QUOTES); ?>', 
                                                 <?php echo $payment['order_id']; ?>, 
-                                                'service'
+                                                'service_order',
+                                                <?php echo $payment['order_id']; ?>
                                             )"
                                             class="record-payment-btn inline-flex items-center px-4 py-2 bg-blue-600 text-white hover:bg-blue-700 transition-colors">
                                         <i class="fas fa-credit-card mr-2"></i>
@@ -627,14 +628,21 @@
 
 <script>
 // Updated openPaymentModal function to handle total cost, amount paid, and remaining balance
-function openPaymentModal(patientId, visitId, paymentType, totalCost, amountPaid = 0, patientName, itemId, itemType) {
+function openPaymentModal(patientId, visitId, paymentType, totalCost, amountPaid = 0, patientName, itemId, itemType, orderId = null) {
     document.getElementById('modal_patient_id').value = patientId;
     document.getElementById('modal_visit_id').value = visitId;
     document.getElementById('modal_payment_type').value = paymentType;
     // The hidden input for the actual amount being paid in this transaction
     document.getElementById('modal_amount_hidden').value = ''; // Clear previous value
-    document.getElementById('modal_item_id').value = itemId || '';
-    document.getElementById('modal_item_type').value = itemType || '';
+    
+    // For service payments, use the orderId as itemId and 'service_order' as itemType
+    if (paymentType === 'service' && orderId) {
+        document.getElementById('modal_item_id').value = orderId;
+        document.getElementById('modal_item_type').value = 'service_order';
+    } else {
+        document.getElementById('modal_item_id').value = itemId || '';
+        document.getElementById('modal_item_type').value = itemType || '';
+    }
     
     document.getElementById('modal_patient_name').textContent = patientName;
     
