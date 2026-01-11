@@ -1,4 +1,29 @@
 <?php
+// Ensure we have a writable session directory inside the project to avoid
+// permission issues with the system session directory (e.g. /var/lib/php/sessions)
+$sessionDir = __DIR__ . '/storage/sessions';
+if (!is_dir($sessionDir)) {
+    // Try to create with restrictive permissions
+    @mkdir($sessionDir, 0700, true);
+}
+if (is_dir($sessionDir) && is_writable($sessionDir)) {
+    // Use project-local session files
+    session_save_path($sessionDir);
+} else {
+    // Fall back: attempt to use a temp dir inside system tmp
+    error_log("Warning: project session directory '$sessionDir' is not writable; attempting fallback");
+    $tmp = sys_get_temp_dir() . '/php-sessions';
+    if (!is_dir($tmp)) {
+        @mkdir($tmp, 0700, true);
+    }
+    if (is_dir($tmp) && is_writable($tmp)) {
+        session_save_path($tmp);
+    } else {
+        // Leave PHP to use the configured session.save_path; this may still trigger warnings
+        error_log("Warning: fallback temp session directory '$tmp' is not writable; using system session.save_path");
+    }
+}
+
 session_start();
 
 // Security headers

@@ -1,0 +1,5 @@
+[11-Jan-2026 19:59:11 UTC] Error in controller: CSRF token validation failed: Session token missing
+[11-Jan-2026 20:04:15 UTC] Error in controller: CSRF token validation failed: Session token missing
+[11-Jan-2026 20:07:38 UTC] [save_allocation] POST payload: []
+[11-Jan-2026 20:08:36 UTC] [save_allocation] POST payload: []
+[11-Jan-2026 20:09:04 UTC] [save_allocation] POST payload: []
