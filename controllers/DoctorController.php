@@ -10,7 +10,7 @@ class DoctorController extends BaseController {
 
     public function dashboard() {
     // Debug: log incoming POST (helps diagnose empty allocations)
-    error_log('[save_allocation] POST payload: ' . json_encode(array_keys($_POST)));
+    \Logger::debug('[save_allocation] POST payload: ' . json_encode(array_keys($_POST)));
 
     $doctor_id = $_SESSION['user_id'];
 

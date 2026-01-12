@@ -543,12 +543,12 @@ class ReceptionistController extends BaseController
             ORDER BY so.created_at DESC
         ");
         
-        error_log('Fetching pending service payments...');
+        \Logger::debug('Fetching pending service payments...');
         $stmt->execute();
         $pending_service_payments = $stmt->fetchAll();
-        error_log('Found ' . count($pending_service_payments) . ' pending service payments');
+        \Logger::debug('Found ' . count($pending_service_payments) . ' pending service payments');
         foreach ($pending_service_payments as $payment) {
-            error_log(sprintf(
+            \Logger::debug(sprintf(
                 "Service payment: Patient=%s, Service=%s, Status=%s, Paid_Count=%d",
                 $payment['registration_number'],
                 $payment['service_name'],

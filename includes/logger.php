@@ -31,6 +31,13 @@ class Logger {
     }
     
     public static function debug($message, $context = []) {
+        // Only write debug logs when APP_DEBUG is enabled (use env APP_DEBUG=1)
+        if (!defined('APP_DEBUG')) {
+            define('APP_DEBUG', getenv('APP_DEBUG') === '1' || getenv('APP_ENV') === 'development');
+        }
+        if (!APP_DEBUG) {
+            return;
+        }
         self::log('DEBUG', $message, $context);
     }
     
