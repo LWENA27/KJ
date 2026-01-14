@@ -181,13 +181,8 @@ class ReceptionistController extends BaseController
             $height = $post['height'] ?? null;
 
             try {
-                // Only process payment for consultation visits by default
+                // For consultation visits, only require vital signs (no payment - that's handled by Accountant)
                 if ($visit_type === 'consultation') {
-                    // Validate consultation payment
-                    if (empty($consultation_fee) || empty($payment_method)) {
-                        throw new Exception('Consultation fee and payment method are required');
-                    }
-
                     // Require basic vital signs for consultation registrations
                     // Expect blood_pressure in the form "systolic/diastolic"
                     $bp_ok = !empty($blood_pressure) && is_string($blood_pressure) && strpos($blood_pressure, '/') !== false;
@@ -242,30 +237,17 @@ class ReceptionistController extends BaseController
                 $stmt->execute([$patient_id, $visit_number, $visit_type, $_SESSION['user_id']]);
                 $visit_id = $this->pdo->lastInsertId();
 
-                // Only record payment for consultation visits (payments table expects visit_id)
-                if ($visit_type === 'consultation' && !empty($consultation_fee) && !empty($payment_method)) {
-                    // Record consultation payment
-                    $stmt = $this->pdo->prepare(
-                        "INSERT INTO payments (visit_id, patient_id, payment_type, amount, payment_method, payment_status, reference_number, collected_by, payment_date, notes) VALUES (?, ?, 'registration', ?, ?, 'paid', NULL, ?, NOW(), ?)"
-                    );
-
-                    $stmt->execute([
-                        $visit_id,
-                        $patient_id,
-                        $consultation_fee,
-                        $payment_method,
-                        $_SESSION['user_id'],
-                        'Initial consultation payment'
-                    ]);
-
-                    // Create a consultations row referencing visit_id so doctors can immediately see the registered patient
-                    // Use default doctor_id = 1 to avoid NULL constraint issues; can be reassigned later
+                // For consultation visits, create the consultation record (payment will be handled by Accountant)
+                if ($visit_type === 'consultation') {
+                    // Create a consultations row referencing visit_id so doctors can see the registered patient
+                    // Payment is not recorded here - Accountant will process payment separately
+                    // Patient will need to pay at Accountant desk before being seen by doctor
                     $default_doctor_id = 1;
                     $stmt = $this->pdo->prepare("INSERT INTO consultations (visit_id, patient_id, doctor_id, consultation_type, status, created_at) VALUES (?, ?, ?, 'new', 'pending', NOW())");
                     $stmt->execute([$visit_id, $patient_id, $default_doctor_id]);
                 }
 
-                // Handle lab-only visit: create lab_test_orders and optional payment
+                // Handle lab-only visit: create lab_test_orders (payment handled by Accountant)
                 if ($visit_type === 'lab_test') {
                     // Selected tests are expected as an array of test IDs
                     $selected_tests = $_POST['selected_tests'] ?? [];
@@ -283,40 +265,12 @@ class ReceptionistController extends BaseController
                             $tid = intval($test_id);
                             if ($tid <= 0) continue;
                             $stmtOrder->execute([$visit_id, $patient_id, $tid, $_SESSION['user_id']]);
-                            // Sum price
+                            // Sum price for reference (payment recorded later by Accountant)
                             $stmtPrice->execute([$tid]);
                             $price = (float)$stmtPrice->fetchColumn();
                             $total_lab_amount += $price;
                         }
-
-                        // If a payment method and amount provided, record lab test payment
-                        $lab_payment_method = $payment_method_lab;
-                        $lab_payment_amount = $post['lab_total_amount'] ?? null;
-                        if (empty($lab_payment_amount)) {
-                            // If not explicitly provided, use the calculated total
-                            $lab_payment_amount = $total_lab_amount;
-                        }
-
-                        if (!empty($lab_payment_amount) && !empty($lab_payment_method)) {
-                            $stmtPay = $this->pdo->prepare(
-                                "INSERT INTO payments (visit_id, patient_id, payment_type, amount, payment_method, payment_status, reference_number, collected_by, payment_date, notes) VALUES (?, ?, 'lab_test', ?, ?, 'paid', NULL, ?, NOW(), ?)"
-                            );
-                            $stmtPay->execute([
-                                $visit_id,
-                                $patient_id,
-                                $lab_payment_amount,
-                                $lab_payment_method,
-                                $_SESSION['user_id'],
-                                'Lab test payment at registration'
-                            ]);
-
-                            // Update workflow status if helper exists
-                            try {
-                                $this->updateWorkflowStatus($patient_id, 'lab_testing', ['lab_tests_paid' => true]);
-                            } catch (Exception $e) {
-                                // non-fatal
-                            }
-                        }
+                        // Note: Payment is NOT recorded here - Accountant will handle lab test payment
                     }
                 }
 
@@ -345,30 +299,19 @@ class ReceptionistController extends BaseController
                 }
 
                 $this->pdo->commit();
-                $_SESSION['success'] = "Patient registered successfully! Registration Number: $registration_number";
-
-                // If no payment was recorded for this registration, redirect to payments page for processing
-                $payment_recorded = false;
-                if ($visit_type === 'consultation' && !empty($consultation_fee) && !empty($payment_method)) {
-                    $payment_recorded = true;
+                
+                // Build success message based on visit type
+                $success_message = "Patient registered successfully! Registration Number: $registration_number";
+                if ($visit_type === 'consultation') {
+                    $success_message .= " - Please direct patient to Accountant for consultation fee payment.";
                 } else if ($visit_type === 'lab_test') {
-                    $selected_tests = $_POST['selected_tests'] ?? [];
-                    if (!is_array($selected_tests)) {
-                        $selected_tests = array_filter(array_map('trim', explode(',', (string)$selected_tests)));
-                    }
-                    $lab_payment_method = $post['payment_method_lab'] ?? null;
-                    $lab_payment_amount = $post['lab_total_amount'] ?? null;
-                    if (!empty($selected_tests) && !empty($lab_payment_method) && !empty($lab_payment_amount)) {
-                        $payment_recorded = true;
-                    }
+                    $success_message .= " - Please direct patient to Accountant for lab test payment.";
                 }
+                
+                $_SESSION['success'] = $success_message;
 
-                if (!$payment_recorded) {
-                    // Redirect to payments page for receptionist to process payment
-                    $this->redirect('receptionist/payments');
-                } else {
-                    $this->redirect('receptionist/patients');
-                }
+                // Always redirect to patients list - payment is handled by Accountant
+                $this->redirect('receptionist/patients');
             } catch (Exception $e) {
                 $this->pdo->rollBack();
                 $_SESSION['error'] = 'Registration failed: ' . $e->getMessage();

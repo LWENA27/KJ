@@ -1373,12 +1373,37 @@ class DoctorController extends BaseController {
             return;
         }
 
-        // Check workflow access
+        // Check workflow access (payment verification)
         $access_check = $this->checkWorkflowAccess($patient_id, 'consultation');
+        
+        // If not paid, check if doctor is providing an override reason
         if (!$access_check['access']) {
-            $_SESSION['error'] = $access_check['message'];
-            $this->redirect('doctor/patients');
-            return;
+            // Check if this is a POST with override reason
+            if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['override_reason'])) {
+                $this->validateCSRF($_POST['csrf_token'] ?? '');
+                $override_reason = trim($_POST['override_reason'] ?? '');
+                
+                if (empty($override_reason)) {
+                    $_SESSION['error'] = 'Please provide a reason for attending unpaid patient';
+                    $this->redirect('doctor/payment_required?patient_id=' . $patient_id);
+                    return;
+                }
+                
+                // Log the override for audit
+                $this->logPaymentOverride($patient_id, $override_reason);
+                
+                // Continue to attend patient with override flag
+                $_SESSION['payment_override'] = [
+                    'patient_id' => $patient_id,
+                    'reason' => $override_reason,
+                    'timestamp' => date('Y-m-d H:i:s'),
+                    'doctor_id' => $_SESSION['user_id']
+                ];
+            } else {
+                // Redirect to payment required page with reason form
+                $this->redirect('doctor/payment_required?patient_id=' . $patient_id);
+                return;
+            }
         }
 
         // Find latest active visit for this patient to attach allocations/orders
@@ -1390,7 +1415,99 @@ class DoctorController extends BaseController {
         $this->render('doctor/attend_patient', [
             'patient' => $patient,
             'csrf_token' => $this->generateCSRF(),
-            'visit_id' => $latest_visit_id
+            'visit_id' => $latest_visit_id,
+            'payment_override' => $_SESSION['payment_override'] ?? null
+        ]);
+        
+        // Clear the override session after use
+        unset($_SESSION['payment_override']);
+    }
+
+    /**
+     * Log payment override for audit purposes
+     */
+    private function logPaymentOverride($patient_id, $reason) {
+        try {
+            // Get latest visit
+            $stmt = $this->pdo->prepare("SELECT id FROM patient_visits WHERE patient_id = ? ORDER BY created_at DESC LIMIT 1");
+            $stmt->execute([$patient_id]);
+            $visit = $stmt->fetch();
+            $visit_id = $visit['id'] ?? null;
+            
+            // Check if consultation_overrides table exists, create if not
+            $stmt = $this->pdo->query("SHOW TABLES LIKE 'consultation_overrides'");
+            if ($stmt->rowCount() === 0) {
+                $this->pdo->exec("
+                    CREATE TABLE IF NOT EXISTS `consultation_overrides` (
+                        `id` int NOT NULL AUTO_INCREMENT,
+                        `patient_id` int NOT NULL,
+                        `visit_id` int DEFAULT NULL,
+                        `doctor_id` int NOT NULL,
+                        `override_reason` text COLLATE utf8mb4_general_ci NOT NULL,
+                        `override_type` enum('payment_bypass','emergency','other') DEFAULT 'payment_bypass',
+                        `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                        PRIMARY KEY (`id`),
+                        KEY `idx_patient_id` (`patient_id`),
+                        KEY `idx_doctor_id` (`doctor_id`),
+                        KEY `idx_created_at` (`created_at`)
+                    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci
+                ");
+            }
+            
+            // Insert override record
+            $stmt = $this->pdo->prepare("
+                INSERT INTO consultation_overrides (patient_id, visit_id, doctor_id, override_reason, override_type)
+                VALUES (?, ?, ?, ?, 'payment_bypass')
+            ");
+            $stmt->execute([$patient_id, $visit_id, $_SESSION['user_id'], $reason]);
+            
+            \Logger::info("Payment override: Doctor {$_SESSION['user_id']} attended patient {$patient_id} without payment. Reason: {$reason}");
+            
+        } catch (Exception $e) {
+            \Logger::error("Failed to log payment override: " . $e->getMessage());
+        }
+    }
+
+    /**
+     * Show payment required page with override option
+     */
+    public function payment_required() {
+        $patient_id = filter_input(INPUT_GET, 'patient_id', FILTER_VALIDATE_INT);
+        
+        if (!$patient_id) {
+            $_SESSION['error'] = 'Invalid patient ID';
+            $this->redirect('doctor/dashboard');
+            return;
+        }
+        
+        // Get patient details
+        $stmt = $this->pdo->prepare("SELECT * FROM patients WHERE id = ?");
+        $stmt->execute([$patient_id]);
+        $patient = $stmt->fetch();
+        
+        if (!$patient) {
+            $_SESSION['error'] = 'Patient not found';
+            $this->redirect('doctor/dashboard');
+            return;
+        }
+        
+        // Get payment status
+        $stmt = $this->pdo->prepare("
+            SELECT pv.id as visit_id, pv.visit_date, pv.visit_type,
+                   pay.payment_status, pay.amount, pay.payment_type
+            FROM patient_visits pv
+            LEFT JOIN payments pay ON pay.visit_id = pv.id AND pay.payment_type = 'registration'
+            WHERE pv.patient_id = ?
+            ORDER BY pv.created_at DESC
+            LIMIT 1
+        ");
+        $stmt->execute([$patient_id]);
+        $visit_payment = $stmt->fetch();
+        
+        $this->render('doctor/payment_required', [
+            'patient' => $patient,
+            'visit_payment' => $visit_payment,
+            'csrf_token' => $this->generateCSRF()
         ]);
     }
 

@@ -47,7 +47,7 @@ class AdminController extends BaseController {
                     throw new Exception('Please enter a valid email address');
                 }
 
-                if (!in_array($role, ['admin', 'doctor', 'receptionist', 'lab_technician'])) {
+                if (!in_array($role, ['admin', 'doctor', 'receptionist', 'accountant', 'pharmacist', 'lab_technician'])) {
                     throw new Exception('Invalid role selected');
                 }
 
@@ -123,7 +123,7 @@ class AdminController extends BaseController {
                     throw new Exception('Please enter a valid email address');
                 }
 
-                if (!in_array($role, ['admin', 'doctor', 'receptionist', 'lab_technician'])) {
+                if (!in_array($role, ['admin', 'doctor', 'receptionist', 'accountant', 'pharmacist', 'lab_technician'])) {
                     throw new Exception('Invalid role selected');
                 }
 

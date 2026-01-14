@@ -88,6 +88,12 @@ if (empty($path) || $path === '') {
         case 'receptionist':
         header('Location: ' . BASE_PATH . '/receptionist/dashboard');
             break;
+        case 'accountant':
+        header('Location: ' . BASE_PATH . '/accountant/dashboard');
+            break;
+        case 'pharmacist':
+        header('Location: ' . BASE_PATH . '/pharmacist/dashboard');
+            break;
         default:
         header('Location: ' . BASE_PATH . '/auth/login');
     }
@@ -99,7 +105,7 @@ $controller = $segments[0] ?? 'auth';
 $action = $segments[1] ?? 'login';
 
 // Validate controller
-$validControllers = ['auth', 'admin', 'doctor', 'lab', 'receptionist', 'patienthistory'];
+$validControllers = ['auth', 'admin', 'doctor', 'lab', 'receptionist', 'accountant', 'pharmacist', 'patienthistory'];
 if (!in_array($controller, $validControllers)) {
     http_response_code(404);
     echo "Controller not found: " . htmlspecialchars($controller);

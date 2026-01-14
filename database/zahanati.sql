@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: localhost:3306
--- Generation Time: Nov 10, 2025 at 08:51 AM
+-- Generation Time: Jan 14, 2026 at 07:28 PM
 -- Server version: 8.0.43-0ubuntu0.24.04.2
 -- PHP Version: 8.3.6
 
@@ -28,28 +28,28 @@ SET time_zone = "+00:00";
 -- (See below for the actual view)
 --
 CREATE TABLE `active_patient_queue` (
-`visit_id` int
-,`visit_type` enum('consultation','lab_only','minor_service')
-,`visit_date` date
-,`patient_id` int
-,`registration_number` varchar(20)
-,`patient_name` varchar(101)
-,`phone` varchar(20)
-,`gender` enum('male','female','other')
-,`age` bigint
-,`temperature` decimal(4,1)
-,`pulse_rate` int
-,`blood_pressure_systolic` int
+`age` bigint
 ,`blood_pressure_diastolic` int
+,`blood_pressure_systolic` int
+,`completed_lab_tests` bigint
 ,`consultation_id` int
 ,`consultation_status` enum('pending','in_progress','completed','cancelled')
 ,`doctor_name` varchar(101)
-,`registration_paid` decimal(32,2)
-,`pending_lab_tests` bigint
-,`completed_lab_tests` bigint
-,`pending_prescriptions` bigint
+,`gender` enum('male','female','other')
 ,`partial_prescriptions` bigint
+,`patient_id` int
+,`patient_name` varchar(101)
+,`pending_lab_tests` bigint
+,`pending_prescriptions` bigint
+,`phone` varchar(20)
+,`pulse_rate` int
+,`registration_number` varchar(20)
+,`registration_paid` decimal(32,2)
 ,`registration_time` timestamp
+,`temperature` decimal(4,1)
+,`visit_date` date
+,`visit_id` int
+,`visit_type` enum('consultation','lab_only','minor_service')
 );
 
 -- --------------------------------------------------------
@@ -103,40 +103,11 @@ CREATE TABLE `consultations` (
 --
 
 INSERT INTO `consultations` (`id`, `visit_id`, `patient_id`, `doctor_id`, `consultation_number`, `consultation_type`, `main_complaint`, `history_of_present_illness`, `on_examination`, `diagnosis`, `preliminary_diagnosis`, `final_diagnosis`, `treatment_plan`, `notes`, `follow_up_required`, `follow_up_date`, `follow_up_instructions`, `referred_to`, `referral_reason`, `status`, `cancellation_reason`, `started_at`, `completed_at`, `created_at`, `updated_at`) VALUES
-(1, 1, 1, 3, 1, 'new', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 0, NULL, NULL, NULL, NULL, 'in_progress', NULL, '2025-10-11 05:15:14', NULL, '2025-10-11 03:50:52', '2025-10-11 05:15:14'),
-(2, 2, 2, 3, 1, 'new', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 0, NULL, NULL, NULL, NULL, 'in_progress', NULL, '2025-10-11 06:09:42', NULL, '2025-10-11 06:04:10', '2025-10-11 06:09:42'),
-(3, 3, 3, 1, 1, 'new', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 0, NULL, NULL, NULL, NULL, 'pending', NULL, NULL, NULL, '2025-10-11 11:12:44', '2025-10-11 11:12:44'),
-(4, 4, 4, 3, 1, 'new', 'kichwa', NULL, 'ubongo', '', NULL, NULL, '', NULL, 0, NULL, NULL, NULL, NULL, 'completed', NULL, '2025-10-17 08:04:05', '2025-10-17 08:04:05', '2025-10-17 08:02:10', '2025-10-17 08:04:05'),
-(5, 5, 5, 1, 1, 'new', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 0, NULL, NULL, NULL, NULL, 'pending', NULL, NULL, NULL, '2025-10-17 08:35:54', '2025-10-17 08:35:54'),
-(6, 6, 6, 3, 1, 'new', 'kichwa', NULL, 'snfh', '', NULL, NULL, '', NULL, 0, NULL, NULL, NULL, NULL, 'completed', NULL, '2025-10-18 05:14:25', '2025-10-18 05:14:25', '2025-10-18 05:02:27', '2025-10-18 05:14:25'),
-(7, 7, 1, 3, 1, '', 'null', NULL, 'null', 'null', NULL, NULL, 'nul', NULL, 0, NULL, NULL, NULL, NULL, 'completed', NULL, '2025-10-22 06:48:58', '2025-10-22 06:48:58', '2025-10-20 07:00:37', '2025-10-22 06:48:58'),
-(9, 9, 6, 1, 1, '', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 0, NULL, NULL, NULL, NULL, 'pending', NULL, NULL, NULL, '2025-10-20 07:12:12', '2025-10-20 07:12:12'),
-(10, 10, 7, 1, 1, 'new', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 0, NULL, NULL, NULL, NULL, 'pending', NULL, NULL, NULL, '2025-10-21 19:04:49', '2025-10-21 19:04:49'),
-(11, 11, 8, 3, 1, 'new', 'kichwa', NULL, 'kichwa', 'hdc', NULL, NULL, 'hjsd', NULL, 0, NULL, NULL, NULL, NULL, 'completed', NULL, '2025-10-21 19:21:27', '2025-10-21 19:21:27', '2025-10-21 19:08:48', '2025-10-21 19:21:27'),
-(12, 12, 9, 1, 1, 'new', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 0, NULL, NULL, NULL, NULL, 'pending', NULL, NULL, NULL, '2025-10-21 19:18:47', '2025-10-21 19:18:47'),
-(13, 13, 10, 3, 1, 'new', 'null', NULL, 'null', 'null', NULL, NULL, 'fhjgsf', NULL, 0, NULL, NULL, NULL, NULL, 'completed', NULL, '2025-10-22 06:52:41', '2025-10-22 06:52:41', '2025-10-22 06:51:49', '2025-10-22 06:52:41'),
-(14, 14, 11, 1, 1, 'new', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 0, NULL, NULL, NULL, NULL, 'pending', NULL, NULL, NULL, '2025-10-22 07:57:57', '2025-10-22 07:57:57'),
-(15, 15, 12, 3, 1, 'new', 'null', NULL, 'null', 'null', NULL, NULL, 'null', NULL, 0, NULL, NULL, NULL, NULL, 'completed', NULL, '2025-10-22 08:20:21', '2025-10-22 08:20:21', '2025-10-22 08:17:18', '2025-10-22 08:20:21'),
-(16, 16, 13, 3, 1, 'new', 'null', NULL, 'null', 'null', NULL, NULL, 'null', NULL, 0, NULL, NULL, NULL, NULL, 'completed', NULL, '2025-10-23 19:24:30', '2025-10-23 19:24:30', '2025-10-23 11:01:32', '2025-10-23 19:24:30'),
-(17, 17, 14, 3, 1, 'new', 'null', NULL, 'null', 'null', NULL, NULL, 'null', NULL, 0, NULL, NULL, NULL, NULL, 'completed', NULL, '2025-10-23 21:21:22', '2025-10-23 21:21:22', '2025-10-23 21:18:45', '2025-10-23 21:21:22'),
-(18, 18, 15, 3, 1, 'new', 'null', NULL, 'null', 'null', NULL, NULL, 'null', NULL, 0, NULL, NULL, NULL, NULL, 'completed', NULL, '2025-10-23 22:52:39', '2025-10-23 22:52:39', '2025-10-23 22:47:21', '2025-10-23 22:52:39'),
-(19, 29, 16, 1, 1, 'new', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 0, NULL, NULL, NULL, NULL, 'pending', NULL, NULL, NULL, '2025-10-25 08:16:24', '2025-10-25 08:16:24'),
-(20, 30, 17, 1, 1, 'new', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 0, NULL, NULL, NULL, NULL, 'pending', NULL, NULL, NULL, '2025-10-26 20:48:31', '2025-10-26 20:48:31'),
-(21, 31, 18, 1, 1, 'new', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 0, NULL, NULL, NULL, NULL, 'pending', NULL, NULL, NULL, '2025-10-29 09:12:35', '2025-10-29 09:12:35'),
-(22, 32, 19, 1, 1, 'new', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 0, NULL, NULL, NULL, NULL, 'pending', NULL, NULL, NULL, '2025-10-29 09:42:34', '2025-10-29 09:42:34'),
-(23, 33, 2, 1, 1, 'new', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 0, NULL, NULL, NULL, NULL, 'pending', NULL, NULL, NULL, '2025-11-01 13:38:30', '2025-11-01 13:38:30'),
-(24, 34, 20, 1, 1, 'new', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 0, NULL, NULL, NULL, NULL, 'pending', NULL, NULL, NULL, '2025-11-01 13:44:54', '2025-11-01 13:44:54'),
-(25, 35, 21, 3, 1, 'new', 'mawazo', NULL, 'mawazo', 'not yet known', NULL, NULL, 'after lab test', NULL, 0, NULL, NULL, NULL, NULL, 'completed', NULL, '2025-11-04 14:12:24', '2025-11-04 14:12:24', '2025-11-04 14:10:05', '2025-11-04 14:12:24'),
-(26, 36, 21, 1, 1, 'new', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 0, NULL, NULL, NULL, NULL, 'pending', NULL, NULL, NULL, '2025-11-04 14:32:43', '2025-11-04 14:32:43'),
-(27, 39, 22, 3, 1, 'new', 'sahani', NULL, 'sahani', NULL, '', '', 'good', NULL, 0, NULL, NULL, NULL, NULL, 'completed', NULL, '2025-11-05 09:17:00', '2025-11-05 09:17:00', '2025-11-05 08:45:25', '2025-11-05 09:17:00'),
-(28, 40, 23, 3, 1, 'new', 'dsfhlfk', NULL, 'sdfdskjsd', NULL, 'dsbfdklfs', 'dfhjsdfnm', 'sdbbnfd', NULL, 0, NULL, NULL, NULL, NULL, 'completed', NULL, '2025-11-10 08:08:06', '2025-11-10 08:08:06', '2025-11-05 10:24:41', '2025-11-10 08:08:06'),
-(29, 41, 24, 3, 1, 'new', 'nfrhlvfjdv', NULL, 'djkfhw bjdkbj', NULL, 'ufhvdkxbvm', 'wdvhkczm,v', 'fsfgrh', NULL, 0, NULL, NULL, NULL, NULL, 'completed', NULL, '2025-11-05 20:19:10', '2025-11-05 20:19:10', '2025-11-05 20:03:41', '2025-11-05 20:19:10'),
-(30, 42, 25, 3, 1, 'new', 'null', NULL, 'null', NULL, 'null', 'null', 'sdbnskxc', NULL, 0, NULL, NULL, NULL, NULL, 'completed', NULL, '2025-11-06 19:26:52', '2025-11-06 19:26:52', '2025-11-06 18:25:19', '2025-11-06 19:26:52'),
-(31, 43, 26, 3, 1, 'new', 'sahdjgdj', NULL, 'djhfsdhf', NULL, 'dfjhsd', 'sdfjsdhf', 'dsfdsf', NULL, 0, NULL, NULL, NULL, NULL, 'completed', NULL, '2025-11-10 06:20:11', '2025-11-10 06:20:11', '2025-11-10 06:07:55', '2025-11-10 06:20:11'),
-(32, 44, 27, 3, 1, 'new', 'hsjfsdjk', NULL, 'ssdkf', NULL, 'sdjhf', 'shdjgfsdf', 'daadfg', NULL, 0, NULL, NULL, NULL, NULL, 'completed', NULL, '2025-11-10 07:34:14', '2025-11-10 07:34:14', '2025-11-10 07:31:52', '2025-11-10 07:34:14'),
-(33, 45, 28, 3, 1, 'new', 'sdjnds', NULL, 'shjfhsdf', NULL, 'dsbds', 'dsfsnd', 'sdfd', NULL, 0, NULL, NULL, NULL, NULL, 'completed', NULL, '2025-11-10 08:10:43', '2025-11-10 08:10:43', '2025-11-10 08:09:36', '2025-11-10 08:10:43'),
-(34, 46, 29, 3, 1, 'new', 'sdfjdksj', NULL, 'sdbfbjsdm', NULL, 'dsvsdnm', 'dvndbmsdm,', 'sdbdjjnf', NULL, 0, NULL, NULL, NULL, NULL, 'completed', NULL, '2025-11-10 08:20:07', '2025-11-10 08:20:07', '2025-11-10 08:16:04', '2025-11-10 08:20:07'),
-(35, 47, 30, 3, 1, 'new', 'sdsfd', NULL, 'dksdbf', NULL, 'sdjhfjsd', 'bdsjdbf', 'dsbnfvsf', NULL, 0, NULL, NULL, NULL, NULL, 'completed', NULL, '2025-11-10 08:42:25', '2025-11-10 08:42:25', '2025-11-10 08:41:24', '2025-11-10 08:42:25');
+(39, 51, 33, 9, 1, 'new', 'sawaa', NULL, 'sawa', NULL, 'sawa', 'sawa', 'sawa', NULL, 0, NULL, NULL, NULL, NULL, 'completed', NULL, '2026-01-08 16:04:53', '2026-01-08 16:04:53', '2026-01-08 16:02:17', '2026-01-08 16:04:53'),
+(43, 59, 42, 9, 1, 'new', 'good', NULL, 'good', NULL, 'good', 'good', 'sawa', NULL, 0, NULL, NULL, NULL, NULL, 'completed', NULL, '2026-01-09 10:19:52', '2026-01-09 10:19:52', '2026-01-09 10:18:10', '2026-01-09 10:19:52'),
+(44, 61, 44, 9, 1, 'new', 'fbajfuhjadf', NULL, 'ehjsvhbdfnd', NULL, 'fvhkdfbvfjkd', 'vhfvvsdjfdsnk', 'dgvjyusdjvcbhfuyjhdcyuvxjjk', NULL, 0, NULL, NULL, NULL, NULL, 'completed', NULL, '2026-01-11 19:44:42', '2026-01-11 19:44:42', '2026-01-11 19:40:50', '2026-01-11 19:44:42'),
+(45, 62, 45, 1, 1, 'new', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 0, NULL, NULL, NULL, NULL, 'pending', NULL, NULL, NULL, '2026-01-12 13:26:16', '2026-01-12 13:26:16'),
+(46, 63, 46, 1, 1, 'new', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 0, NULL, NULL, NULL, NULL, 'pending', NULL, NULL, NULL, '2026-01-14 19:19:05', '2026-01-14 19:19:05');
 
 -- --------------------------------------------------------
 
@@ -145,12 +116,12 @@ INSERT INTO `consultations` (`id`, `visit_id`, `patient_id`, `doctor_id`, `consu
 -- (See below for the actual view)
 --
 CREATE TABLE `daily_revenue_summary` (
-`revenue_date` date
-,`payment_type` enum('registration','lab_test','medicine','minor_service','service')
+`collected_by_name` varchar(101)
 ,`payment_method` enum('cash','card','mobile_money','insurance')
-,`transaction_count` bigint
+,`payment_type` enum('registration','lab_test','medicine','minor_service','service')
+,`revenue_date` date
 ,`total_amount` decimal(32,2)
-,`collected_by_name` varchar(101)
+,`transaction_count` bigint
 );
 
 -- --------------------------------------------------------
@@ -259,17 +230,11 @@ CREATE TABLE `lab_results` (
 --
 
 INSERT INTO `lab_results` (`id`, `order_id`, `patient_id`, `test_id`, `result_value`, `result_text`, `result_unit`, `is_normal`, `is_critical`, `interpretation`, `technician_id`, `technician_notes`, `completed_at`, `reviewed_by`, `reviewed_at`, `review_notes`) VALUES
-(1, 1, 4, 4, '1.0', 'Test completed successfully.', 'mg/dL', 1, 0, NULL, 4, NULL, '2025-10-17 05:05:00', NULL, NULL, NULL),
-(2, 3, 8, 4, '1.0', 'Test completed successfully.', 'mg/dL', 1, 0, NULL, 6, NULL, '2025-10-21 17:13:00', NULL, NULL, NULL),
-(3, 2, 6, 4, '1.0', 'Test completed successfully.', 'mg/dL', 1, 0, NULL, 6, NULL, '2025-10-22 03:32:00', NULL, NULL, NULL),
-(4, 5, 10, 14, '1.5', 'condition good', 'mg/dL', 0, 0, NULL, 6, NULL, '2025-10-22 03:53:00', NULL, NULL, NULL),
-(5, 6, 12, 3, '1.0', 'Test completed ', 'mg/dL', 1, 0, NULL, 6, NULL, '2025-10-22 05:21:00', NULL, NULL, NULL),
-(6, 9, 15, 4, '1.0', 'null', 'mg/dL', 0, 0, NULL, 6, NULL, '2025-10-23 19:56:00', NULL, NULL, NULL),
-(7, 7, 14, 4, '1.2', 'null', 'mg/dl', 0, 0, NULL, 6, NULL, '2025-11-03 06:09:00', NULL, NULL, NULL),
-(8, 10, 21, 21, '1.0', 'Test completed successfully.', 'mg/dL', 1, 0, NULL, 6, NULL, '2025-11-04 11:15:00', NULL, NULL, NULL),
-(9, 11, 24, 11, '1.0', 'Test completed successfully.', 'mg/dL', 1, 0, NULL, 6, NULL, '2025-11-05 17:20:00', NULL, NULL, NULL),
-(10, 4, 8, 2, 'dfv', 'sdfv', 'mg/dL', 1, 0, NULL, 6, NULL, '2025-11-06 16:36:00', NULL, NULL, NULL),
-(11, 14, 28, 4, '1.0', 'Test completed successfully.', 'mg/dL', 1, 0, NULL, 6, NULL, '2025-11-10 05:12:00', NULL, NULL, NULL);
+(13, 18, 33, 4, '1.2', 'ulk', 'mg/dl', 0, 0, NULL, 10, NULL, '2026-01-08 13:07:00', NULL, NULL, NULL),
+(14, 19, 37, 4, '30%', 'dgajhfjadhajf', '30%', 1, 0, NULL, 10, NULL, '2026-01-09 05:36:00', NULL, NULL, NULL),
+(15, 20, 42, 20, '1.0', 'Test completed successfully.', 'mg/dL', 1, 0, NULL, 10, NULL, '2026-01-09 07:38:00', NULL, NULL, NULL),
+(16, 21, 43, 20, '1.0', 'Test completed successfully.', 'mg/dL', 1, 0, NULL, 10, NULL, '2026-01-09 07:53:00', NULL, NULL, NULL),
+(17, 22, 44, 4, '1', 'dgshyrbhcusyfhj', 'mg/dL', 0, 0, NULL, 10, NULL, '2026-01-11 16:52:00', NULL, NULL, NULL);
 
 -- --------------------------------------------------------
 
@@ -403,21 +368,11 @@ CREATE TABLE `lab_test_orders` (
 --
 
 INSERT INTO `lab_test_orders` (`id`, `visit_id`, `patient_id`, `consultation_id`, `test_id`, `ordered_by`, `assigned_to`, `priority`, `status`, `cancellation_reason`, `instructions`, `sample_collected_at`, `expected_completion`, `created_at`, `updated_at`) VALUES
-(1, 4, 4, 4, 4, 3, 4, 'normal', 'completed', NULL, NULL, NULL, NULL, '2025-10-17 08:04:05', '2025-10-17 08:05:15'),
-(2, 6, 6, 6, 4, 3, 4, 'normal', 'completed', NULL, NULL, NULL, NULL, '2025-10-18 05:14:25', '2025-10-22 06:32:32'),
-(3, 11, 8, 11, 4, 3, 4, 'normal', 'completed', NULL, NULL, NULL, NULL, '2025-10-21 19:21:27', '2025-10-21 20:13:15'),
-(4, 11, 8, 11, 2, 3, 4, 'normal', 'completed', NULL, NULL, NULL, NULL, '2025-10-21 19:21:27', '2025-11-06 19:37:01'),
-(5, 13, 10, 13, 14, 3, 4, 'normal', 'completed', NULL, NULL, NULL, NULL, '2025-10-22 06:52:41', '2025-10-22 06:54:06'),
-(6, 15, 12, 15, 3, 3, 4, 'normal', 'completed', NULL, NULL, NULL, NULL, '2025-10-22 08:20:21', '2025-10-22 08:21:17'),
-(7, 17, 14, 17, 4, 3, 4, 'normal', 'completed', NULL, NULL, NULL, NULL, '2025-10-23 21:21:22', '2025-11-03 09:09:57'),
-(8, 17, 14, 17, 5, 3, 4, 'normal', 'pending', NULL, NULL, NULL, NULL, '2025-10-23 21:21:22', '2025-10-23 21:21:22'),
-(9, 18, 15, 18, 4, 3, 4, 'normal', 'completed', NULL, NULL, NULL, NULL, '2025-10-23 22:52:39', '2025-10-23 22:56:54'),
-(10, 35, 21, 25, 21, 3, 4, 'normal', 'completed', NULL, NULL, NULL, NULL, '2025-11-04 14:12:24', '2025-11-04 14:15:20'),
-(11, 41, 24, 29, 11, 3, 4, 'normal', 'completed', NULL, NULL, NULL, NULL, '2025-11-05 20:19:10', '2025-11-05 20:20:25'),
-(12, 42, 25, 30, 4, 3, 4, 'normal', 'pending', NULL, NULL, NULL, NULL, '2025-11-06 19:26:52', '2025-11-06 19:26:52'),
-(13, 40, 23, 28, 20, 3, 4, 'normal', 'pending', NULL, NULL, NULL, NULL, '2025-11-10 08:08:06', '2025-11-10 08:08:06'),
-(14, 45, 28, 33, 4, 3, 4, 'normal', 'completed', NULL, NULL, NULL, NULL, '2025-11-10 08:10:43', '2025-11-10 08:12:52'),
-(15, 47, 30, 35, 4, 3, 4, 'normal', 'pending', NULL, NULL, NULL, NULL, '2025-11-10 08:42:25', '2025-11-10 08:42:25');
+(18, 51, 33, 39, 4, 9, NULL, 'normal', 'completed', NULL, NULL, NULL, NULL, '2026-01-08 16:04:53', '2026-01-08 16:08:17'),
+(19, 54, 37, NULL, 4, 8, NULL, 'normal', 'completed', NULL, NULL, NULL, NULL, '2026-01-09 08:33:12', '2026-01-09 08:37:11'),
+(20, 59, 42, 43, 20, 9, 10, 'normal', 'completed', NULL, NULL, NULL, NULL, '2026-01-09 10:19:52', '2026-01-09 10:41:46'),
+(21, 60, 43, NULL, 20, 8, NULL, 'normal', 'completed', NULL, NULL, NULL, NULL, '2026-01-09 10:50:59', '2026-01-09 10:53:40'),
+(22, 61, 44, 44, 4, 9, 10, 'normal', 'completed', NULL, NULL, NULL, NULL, '2026-01-11 19:44:42', '2026-01-11 19:53:37');
 
 -- --------------------------------------------------------
 
@@ -458,7 +413,224 @@ INSERT INTO `medicines` (`id`, `name`, `generic_name`, `description`, `strength`
 (12, 'Cetirizine', 'Cetirizine', 'Antihistamine for allergies', '10mg', 'tablets', 80.00, 300, 1, '2025-10-11 03:12:35', '2025-10-11 03:12:35'),
 (13, 'Multivitamins', 'Multivitamins', 'Daily vitamin supplement', 'Adult', 'tablets', 150.00, 200, 1, '2025-10-11 03:12:35', '2025-10-11 03:12:35'),
 (14, 'ORS', 'Oral Rehydration Salts', 'Dehydration treatment', '27.9g', 'sachets', 200.00, 500, 1, '2025-10-11 03:12:35', '2025-10-11 03:12:35'),
-(15, 'Diclofenac', 'Diclofenac', 'Pain and inflammation relief', '50mg', 'tablets', 120.00, 300, 1, '2025-10-11 03:12:35', '2025-10-11 03:12:35');
+(15, 'Diclofenac', 'Diclofenac', 'Pain and inflammation relief', '50mg', 'tablets', 120.00, 300, 1, '2025-10-11 03:12:35', '2025-10-11 03:12:35'),
+(16, 'Paracetamol', 'Acetaminophen', 'Analgesic and antipyretic for mild to moderate pain and fever', '500mg', 'tablets', 50.00, 1000, 1, '2026-01-12 06:14:36', '2026-01-12 06:14:36'),
+(17, 'Paracetamol Syrup', 'Acetaminophen', 'Paediatric analgesic and antipyretic', '125mg/5ml', 'ml', 3000.00, 100, 1, '2026-01-12 06:14:36', '2026-01-12 06:14:36'),
+(18, 'Paracetamol IV', 'Acetaminophen', 'Injectable analgesic for post-operative pain', '1g/100ml', 'vial', 15000.00, 50, 1, '2026-01-12 06:14:36', '2026-01-12 06:14:36'),
+(19, 'Ibuprofen', 'Ibuprofen', 'NSAID for pain, inflammation and fever', '400mg', 'tablets', 100.00, 500, 1, '2026-01-12 06:14:36', '2026-01-12 06:14:36'),
+(20, 'Ibuprofen Suspension', 'Ibuprofen', 'Paediatric NSAID suspension', '100mg/5ml', 'ml', 5000.00, 50, 1, '2026-01-12 06:14:36', '2026-01-12 06:14:36'),
+(21, 'Diclofenac', 'Diclofenac Sodium', 'NSAID for pain and inflammation', '50mg', 'tablets', 120.00, 300, 1, '2026-01-12 06:14:36', '2026-01-12 06:14:36'),
+(22, 'Acetylsalicylic Acid', 'Aspirin', 'Analgesic, antipyretic and antiplatelet', '75mg', 'tablets', 80.00, 500, 1, '2026-01-12 06:14:36', '2026-01-12 06:14:36'),
+(23, 'Tramadol', 'Tramadol HCl', 'Opioid analgesic for moderate to severe pain', '50mg', 'capsules', 300.00, 200, 1, '2026-01-12 06:14:36', '2026-01-12 06:14:36'),
+(24, 'Morphine Sulphate', 'Morphine', 'Opioid for severe pain management', '10mg/ml', 'ampoule', 5000.00, 100, 1, '2026-01-12 06:14:36', '2026-01-12 06:14:36'),
+(25, 'Pethidine', 'Pethidine HCl', 'Opioid analgesic for labour and post-operative pain', '50mg/ml', 'ampoule', 3000.00, 100, 1, '2026-01-12 06:14:36', '2026-01-12 06:14:36'),
+(26, 'Artemether-Lumefantrine (AL)', 'Artemether + Lumefantrine', 'First-line antimalarial for uncomplicated malaria', '20mg/120mg', 'tablets', 500.00, 1000, 1, '2026-01-12 06:14:36', '2026-01-12 06:14:36'),
+(27, 'Quinine Injection', 'Quinine Dihydrochloride', 'Injectable for severe malaria', '300mg/ml', 'ampoule', 2000.00, 200, 1, '2026-01-12 06:14:36', '2026-01-12 06:14:36'),
+(28, 'Quinine Tablets', 'Quinine Sulphate', 'Oral treatment for uncomplicated malaria', '300mg', 'tablets', 150.00, 500, 1, '2026-01-12 06:14:36', '2026-01-12 06:14:36'),
+(29, 'Artesunate Injection', 'Artesunate', 'Parenteral treatment for severe malaria', '60mg', 'vial', 8000.00, 100, 1, '2026-01-12 06:14:36', '2026-01-12 06:14:36'),
+(30, 'Sulfadoxine-Pyrimethamine', 'SP', 'Intermittent preventive treatment in pregnancy (IPTp)', '500mg/25mg', 'tablets', 200.00, 500, 1, '2026-01-12 06:14:36', '2026-01-12 06:14:36'),
+(31, 'Amoxicillin', 'Amoxicillin', 'Beta-lactam antibiotic for respiratory and soft tissue infections', '500mg', 'capsules', 200.00, 1000, 1, '2026-01-12 06:14:36', '2026-01-12 06:14:36'),
+(32, 'Amoxicillin Suspension', 'Amoxicillin', 'Paediatric antibiotic suspension', '125mg/5ml', 'ml', 5000.00, 100, 1, '2026-01-12 06:14:36', '2026-01-12 06:14:36'),
+(33, 'Amoxicillin-Clavulanic Acid', 'Co-amoxiclav', 'Beta-lactamase resistant antibiotic', '625mg', 'tablets', 500.00, 500, 1, '2026-01-12 06:14:36', '2026-01-12 06:14:36'),
+(34, 'Benzylpenicillin', 'Penicillin G', 'Injectable antibiotic for serious bacterial infections', '5MU', 'vial', 2000.00, 200, 1, '2026-01-12 06:14:36', '2026-01-12 06:14:36'),
+(35, 'Procaine Benzylpenicillin', 'Procaine Penicillin', 'Long-acting penicillin IM injection', '3MU', 'vial', 2500.00, 200, 1, '2026-01-12 06:14:36', '2026-01-12 06:14:36'),
+(36, 'Benzathine Benzylpenicillin', 'Benzathine Penicillin', 'Long-acting penicillin for syphilis and rheumatic fever prophylaxis', '2.4MU', 'vial', 3000.00, 100, 1, '2026-01-12 06:14:36', '2026-01-12 06:14:36'),
+(37, 'Cloxacillin', 'Cloxacillin Sodium', 'Beta-lactamase resistant antibiotic for staphylococcal infections', '500mg', 'capsules', 300.00, 500, 1, '2026-01-12 06:14:36', '2026-01-12 06:14:36'),
+(38, 'Phenoxymethylpenicillin', 'Penicillin V', 'Oral penicillin for streptococcal infections', '250mg', 'tablets', 150.00, 500, 1, '2026-01-12 06:14:36', '2026-01-12 06:14:36'),
+(39, 'Erythromycin', 'Erythromycin', 'Macrolide antibiotic alternative to penicillin', '250mg', 'tablets', 200.00, 500, 1, '2026-01-12 06:14:36', '2026-01-12 06:14:36'),
+(40, 'Azithromycin', 'Azithromycin', 'Macrolide for respiratory and STI infections', '500mg', 'tablets', 500.00, 300, 1, '2026-01-12 06:14:36', '2026-01-12 06:14:36'),
+(41, 'Doxycycline', 'Doxycycline Hyclate', 'Tetracycline for various bacterial infections and malaria prophylaxis', '100mg', 'capsules', 150.00, 500, 1, '2026-01-12 06:14:36', '2026-01-12 06:14:36'),
+(42, 'Tetracycline Eye Ointment', 'Tetracycline', 'Topical antibiotic for eye infections', '1%', 'tube', 2000.00, 100, 1, '2026-01-12 06:14:36', '2026-01-12 06:14:36'),
+(43, 'Metronidazole', 'Metronidazole', 'Antibiotic for anaerobic bacteria and protozoal infections', '400mg', 'tablets', 150.00, 1000, 1, '2026-01-12 06:14:36', '2026-01-12 06:14:36'),
+(44, 'Metronidazole IV', 'Metronidazole', 'Injectable for severe anaerobic infections', '500mg/100ml', 'vial', 3000.00, 100, 1, '2026-01-12 06:14:36', '2026-01-12 06:14:36'),
+(45, 'Cotrimoxazole', 'Sulfamethoxazole + Trimethoprim', 'Antibiotic for UTI, pneumonia and HIV prophylaxis (CPT)', '480mg', 'tablets', 100.00, 1000, 1, '2026-01-12 06:14:36', '2026-01-12 06:14:36'),
+(46, 'Cotrimoxazole Suspension', 'Sulfamethoxazole + Trimethoprim', 'Paediatric suspension', '240mg/5ml', 'ml', 3000.00, 100, 1, '2026-01-12 06:14:36', '2026-01-12 06:14:36'),
+(47, 'Nitrofurantoin', 'Nitrofurantoin', 'Antibiotic for urinary tract infections', '100mg', 'capsules', 200.00, 300, 1, '2026-01-12 06:14:36', '2026-01-12 06:14:36'),
+(48, 'Ceftriaxone', 'Ceftriaxone Sodium', 'Third generation cephalosporin for serious infections', '1g', 'vial', 3000.00, 200, 1, '2026-01-12 06:14:36', '2026-01-12 06:14:36'),
+(49, 'Cefotaxime', 'Cefotaxime Sodium', 'Third generation cephalosporin', '1g', 'vial', 3500.00, 150, 1, '2026-01-12 06:14:36', '2026-01-12 06:14:36'),
+(50, 'Ceftazidime', 'Ceftazidime', 'Third generation cephalosporin for pseudomonas', '1g', 'vial', 4000.00, 100, 1, '2026-01-12 06:14:36', '2026-01-12 06:14:36'),
+(51, 'Cefixime', 'Cefixime', 'Oral third generation cephalosporin', '400mg', 'tablets', 600.00, 200, 1, '2026-01-12 06:14:36', '2026-01-12 06:14:36'),
+(52, 'Ciprofloxacin', 'Ciprofloxacin HCl', 'Fluoroquinolone for various bacterial infections', '500mg', 'tablets', 300.00, 500, 1, '2026-01-12 06:14:36', '2026-01-12 06:14:36'),
+(53, 'Ciprofloxacin IV', 'Ciprofloxacin', 'Injectable fluoroquinolone', '200mg/100ml', 'vial', 5000.00, 100, 1, '2026-01-12 06:14:36', '2026-01-12 06:14:36'),
+(54, 'Levofloxacin', 'Levofloxacin', 'Fluoroquinolone for respiratory and urinary infections', '500mg', 'tablets', 400.00, 200, 1, '2026-01-12 06:14:36', '2026-01-12 06:14:36'),
+(55, 'Gentamicin', 'Gentamicin Sulphate', 'Aminoglycoside for serious gram-negative infections', '80mg/2ml', 'ampoule', 2000.00, 200, 1, '2026-01-12 06:14:36', '2026-01-12 06:14:36'),
+(56, 'Clarithromycin', 'Clarithromycin', 'Macrolide for H.pylori and respiratory infections', '500mg', 'tablets', 600.00, 200, 1, '2026-01-12 06:14:36', '2026-01-12 06:14:36'),
+(57, 'Meropenem', 'Meropenem', 'Carbapenem for resistant gram-negative infections', '1g', 'vial', 15000.00, 50, 1, '2026-01-12 06:14:36', '2026-01-12 06:14:36'),
+(58, 'Imipenem-Cilastatin', 'Imipenem + Cilastatin', 'Carbapenem antibiotic', '500mg', 'vial', 18000.00, 50, 1, '2026-01-12 06:14:36', '2026-01-12 06:14:36'),
+(59, 'Vancomycin', 'Vancomycin HCl', 'Glycopeptide for MRSA and resistant gram-positive infections', '500mg', 'vial', 20000.00, 50, 1, '2026-01-12 06:14:36', '2026-01-12 06:14:36'),
+(60, 'Linezolid', 'Linezolid', 'Oxazolidinone for VRE and MRSA', '600mg', 'tablets', 8000.00, 30, 1, '2026-01-12 06:14:36', '2026-01-12 06:14:36'),
+(61, 'Rifampicin + Isoniazid + Pyrazinamide + Ethambutol', 'RHZE FDC', 'Fixed dose combination for TB intensive phase', '150/75/400/275mg', 'tablets', 300.00, 1000, 1, '2026-01-12 06:14:36', '2026-01-12 06:14:36'),
+(62, 'Rifampicin + Isoniazid', 'RH FDC', 'Fixed dose combination for TB continuation phase', '150/75mg', 'tablets', 150.00, 1000, 1, '2026-01-12 06:14:36', '2026-01-12 06:14:36'),
+(63, 'Isoniazid', 'Isoniazid (INH)', 'First-line anti-TB agent', '300mg', 'tablets', 100.00, 500, 1, '2026-01-12 06:14:36', '2026-01-12 06:14:36'),
+(64, 'Rifampicin', 'Rifampicin', 'First-line anti-TB agent', '150mg', 'capsules', 200.00, 500, 1, '2026-01-12 06:14:36', '2026-01-12 06:14:36'),
+(65, 'Pyrazinamide', 'Pyrazinamide', 'First-line anti-TB agent', '400mg', 'tablets', 150.00, 500, 1, '2026-01-12 06:14:36', '2026-01-12 06:14:36'),
+(66, 'Ethambutol', 'Ethambutol HCl', 'First-line anti-TB agent', '400mg', 'tablets', 120.00, 500, 1, '2026-01-12 06:14:36', '2026-01-12 06:14:36'),
+(67, 'Streptomycin', 'Streptomycin Sulphate', 'Injectable anti-TB agent', '1g', 'vial', 2500.00, 100, 1, '2026-01-12 06:14:36', '2026-01-12 06:14:36'),
+(68, 'Tenofovir + Lamivudine + Dolutegravir', 'TLD FDC', 'First-line ART fixed dose combination', '300/300/50mg', 'tablets', 200.00, 2000, 1, '2026-01-12 06:14:36', '2026-01-12 06:14:36'),
+(69, 'Tenofovir + Lamivudine + Efavirenz', 'TLE FDC', 'Alternative first-line ART', '300/300/600mg', 'tablets', 180.00, 1000, 1, '2026-01-12 06:14:36', '2026-01-12 06:14:36'),
+(70, 'Abacavir + Lamivudine', 'ABC/3TC', 'NRTI backbone for children and adults', '600/300mg', 'tablets', 250.00, 500, 1, '2026-01-12 06:14:36', '2026-01-12 06:14:36'),
+(71, 'Zidovudine + Lamivudine + Nevirapine', 'AZT/3TC/NVP', 'Paediatric FDC', '60/30/50mg', 'tablets', 100.00, 500, 1, '2026-01-12 06:14:36', '2026-01-12 06:14:36'),
+(72, 'Lopinavir + Ritonavir', 'LPV/r', 'Second-line protease inhibitor', '200/50mg', 'tablets', 300.00, 500, 1, '2026-01-12 06:14:36', '2026-01-12 06:14:36'),
+(73, 'Atazanavir + Ritonavir', 'ATV/r', 'Second-line protease inhibitor', '300/100mg', 'tablets', 350.00, 300, 1, '2026-01-12 06:14:36', '2026-01-12 06:14:36'),
+(74, 'Darunavir', 'Darunavir', 'Third-line protease inhibitor', '600mg', 'tablets', 500.00, 200, 1, '2026-01-12 06:14:36', '2026-01-12 06:14:36'),
+(75, 'Raltegravir', 'Raltegravir', 'Integrase inhibitor', '400mg', 'tablets', 600.00, 200, 1, '2026-01-12 06:14:36', '2026-01-12 06:14:36'),
+(76, 'Fluconazole', 'Fluconazole', 'Antifungal for candidiasis and cryptococcal meningitis', '200mg', 'capsules', 500.00, 300, 1, '2026-01-12 06:14:36', '2026-01-12 06:14:36'),
+(77, 'Fluconazole IV', 'Fluconazole', 'Injectable antifungal', '200mg/100ml', 'vial', 8000.00, 50, 1, '2026-01-12 06:14:36', '2026-01-12 06:14:36'),
+(78, 'Nystatin Suspension', 'Nystatin', 'Topical antifungal for oral candidiasis', '100,000IU/ml', 'ml', 3000.00, 100, 1, '2026-01-12 06:14:36', '2026-01-12 06:14:36'),
+(79, 'Clotrimazole Cream', 'Clotrimazole', 'Topical antifungal', '1%', 'tube', 2000.00, 100, 1, '2026-01-12 06:14:36', '2026-01-12 06:14:36'),
+(80, 'Miconazole Oral Gel', 'Miconazole', 'Oral antifungal gel', '2%', 'tube', 3000.00, 50, 1, '2026-01-12 06:14:36', '2026-01-12 06:14:36'),
+(81, 'Griseofulvin', 'Griseofulvin', 'Oral antifungal for dermatophyte infections', '500mg', 'tablets', 300.00, 200, 1, '2026-01-12 06:14:36', '2026-01-12 06:14:36'),
+(82, 'Acyclovir', 'Acyclovir', 'Antiviral for herpes infections', '200mg', 'tablets', 300.00, 300, 1, '2026-01-12 06:14:36', '2026-01-12 06:14:36'),
+(83, 'Acyclovir IV', 'Acyclovir Sodium', 'Injectable antiviral for severe herpes infections', '250mg', 'vial', 8000.00, 50, 1, '2026-01-12 06:14:36', '2026-01-12 06:14:36'),
+(84, 'Oseltamivir', 'Oseltamivir Phosphate', 'Antiviral for influenza', '75mg', 'capsules', 1500.00, 100, 1, '2026-01-12 06:14:36', '2026-01-12 06:14:36'),
+(85, 'Albendazole', 'Albendazole', 'Broad spectrum anthelmintic', '400mg', 'tablets', 150.00, 1000, 1, '2026-01-12 06:14:36', '2026-01-12 06:14:36'),
+(86, 'Mebendazole', 'Mebendazole', 'Anthelmintic for intestinal worms', '500mg', 'tablets', 120.00, 1000, 1, '2026-01-12 06:14:36', '2026-01-12 06:14:36'),
+(87, 'Praziquantel', 'Praziquantel', 'Treatment for schistosomiasis and tapeworms', '600mg', 'tablets', 300.00, 500, 1, '2026-01-12 06:14:36', '2026-01-12 06:14:36'),
+(88, 'Ivermectin', 'Ivermectin', 'Antiparasitic for onchocerciasis and strongyloidiasis', '3mg', 'tablets', 200.00, 300, 1, '2026-01-12 06:14:36', '2026-01-12 06:14:36'),
+(89, 'Permethrin Lotion', 'Permethrin', 'Topical treatment for scabies', '5%', 'lotion', 5000.00, 50, 1, '2026-01-12 06:14:36', '2026-01-12 06:14:36'),
+(90, 'Benzyl Benzoate', 'Benzyl Benzoate', 'Topical treatment for scabies', '25%', 'lotion', 3000.00, 50, 1, '2026-01-12 06:14:36', '2026-01-12 06:14:36'),
+(91, 'Amlodipine', 'Amlodipine Besylate', 'Calcium channel blocker for hypertension', '5mg', 'tablets', 150.00, 500, 1, '2026-01-12 06:14:36', '2026-01-12 06:14:36'),
+(92, 'Nifedipine', 'Nifedipine', 'Calcium channel blocker for hypertension and angina', '20mg', 'tablets', 120.00, 400, 1, '2026-01-12 06:14:36', '2026-01-12 06:14:36'),
+(93, 'Atenolol', 'Atenolol', 'Beta-blocker for hypertension and angina', '50mg', 'tablets', 100.00, 500, 1, '2026-01-12 06:14:36', '2026-01-12 06:14:36'),
+(94, 'Propranolol', 'Propranolol HCl', 'Non-selective beta-blocker', '40mg', 'tablets', 80.00, 400, 1, '2026-01-12 06:14:36', '2026-01-12 06:14:36'),
+(95, 'Enalapril', 'Enalapril Maleate', 'ACE inhibitor for hypertension and heart failure', '5mg', 'tablets', 120.00, 500, 1, '2026-01-12 06:14:36', '2026-01-12 06:14:36'),
+(96, 'Lisinopril', 'Lisinopril', 'ACE inhibitor for hypertension', '10mg', 'tablets', 150.00, 400, 1, '2026-01-12 06:14:36', '2026-01-12 06:14:36'),
+(97, 'Losartan', 'Losartan Potassium', 'Angiotensin receptor blocker', '50mg', 'tablets', 200.00, 300, 1, '2026-01-12 06:14:36', '2026-01-12 06:14:36'),
+(98, 'Hydrochlorothiazide', 'Hydrochlorothiazide', 'Thiazide diuretic for hypertension', '25mg', 'tablets', 80.00, 500, 1, '2026-01-12 06:14:36', '2026-01-12 06:14:36'),
+(99, 'Furosemide', 'Furosemide', 'Loop diuretic for edema and heart failure', '40mg', 'tablets', 100.00, 500, 1, '2026-01-12 06:14:36', '2026-01-12 06:14:36'),
+(100, 'Furosemide Injection', 'Furosemide', 'Injectable diuretic', '20mg/2ml', 'ampoule', 1500.00, 100, 1, '2026-01-12 06:14:36', '2026-01-12 06:14:36'),
+(101, 'Spironolactone', 'Spironolactone', 'Potassium-sparing diuretic', '25mg', 'tablets', 150.00, 300, 1, '2026-01-12 06:14:36', '2026-01-12 06:14:36'),
+(102, 'Atorvastatin', 'Atorvastatin Calcium', 'Statin for hyperlipidemia', '20mg', 'tablets', 250.00, 300, 1, '2026-01-12 06:14:36', '2026-01-12 06:14:36'),
+(103, 'Simvastatin', 'Simvastatin', 'Statin for cholesterol reduction', '20mg', 'tablets', 200.00, 300, 1, '2026-01-12 06:14:36', '2026-01-12 06:14:36'),
+(104, 'Isosorbide Dinitrate', 'Isosorbide Dinitrate', 'Nitrate for angina prophylaxis', '5mg', 'tablets', 120.00, 300, 1, '2026-01-12 06:14:36', '2026-01-12 06:14:36'),
+(105, 'Glyceryl Trinitrate', 'GTN', 'Sublingual nitrate for acute angina', '500mcg', 'tablets', 200.00, 200, 1, '2026-01-12 06:14:36', '2026-01-12 06:14:36'),
+(106, 'Digoxin', 'Digoxin', 'Cardiac glycoside for heart failure and atrial fibrillation', '250mcg', 'tablets', 100.00, 300, 1, '2026-01-12 06:14:36', '2026-01-12 06:14:36'),
+(107, 'Methyldopa', 'Methyldopa', 'Antihypertensive safe in pregnancy', '250mg', 'tablets', 120.00, 400, 1, '2026-01-12 06:14:36', '2026-01-12 06:14:36'),
+(108, 'Hydralazine', 'Hydralazine HCl', 'Vasodilator for hypertension', '25mg', 'tablets', 150.00, 200, 1, '2026-01-12 06:14:36', '2026-01-12 06:14:36'),
+(109, 'Adrenaline', 'Epinephrine', 'Emergency medicine for cardiac arrest and anaphylaxis', '1mg/ml', 'ampoule', 2000.00, 200, 1, '2026-01-12 06:14:36', '2026-01-12 06:14:36'),
+(110, 'Atropine', 'Atropine Sulphate', 'Anticholinergic for bradycardia', '1mg/ml', 'ampoule', 1500.00, 150, 1, '2026-01-12 06:14:36', '2026-01-12 06:14:36'),
+(111, 'Dextrose 50%', 'Dextrose', 'Hypertonic glucose for hypoglycemia', '50%', 'ampoule', 1000.00, 200, 1, '2026-01-12 06:14:36', '2026-01-12 06:14:36'),
+(112, 'Sodium Bicarbonate 8.4%', 'Sodium Bicarbonate', 'Alkalinizing agent for metabolic acidosis', '8.4%', 'ampoule', 1500.00, 100, 1, '2026-01-12 06:14:36', '2026-01-12 06:14:36'),
+(113, 'Calcium Gluconate', 'Calcium Gluconate', 'Calcium supplement for hypocalcemia', '10%', 'ampoule', 2000.00, 100, 1, '2026-01-12 06:14:36', '2026-01-12 06:14:36'),
+(114, 'Naloxone', 'Naloxone HCl', 'Opioid antagonist for overdose reversal', '400mcg/ml', 'ampoule', 5000.00, 50, 1, '2026-01-12 06:14:36', '2026-01-12 06:14:36'),
+(115, 'Hydrocortisone', 'Hydrocortisone Sodium Succinate', 'Corticosteroid for acute adrenal insufficiency', '100mg', 'vial', 3000.00, 100, 1, '2026-01-12 06:14:36', '2026-01-12 06:14:36'),
+(116, 'Phenytoin', 'Phenytoin Sodium', 'Anticonvulsant for seizures', '100mg', 'capsules', 150.00, 400, 1, '2026-01-12 06:14:36', '2026-01-12 06:14:36'),
+(117, 'Phenobarbitone', 'Phenobarbital', 'Anticonvulsant and sedative', '30mg', 'tablets', 80.00, 500, 1, '2026-01-12 06:14:36', '2026-01-12 06:14:36'),
+(118, 'Carbamazepine', 'Carbamazepine', 'Anticonvulsant for epilepsy and neuropathic pain', '200mg', 'tablets', 150.00, 400, 1, '2026-01-12 06:14:36', '2026-01-12 06:14:36'),
+(119, 'Sodium Valproate', 'Valproic Acid', 'Broad-spectrum anticonvulsant', '200mg', 'tablets', 200.00, 300, 1, '2026-01-12 06:14:36', '2026-01-12 06:14:36'),
+(120, 'Diazepam', 'Diazepam', 'Benzodiazepine for status epilepticus', '10mg/2ml', 'ampoule', 1500.00, 200, 1, '2026-01-12 06:14:36', '2026-01-12 06:14:36'),
+(121, 'Diazepam Rectal', 'Diazepam', 'Rectal solution for emergency seizures', '5mg/2.5ml', 'tube', 3000.00, 50, 1, '2026-01-12 06:14:36', '2026-01-12 06:14:36'),
+(122, 'Metformin', 'Metformin HCl', 'First-line oral hypoglycemic for Type 2 diabetes', '500mg', 'tablets', 100.00, 1000, 1, '2026-01-12 06:14:36', '2026-01-12 06:14:36'),
+(123, 'Glibenclamide', 'Glibenclamide', 'Sulfonylurea for Type 2 diabetes', '5mg', 'tablets', 80.00, 800, 1, '2026-01-12 06:14:36', '2026-01-12 06:14:36'),
+(124, 'Insulin Soluble (Regular)', 'Human Insulin', 'Short-acting insulin', '100IU/ml', 'vial', 15000.00, 100, 1, '2026-01-12 06:14:36', '2026-01-12 06:14:36'),
+(125, 'Insulin Isophane (NPH)', 'Isophane Insulin', 'Intermediate-acting insulin', '100IU/ml', 'vial', 15000.00, 100, 1, '2026-01-12 06:14:36', '2026-01-12 06:14:36'),
+(126, 'Insulin 30/70', 'Biphasic Insulin', 'Mixed insulin 30% regular, 70% NPH', '100IU/ml', 'vial', 16000.00, 100, 1, '2026-01-12 06:14:36', '2026-01-12 06:14:36'),
+(127, 'Omeprazole', 'Omeprazole', 'Proton pump inhibitor for peptic ulcer disease', '20mg', 'capsules', 250.00, 500, 1, '2026-01-12 06:14:36', '2026-01-12 06:14:36'),
+(128, 'Ranitidine', 'Ranitidine HCl', 'H2 receptor antagonist for GERD', '150mg', 'tablets', 120.00, 400, 1, '2026-01-12 06:14:36', '2026-01-12 06:14:36'),
+(129, 'Oral Rehydration Salts (ORS)', 'ORS', 'Rehydration solution for diarrhea', '20.5g', 'sachets', 200.00, 2000, 1, '2026-01-12 06:14:36', '2026-01-12 06:14:36'),
+(130, 'Zinc Sulphate', 'Zinc', 'Zinc supplementation for diarrhea management', '20mg', 'tablets', 100.00, 1000, 1, '2026-01-12 06:14:36', '2026-01-12 06:14:36'),
+(131, 'Loperamide', 'Loperamide HCl', 'Antidiarrheal agent', '2mg', 'capsules', 150.00, 300, 1, '2026-01-12 06:14:36', '2026-01-12 06:14:36'),
+(132, 'Magnesium Hydroxide', 'Milk of Magnesia', 'Antacid and laxative', '400mg/5ml', 'suspension', 3000.00, 50, 1, '2026-01-12 06:14:36', '2026-01-12 06:14:36'),
+(133, 'Bisacodyl', 'Bisacodyl', 'Stimulant laxative', '5mg', 'tablets', 80.00, 200, 1, '2026-01-12 06:14:36', '2026-01-12 06:14:36'),
+(134, 'Lactulose', 'Lactulose', 'Osmotic laxative for constipation', '667mg/ml', 'syrup', 8000.00, 50, 1, '2026-01-12 06:14:36', '2026-01-12 06:14:36'),
+(135, 'Hyoscine Butylbromide', 'Buscopan', 'Antispasmodic for abdominal pain', '10mg', 'tablets', 150.00, 300, 1, '2026-01-12 06:14:36', '2026-01-12 06:14:36'),
+(136, 'Metoclopramide', 'Metoclopramide HCl', 'Antiemetic and prokinetic agent', '10mg', 'tablets', 100.00, 400, 1, '2026-01-12 06:14:36', '2026-01-12 06:14:36'),
+(137, 'Promethazine', 'Promethazine HCl', 'Antihistamine and antiemetic', '25mg', 'tablets', 120.00, 300, 1, '2026-01-12 06:14:36', '2026-01-12 06:14:36'),
+(138, 'Ondansetron', 'Ondansetron HCl', 'Serotonin antagonist antiemetic', '4mg', 'tablets', 500.00, 200, 1, '2026-01-12 06:14:36', '2026-01-12 06:14:36'),
+(139, 'Salbutamol Inhaler', 'Salbutamol', 'Short-acting beta-agonist for asthma', '100mcg', 'inhaler', 1500.00, 200, 1, '2026-01-12 06:14:36', '2026-01-12 06:14:36'),
+(140, 'Salbutamol Syrup', 'Salbutamol', 'Bronchodilator syrup', '2mg/5ml', 'syrup', 3000.00, 50, 1, '2026-01-12 06:14:36', '2026-01-12 06:14:36'),
+(141, 'Beclomethasone Inhaler', 'Beclomethasone', 'Inhaled corticosteroid for asthma', '250mcg', 'inhaler', 3000.00, 100, 1, '2026-01-12 06:14:36', '2026-01-12 06:14:36'),
+(142, 'Prednisolone', 'Prednisolone', 'Oral corticosteroid for inflammation', '5mg', 'tablets', 100.00, 500, 1, '2026-01-12 06:14:36', '2026-01-12 06:14:36'),
+(143, 'Aminophylline', 'Aminophylline', 'Bronchodilator for severe asthma', '100mg', 'tablets', 120.00, 300, 1, '2026-01-12 06:14:36', '2026-01-12 06:14:36'),
+(144, 'Aminophylline Injection', 'Aminophylline', 'Injectable bronchodilator', '250mg/10ml', 'ampoule', 2000.00, 100, 1, '2026-01-12 06:14:36', '2026-01-12 06:14:36'),
+(145, 'Ipratropium Bromide Inhaler', 'Ipratropium', 'Anticholinergic bronchodilator', '20mcg', 'inhaler', 2500.00, 100, 1, '2026-01-12 06:14:36', '2026-01-12 06:14:36'),
+(146, 'Chlorpheniramine', 'Chlorpheniramine Maleate', 'First generation antihistamine', '4mg', 'tablets', 80.00, 500, 1, '2026-01-12 06:14:36', '2026-01-12 06:14:36'),
+(147, 'Cetirizine', 'Cetirizine HCl', 'Second generation antihistamine for allergies', '10mg', 'tablets', 80.00, 500, 1, '2026-01-12 06:14:36', '2026-01-12 06:14:36'),
+(148, 'Loratadine', 'Loratadine', 'Non-sedating antihistamine', '10mg', 'tablets', 100.00, 400, 1, '2026-01-12 06:14:36', '2026-01-12 06:14:36'),
+(149, 'Hydrocortisone Cream', 'Hydrocortisone', 'Topical corticosteroid for skin inflammation', '1%', 'cream', 2000.00, 100, 1, '2026-01-12 06:14:36', '2026-01-12 06:14:36'),
+(150, 'Betamethasone Cream', 'Betamethasone', 'Potent topical corticosteroid', '0.1%', 'cream', 3000.00, 50, 1, '2026-01-12 06:14:36', '2026-01-12 06:14:36'),
+(151, 'Ferrous Sulphate', 'Iron', 'Iron supplement for anemia', '200mg', 'tablets', 80.00, 1000, 1, '2026-01-12 06:14:36', '2026-01-12 06:14:36'),
+(152, 'Ferrous Sulphate + Folic Acid', 'Iron + Folate', 'Combined iron and folate for pregnancy', '200mg/0.25mg', 'tablets', 100.00, 1000, 1, '2026-01-12 06:14:36', '2026-01-12 06:14:36'),
+(153, 'Folic Acid', 'Folic Acid', 'Folate supplement for anemia prevention', '5mg', 'tablets', 50.00, 1000, 1, '2026-01-12 06:14:36', '2026-01-12 06:14:36'),
+(154, 'Vitamin B Complex', 'B Vitamins', 'Multiple B vitamin supplement', 'Multi', 'tablets', 150.00, 500, 1, '2026-01-12 06:14:36', '2026-01-12 06:14:36'),
+(155, 'Vitamin A', 'Retinol', 'Vitamin A supplementation for deficiency', '200,000IU', 'capsules', 200.00, 500, 1, '2026-01-12 06:14:36', '2026-01-12 06:14:36'),
+(156, 'Calcium Carbonate', 'Calcium', 'Calcium supplement', '500mg', 'tablets', 100.00, 500, 1, '2026-01-12 06:14:36', '2026-01-12 06:14:36'),
+(157, 'Multivitamins', 'Multivitamins', 'Daily vitamin supplement', 'Adult', 'tablets', 150.00, 500, 1, '2026-01-12 06:14:36', '2026-01-12 06:14:36'),
+(158, 'Oxytocin', 'Oxytocin', 'Uterotonic for prevention and treatment of PPH', '10IU/ml', 'ampoule', 2000.00, 300, 1, '2026-01-12 06:14:36', '2026-01-12 06:14:36'),
+(159, 'Misoprostol', 'Misoprostol', 'Prostaglandin for PPH prevention and cervical ripening', '200mcg', 'tablets', 500.00, 500, 1, '2026-01-12 06:14:36', '2026-01-12 06:14:36'),
+(160, 'Ergometrine', 'Ergometrine Maleate', 'Uterotonic for PPH management', '500mcg/ml', 'ampoule', 2500.00, 200, 1, '2026-01-12 06:14:36', '2026-01-12 06:14:36'),
+(161, 'Magnesium Sulphate', 'Magnesium Sulphate', 'Treatment of eclampsia and pre-eclampsia', '50%', 'ampoule', 2000.00, 200, 1, '2026-01-12 06:14:36', '2026-01-12 06:14:36'),
+(162, 'Nifedipine Slow Release', 'Nifedipine', 'Tocolytic and antihypertensive', '20mg', 'tablets', 150.00, 300, 1, '2026-01-12 06:14:36', '2026-01-12 06:14:36'),
+(163, 'Tranexamic Acid', 'Tranexamic Acid', 'Antifibrinolytic for PPH', '500mg', 'ampoule', 5000.00, 100, 1, '2026-01-12 06:14:36', '2026-01-12 06:14:36'),
+(164, 'Clomiphene Citrate', 'Clomiphene', 'Ovulation inducer for infertility', '50mg', 'tablets', 500.00, 100, 1, '2026-01-12 06:14:36', '2026-01-12 06:14:36'),
+(165, 'Combined Oral Contraceptive', 'Ethinylestradiol + Levonorgestrel', 'COC pill for contraception', '30mcg/150mcg', 'tablets', 200.00, 1000, 1, '2026-01-12 06:14:36', '2026-01-12 06:14:36'),
+(166, 'Progesterone Only Pill', 'Levonorgestrel', 'Progestin-only pill (mini-pill)', '30mcg', 'tablets', 150.00, 500, 1, '2026-01-12 06:14:36', '2026-01-12 06:14:36'),
+(167, 'Medroxyprogesterone Injectable', 'Depo-Provera', 'Injectable contraceptive', '150mg/ml', 'vial', 2500.00, 300, 1, '2026-01-12 06:14:36', '2026-01-12 06:14:36'),
+(168, 'Levonorgestrel Implant', 'Jadelle', 'Long-acting reversible contraceptive implant', '75mg x 2', 'implant', 15000.00, 50, 1, '2026-01-12 06:14:36', '2026-01-12 06:14:36'),
+(169, 'Emergency Contraceptive Pill', 'Levonorgestrel', 'Emergency contraception', '1.5mg', 'tablets', 1000.00, 200, 1, '2026-01-12 06:14:36', '2026-01-12 06:14:36'),
+(170, 'Copper IUD', 'Copper T380A', 'Intrauterine contraceptive device', 'Device', 'unit', 5000.00, 100, 1, '2026-01-12 06:14:36', '2026-01-12 06:14:36'),
+(171, 'Haloperidol', 'Haloperidol', 'Antipsychotic for schizophrenia and psychosis', '5mg', 'tablets', 150.00, 300, 1, '2026-01-12 06:14:36', '2026-01-12 06:14:36'),
+(172, 'Haloperidol Injection', 'Haloperidol', 'Injectable antipsychotic', '5mg/ml', 'ampoule', 2000.00, 100, 1, '2026-01-12 06:14:36', '2026-01-12 06:14:36'),
+(173, 'Chlorpromazine', 'Chlorpromazine HCl', 'Antipsychotic and antiemetic', '100mg', 'tablets', 120.00, 400, 1, '2026-01-12 06:14:36', '2026-01-12 06:14:36'),
+(174, 'Amitriptyline', 'Amitriptyline HCl', 'Tricyclic antidepressant', '25mg', 'tablets', 100.00, 400, 1, '2026-01-12 06:14:36', '2026-01-12 06:14:36'),
+(175, 'Fluoxetine', 'Fluoxetine HCl', 'SSRI antidepressant', '20mg', 'capsules', 200.00, 300, 1, '2026-01-12 06:14:36', '2026-01-12 06:14:36'),
+(176, 'Diazepam Tablets', 'Diazepam', 'Benzodiazepine anxiolytic', '5mg', 'tablets', 80.00, 400, 1, '2026-01-12 06:14:36', '2026-01-12 06:14:36'),
+(177, 'Lorazepam', 'Lorazepam', 'Benzodiazepine for anxiety', '2mg', 'tablets', 150.00, 200, 1, '2026-01-12 06:14:36', '2026-01-12 06:14:36'),
+(178, 'Lithium Carbonate', 'Lithium', 'Mood stabilizer for bipolar disorder', '300mg', 'tablets', 200.00, 200, 1, '2026-01-12 06:14:36', '2026-01-12 06:14:36'),
+(179, 'Tetracycline Eye Oint', 'Tetracycline', 'Antibiotic eye ointment', '1%', 'tube', 2000.00, 100, 1, '2026-01-12 06:14:36', '2026-01-12 06:14:36'),
+(180, 'Chloramphenicol Eye Drops', 'Chloramphenicol', 'Antibiotic eye drops', '0.5%', 'drops', 2000.00, 100, 1, '2026-01-12 06:14:36', '2026-01-12 06:14:36'),
+(181, 'Gentamicin Eye Drops', 'Gentamicin', 'Antibiotic eye drops', '0.3%', 'drops', 2500.00, 100, 1, '2026-01-12 06:14:36', '2026-01-12 06:14:36'),
+(182, 'Atropine Eye Drops', 'Atropine Sulphate', 'Mydriatic and cycloplegic', '1%', 'drops', 3000.00, 50, 1, '2026-01-12 06:14:36', '2026-01-12 06:14:36'),
+(183, 'Timolol Eye Drops', 'Timolol Maleate', 'Beta-blocker for glaucoma', '0.5%', 'drops', 5000.00, 50, 1, '2026-01-12 06:14:36', '2026-01-12 06:14:36'),
+(184, 'Pilocarpine Eye Drops', 'Pilocarpine HCl', 'Miotic for glaucoma', '2%', 'drops', 3000.00, 50, 1, '2026-01-12 06:14:36', '2026-01-12 06:14:36'),
+(185, 'Acetazolamide', 'Acetazolamide', 'Carbonic anhydrase inhibitor for glaucoma', '250mg', 'tablets', 200.00, 200, 1, '2026-01-12 06:14:36', '2026-01-12 06:14:36'),
+(186, 'Whitfield Ointment', 'Benzoic + Salicylic Acid', 'Antifungal ointment for ringworm', '6%+3%', 'ointment', 2000.00, 100, 1, '2026-01-12 06:14:36', '2026-01-12 06:14:36'),
+(187, 'Gentian Violet', 'Crystal Violet', 'Antiseptic and antifungal', '0.5%', 'solution', 1500.00, 100, 1, '2026-01-12 06:14:36', '2026-01-12 06:14:36'),
+(188, 'Calamine Lotion', 'Calamine', 'Soothing lotion for itching', 'Lotion', 'bottle', 2000.00, 100, 1, '2026-01-12 06:14:36', '2026-01-12 06:14:36'),
+(189, 'Aqueous Cream', 'Emollient Base', 'Moisturizing cream', 'Cream', 'jar', 3000.00, 50, 1, '2026-01-12 06:14:36', '2026-01-12 06:14:36'),
+(190, 'Zinc Oxide Ointment', 'Zinc Oxide', 'Protective barrier ointment', '15%', 'ointment', 2000.00, 100, 1, '2026-01-12 06:14:36', '2026-01-12 06:14:36'),
+(191, 'Silver Sulfadiazine Cream', 'Silver Sulfadiazine', 'Topical antimicrobial for burns', '1%', 'cream', 5000.00, 50, 1, '2026-01-12 06:14:36', '2026-01-12 06:14:36'),
+(192, 'Tetanus Toxoid', 'TT Vaccine', 'Tetanus vaccination', '0.5ml', 'ampoule', 2000.00, 500, 1, '2026-01-12 06:14:36', '2026-01-12 06:14:36'),
+(193, 'Anti-Tetanus Serum', 'ATS', 'Tetanus immunoglobulin', '1500IU', 'ampoule', 10000.00, 50, 1, '2026-01-12 06:14:36', '2026-01-12 06:14:36'),
+(194, 'Anti-Rabies Vaccine', 'Rabies Vaccine', 'Post-exposure rabies prophylaxis', '2.5IU', 'vial', 25000.00, 30, 1, '2026-01-12 06:14:36', '2026-01-12 06:14:36'),
+(195, 'Anti-Rabies Immunoglobulin', 'HRIG', 'Human rabies immunoglobulin', '300IU', 'vial', 50000.00, 20, 1, '2026-01-12 06:14:36', '2026-01-12 06:14:36'),
+(196, 'Anti-Snake Venom', 'Polyvalent ASV', 'Antivenom for snake bites', '10ml', 'vial', 30000.00, 30, 1, '2026-01-12 06:14:36', '2026-01-12 06:14:36'),
+(197, 'Normal Saline 0.9%', 'Sodium Chloride', 'Isotonic IV fluid', '1000ml', 'bag', 3000.00, 500, 1, '2026-01-12 06:14:36', '2026-01-12 06:14:36'),
+(198, 'Ringer Lactate', 'Hartmanns Solution', 'Balanced IV fluid', '1000ml', 'bag', 3000.00, 500, 1, '2026-01-12 06:14:36', '2026-01-12 06:14:36'),
+(199, 'Dextrose 5%', 'Glucose', 'Isotonic dextrose solution', '1000ml', 'bag', 3000.00, 300, 1, '2026-01-12 06:14:36', '2026-01-12 06:14:36'),
+(200, 'Dextrose 10%', 'Glucose', 'Hypertonic glucose solution', '500ml', 'bag', 2500.00, 200, 1, '2026-01-12 06:14:36', '2026-01-12 06:14:36'),
+(201, 'Dextrose Saline', 'Dextrose + NaCl', 'Combined glucose and saline', '1000ml', 'bag', 3000.00, 300, 1, '2026-01-12 06:14:36', '2026-01-12 06:14:36'),
+(202, 'Mannitol 20%', 'Mannitol', 'Osmotic diuretic for cerebral edema', '500ml', 'bottle', 15000.00, 50, 1, '2026-01-12 06:14:36', '2026-01-12 06:14:36'),
+(203, 'Ketamine', 'Ketamine HCl', 'Dissociative anesthetic', '50mg/ml', 'vial', 5000.00, 100, 1, '2026-01-12 06:14:36', '2026-01-12 06:14:36'),
+(204, 'Thiopentone Sodium', 'Thiopental', 'Induction agent for general anesthesia', '500mg', 'vial', 8000.00, 50, 1, '2026-01-12 06:14:36', '2026-01-12 06:14:36'),
+(205, 'Halothane', 'Halothane', 'Volatile anesthetic agent', '250ml', 'bottle', 25000.00, 20, 1, '2026-01-12 06:14:36', '2026-01-12 06:14:36'),
+(206, 'Lidocaine 2%', 'Lignocaine', 'Local anesthetic', '2%', 'vial', 1500.00, 200, 1, '2026-01-12 06:14:36', '2026-01-12 06:14:36'),
+(207, 'Bupivacaine', 'Bupivacaine HCl', 'Long-acting local anesthetic', '0.5%', 'ampoule', 3000.00, 100, 1, '2026-01-12 06:14:36', '2026-01-12 06:14:36'),
+(208, 'Suxamethonium', 'Succinylcholine', 'Depolarizing muscle relaxant', '50mg/ml', 'ampoule', 3000.00, 100, 1, '2026-01-12 06:14:36', '2026-01-12 06:14:36'),
+(209, 'Activated Charcoal', 'Charcoal', 'Adsorbent for poisoning', '50g', 'bottle', 5000.00, 50, 1, '2026-01-12 06:14:36', '2026-01-12 06:14:36'),
+(210, 'N-Acetylcysteine', 'NAC', 'Antidote for paracetamol overdose', '200mg/ml', 'ampoule', 10000.00, 30, 1, '2026-01-12 06:14:36', '2026-01-12 06:14:36'),
+(211, 'Desferrioxamine', 'Deferoxamine', 'Iron chelating agent', '500mg', 'vial', 15000.00, 20, 1, '2026-01-12 06:14:36', '2026-01-12 06:14:36'),
+(212, 'Protamine Sulphate', 'Protamine', 'Heparin antagonist', '10mg/ml', 'ampoule', 8000.00, 30, 1, '2026-01-12 06:14:36', '2026-01-12 06:14:36'),
+(213, 'Vitamin K', 'Phytomenadione', 'Antidote for warfarin overdose', '10mg/ml', 'ampoule', 3000.00, 100, 1, '2026-01-12 06:14:36', '2026-01-12 06:14:36'),
+(214, 'Heparin Sodium', 'Unfractionated Heparin', 'Anticoagulant for DVT and PE', '5000IU/ml', 'vial', 5000.00, 100, 1, '2026-01-12 06:14:36', '2026-01-12 06:14:36'),
+(215, 'Enoxaparin', 'Low Molecular Weight Heparin', 'LMWH for thromboprophylaxis', '40mg/0.4ml', 'syringe', 8000.00, 100, 1, '2026-01-12 06:14:36', '2026-01-12 06:14:36'),
+(216, 'Warfarin', 'Warfarin Sodium', 'Oral anticoagulant', '5mg', 'tablets', 150.00, 300, 1, '2026-01-12 06:14:36', '2026-01-12 06:14:36'),
+(217, 'Clopidogrel', 'Clopidogrel', 'Antiplatelet for cardiovascular disease', '75mg', 'tablets', 300.00, 300, 1, '2026-01-12 06:14:36', '2026-01-12 06:14:36'),
+(218, 'Methotrexate', 'Methotrexate', 'Antimetabolite chemotherapy', '50mg', 'vial', 8000.00, 50, 1, '2026-01-12 06:14:36', '2026-01-12 06:14:36'),
+(219, 'Cyclophosphamide', 'Cyclophosphamide', 'Alkylating agent chemotherapy', '500mg', 'vial', 10000.00, 50, 1, '2026-01-12 06:14:36', '2026-01-12 06:14:36'),
+(220, 'Vincristine', 'Vincristine Sulphate', 'Vinca alkaloid chemotherapy', '1mg', 'vial', 8000.00, 50, 1, '2026-01-12 06:14:36', '2026-01-12 06:14:36'),
+(221, 'Doxorubicin', 'Doxorubicin HCl', 'Anthracycline chemotherapy', '50mg', 'vial', 15000.00, 30, 1, '2026-01-12 06:14:36', '2026-01-12 06:14:36'),
+(222, 'Tamoxifen', 'Tamoxifen Citrate', 'Hormonal therapy for breast cancer', '20mg', 'tablets', 300.00, 200, 1, '2026-01-12 06:14:36', '2026-01-12 06:14:36'),
+(223, 'Azathioprine', 'Azathioprine', 'Immunosuppressant', '50mg', 'tablets', 300.00, 200, 1, '2026-01-12 06:14:36', '2026-01-12 06:14:36'),
+(224, 'Prednisolone High Dose', 'Prednisolone', 'High-dose corticosteroid', '25mg', 'tablets', 200.00, 300, 1, '2026-01-12 06:14:36', '2026-01-12 06:14:36'),
+(225, 'Povidone Iodine', 'Iodine Solution', 'Antiseptic solution', '10%', 'solution', 3000.00, 100, 1, '2026-01-12 06:14:36', '2026-01-12 06:14:36'),
+(226, 'Hydrogen Peroxide', 'H2O2', 'Antiseptic and disinfectant', '6%', 'solution', 2000.00, 100, 1, '2026-01-12 06:14:36', '2026-01-12 06:14:36'),
+(227, 'Methylated Spirit', 'Ethanol', 'Antiseptic and disinfectant', '70%', 'solution', 2000.00, 100, 1, '2026-01-12 06:14:36', '2026-01-12 06:14:36'),
+(228, 'Glycerine', 'Glycerol', 'Emollient and lubricant', 'Pure', 'bottle', 3000.00, 50, 1, '2026-01-12 06:14:36', '2026-01-12 06:14:36'),
+(229, 'Petroleum Jelly', 'Petrolatum', 'Protective ointment base', 'Pure', 'jar', 2000.00, 100, 1, '2026-01-12 06:14:36', '2026-01-12 06:14:36'),
+(230, 'Cotrimoxazole Prophylaxis', 'SMX-TMP', 'HIV prophylaxis (CPT)', '960mg', 'tablets', 100.00, 2000, 1, '2026-01-12 06:14:36', '2026-01-12 06:14:36'),
+(231, 'Pyridoxine', 'Vitamin B6', 'Prevention of INH neuropathy', '25mg', 'tablets', 80.00, 500, 1, '2026-01-12 06:14:36', '2026-01-12 06:14:36'),
+(232, 'Allopurinol', 'Allopurinol', 'Xanthine oxidase inhibitor for gout', '100mg', 'tablets', 120.00, 300, 1, '2026-01-12 06:14:36', '2026-01-12 06:14:36');
 
 -- --------------------------------------------------------
 
@@ -488,21 +660,22 @@ CREATE TABLE `medicine_batches` (
 --
 
 INSERT INTO `medicine_batches` (`id`, `medicine_id`, `batch_number`, `quantity_received`, `quantity_remaining`, `expiry_date`, `supplier`, `cost_price`, `received_date`, `received_by`, `status`, `notes`, `created_at`, `updated_at`) VALUES
-(1, 1, 'PARA-2024-001', 1000, 908, '2026-12-31', 'MedSupply Ltd', 40.00, '2024-01-15', 1, 'active', NULL, '2025-10-11 03:12:35', '2025-11-10 08:43:10'),
+(1, 1, 'PARA-2024-001', 1000, 837, '2026-12-31', 'MedSupply Ltd', 40.00, '2024-01-15', 1, 'active', NULL, '2025-10-11 03:12:35', '2026-01-14 19:14:53'),
 (2, 2, 'AMOX-2024-001', 500, 500, '2026-06-30', 'MedSupply Ltd', 150.00, '2024-01-15', 1, 'active', NULL, '2025-10-11 03:12:35', '2025-10-11 03:12:35'),
 (3, 3, 'METRO-2024-001', 500, 500, '2026-08-31', 'PharmaDistrib', 120.00, '2024-01-15', 1, 'active', NULL, '2025-10-11 03:12:35', '2025-10-11 03:12:35'),
 (4, 4, 'IBU-2024-001', 800, 800, '2027-03-31', 'MedSupply Ltd', 80.00, '2024-01-15', 1, 'active', NULL, '2025-10-11 03:12:35', '2025-10-11 03:12:35'),
 (5, 5, 'CIPRO-2024-001', 300, 300, '2026-10-31', 'PharmaDistrib', 250.00, '2024-01-15', 1, 'active', NULL, '2025-10-11 03:12:35', '2025-10-11 03:12:35'),
 (6, 6, 'OMEP-2024-001', 400, 400, '2026-09-30', 'MedSupply Ltd', 200.00, '2024-01-15', 1, 'active', NULL, '2025-10-11 03:12:35', '2025-10-11 03:12:35'),
-(7, 7, 'CHL-2024-001', 1000, 920, '2027-12-31', 'PharmaDistrib', 80.00, '2024-01-15', 1, 'active', NULL, '2025-10-11 03:12:35', '2025-11-05 20:27:07'),
+(7, 7, 'CHL-2024-001', 1000, 905, '2027-12-31', 'PharmaDistrib', 80.00, '2024-01-15', 1, 'active', NULL, '2025-10-11 03:12:35', '2025-11-10 09:38:43'),
 (8, 8, 'AL-2024-001', 600, 587, '2026-11-30', 'Global Health', 400.00, '2024-01-15', 1, 'active', NULL, '2025-10-11 03:12:35', '2025-11-05 20:27:07'),
 (9, 9, 'MET-2024-001', 800, 790, '2027-06-30', 'MedSupply Ltd', 80.00, '2024-01-15', 1, 'active', NULL, '2025-10-11 03:12:35', '2025-10-23 23:13:12'),
-(10, 10, 'AML-2024-001', 500, 500, '2026-12-31', 'PharmaDistrib', 120.00, '2024-01-15', 1, 'active', NULL, '2025-10-11 03:12:35', '2025-10-11 03:12:35'),
+(10, 10, 'AML-2024-001', 500, 1000, '2026-12-31', 'PharmaDistrib', 120.00, '2024-01-15', 1, 'active', NULL, '2025-10-11 03:12:35', '2025-11-10 20:26:00'),
 (11, 11, 'SAL-2024-001', 100, 100, '2026-05-31', 'RespiCare', 1200.00, '2024-01-15', 1, 'active', NULL, '2025-10-11 03:12:35', '2025-10-11 03:12:35'),
 (12, 12, 'CET-2024-001', 600, 600, '2027-02-28', 'MedSupply Ltd', 60.00, '2024-01-15', 1, 'active', NULL, '2025-10-11 03:12:35', '2025-10-11 03:12:35'),
 (13, 13, 'MULTI-2024-001', 400, 400, '2026-12-31', 'Nutrition Plus', 120.00, '2024-01-15', 1, 'active', NULL, '2025-10-11 03:12:35', '2025-10-11 03:12:35'),
 (14, 14, 'ORS-2024-001', 1000, 1000, '2027-12-31', 'WHO Supply', 150.00, '2024-01-15', 1, 'active', NULL, '2025-10-11 03:12:35', '2025-10-11 03:12:35'),
-(15, 15, 'DICLO-2024-001', 600, 600, '2026-08-31', 'PharmaDistrib', 100.00, '2024-01-15', 1, 'active', NULL, '2025-10-11 03:12:35', '2025-10-11 03:12:35');
+(15, 15, 'DICLO-2024-001', 600, 600, '2026-08-31', 'PharmaDistrib', 100.00, '2024-01-15', 1, 'active', NULL, '2025-10-11 03:12:35', '2025-10-11 03:12:35'),
+(16, 4, 'BATCH-20251110-202840-00004', 30, 200, '2027-11-10', NULL, 100.00, '2025-11-10', 1, 'active', NULL, '2025-11-10 20:28:40', '2025-11-10 20:28:40');
 
 -- --------------------------------------------------------
 
@@ -526,9 +699,9 @@ CREATE TABLE `medicine_dispensing` (
 -- (See below for the actual view)
 --
 CREATE TABLE `medicine_prescription_stats` (
-`id` int
+`generic_name` varchar(100)
+,`id` int
 ,`name` varchar(100)
-,`generic_name` varchar(100)
 ,`times_prescribed` bigint
 ,`total_quantity_dispensed` decimal(32,0)
 ,`total_revenue` decimal(42,2)
@@ -541,17 +714,17 @@ CREATE TABLE `medicine_prescription_stats` (
 -- (See below for the actual view)
 --
 CREATE TABLE `medicine_stock_status` (
-`id` int
-,`name` varchar(100)
+`active_batches` bigint
 ,`generic_name` varchar(100)
+,`id` int
+,`name` varchar(100)
+,`nearest_expiry` date
+,`reorder_level` int
+,`stock_alert` varchar(13)
 ,`strength` varchar(50)
+,`total_stock` decimal(32,0)
 ,`unit` varchar(20)
 ,`unit_price` decimal(10,2)
-,`reorder_level` int
-,`total_stock` decimal(32,0)
-,`active_batches` bigint
-,`nearest_expiry` date
-,`stock_alert` varchar(13)
 );
 
 -- --------------------------------------------------------
@@ -587,36 +760,16 @@ CREATE TABLE `patients` (
 --
 
 INSERT INTO `patients` (`id`, `registration_number`, `first_name`, `last_name`, `date_of_birth`, `gender`, `phone`, `email`, `address`, `occupation`, `emergency_contact_name`, `emergency_contact_phone`, `blood_group`, `allergies`, `chronic_conditions`, `insurance_company`, `insurance_number`, `created_at`, `updated_at`) VALUES
-(1, 'KJ20250001', 'lwena', 'samson', '2001-07-02', 'male', '068327434', 'lwena027@gmail.com', '', NULL, 'ADAM lwena home of technologies LWENA', '0683274343', NULL, NULL, NULL, NULL, NULL, '2025-10-11 03:50:52', '2025-10-11 03:50:52'),
-(2, 'KJ20250002', 'adam', 'lwena', '2025-07-02', 'male', '0683274343', 'adamlwena22@gmai.com', '', NULL, 'jumla', '0683274343', NULL, NULL, NULL, NULL, NULL, '2025-10-11 06:04:10', '2025-10-11 06:04:10'),
-(3, 'KJ20250003', 'adam', 'lwena', '2025-05-04', 'male', '0683274343', 'adamlwena22@gmai.com', '', NULL, 'adam samson lwena', '0683274343', NULL, NULL, NULL, NULL, NULL, '2025-10-11 11:12:44', '2025-10-11 11:12:44'),
-(4, 'KJ20250004', 'diamond', 'platinumz', '1984-04-02', 'male', '087242534', 'platnumz@gmai.com', '', NULL, 'jumla lokole', '0683274343', NULL, NULL, NULL, NULL, NULL, '2025-10-17 08:02:10', '2025-10-17 08:02:10'),
-(5, 'KJ20250005', 'sule', 'sule', '2025-05-11', 'male', '6543245', 'hjjf@gmail.com', '', NULL, 'zahanati', '0987645678', NULL, NULL, NULL, NULL, NULL, '2025-10-17 08:35:54', '2025-10-17 08:35:54'),
-(6, 'KJ20250006', 'hamza', 'mtinangi', '2005-02-02', 'male', '07212121212', 'hamza@gmail.com', '', NULL, 'lwena samson', '068327434', NULL, NULL, NULL, NULL, NULL, '2025-10-18 05:02:27', '2025-10-18 05:02:27'),
-(7, 'KJ20250007', 'winifrida', 'lwena', '2006-06-08', 'female', '65437234', 'win@gmail.com', '', NULL, 'zawadi lwena', '097876654', NULL, NULL, NULL, NULL, NULL, '2025-10-21 19:04:49', '2025-10-21 19:04:49'),
-(8, 'KJ20250008', 'zawadi', 'lwena', '1999-02-03', 'male', '426436542', 'zawadi@gmail.com', '', NULL, 'ignas', '12342453', NULL, NULL, NULL, NULL, NULL, '2025-10-21 19:08:48', '2025-10-21 19:08:48'),
-(9, 'KJ20250009', 'jackline', 'lwena', '2003-05-04', 'female', '43452346', 'jack@gmail.com', '', NULL, 'win', '45465335', NULL, NULL, NULL, NULL, NULL, '2025-10-21 19:18:47', '2025-10-21 19:18:47'),
-(10, 'KJ20250010', 'hilghat', 'nindi', '1956-04-03', 'female', '0755059343', 'nindi@gmail.com', '', NULL, 'lwena adam', '0683274343', NULL, NULL, NULL, NULL, NULL, '2025-10-22 06:51:49', '2025-10-22 06:51:49'),
-(11, 'KJ20250011', 'july', 'millinga', '2006-04-03', 'male', '76543384', 'millinga@gmail.com', '', NULL, 'clala', '43245376', NULL, NULL, NULL, NULL, NULL, '2025-10-22 07:57:57', '2025-10-22 07:57:57'),
-(12, 'KJ20250012', 'lisah', 'kagemuro', '2003-04-02', 'female', '857635423734', 'lisah@gmaail.com', '', NULL, 'ntui', '324521567', NULL, NULL, NULL, NULL, NULL, '2025-10-22 08:17:18', '2025-10-22 08:17:18'),
-(13, 'KJ20250013', 'jackline', 'jfhf', '2005-05-07', 'male', '657788989', 'j@gmail.com', '', NULL, 'line', '75467876', NULL, NULL, NULL, NULL, NULL, '2025-10-23 11:01:32', '2025-10-23 11:01:32'),
-(14, 'KJ20250014', 'manfred', 'tembo', '1998-05-07', 'male', '876565474', 'manfred@gmail.com', '', NULL, 'adam lwena', '987654456', NULL, NULL, NULL, NULL, NULL, '2025-10-23 21:18:45', '2025-10-23 21:18:45'),
-(15, 'KJ20250015', 'ephrahim', 'swilla', '1985-08-03', 'male', '0987654', 'swillai@gmail.com', '', NULL, 'david', '8763524278', NULL, NULL, NULL, NULL, NULL, '2025-10-23 22:47:21', '2025-10-23 22:47:21'),
-(16, 'KJ20250016', 'sjhdgfdsk', 'jhdfgdl', '2020-04-03', 'male', '765432686', 'fhgkj@gmail.com', '', NULL, 'fdgsfgn', '878654653', NULL, NULL, NULL, NULL, NULL, '2025-10-25 08:16:24', '2025-10-25 08:16:24'),
-(17, 'KJ20250017', 'kylian', 'mbappe', '2025-10-16', 'male', '542324564', 'cathy@gmail.com', '', NULL, 'fadghg', '655', NULL, NULL, NULL, NULL, NULL, '2025-10-26 20:48:31', '2025-10-26 20:48:31'),
-(18, 'KJ20250018', 'ester', 'lupolo', '2000-06-03', 'female', '645326345', '1abla@gmail.com', '', NULL, 'fadghg', '123453', NULL, NULL, NULL, NULL, NULL, '2025-10-29 09:12:35', '2025-10-29 09:12:35'),
-(19, 'KJ20250019', 'mariam', 'julius', '2002-03-05', 'female', '0612345678', 'ablaah1@gmail.com', 'mbeya', 'student', 'fadghg', '5643567', NULL, NULL, NULL, NULL, NULL, '2025-10-29 09:42:34', '2025-10-29 09:42:34'),
-(20, 'KJ20250020', 'nayoth', 'njovu', '1998-01-04', 'male', '989786545', 'nayoth@gmail.com', 'ruvuma', 'ujenzi', 'agress', '29875322', NULL, NULL, NULL, NULL, NULL, '2025-11-01 13:44:54', '2025-11-01 13:44:54'),
-(21, 'KJ20250021', 'zuhura', 'magoto', '1982-04-02', 'female', '98964865', 'zuhura@gmail.com', 'ruvuma juu', 'ness', '5453576', 'kapela', NULL, NULL, NULL, NULL, NULL, '2025-11-04 14:10:05', '2025-11-04 14:10:05'),
-(22, 'KJ20250022', 'hapyness', 'sahani', '2002-04-06', 'female', '12345678609', 'happyness@gmail.com', 'shinyanga', 'student', 'masala', '4578977657', NULL, NULL, NULL, NULL, NULL, '2025-11-05 08:45:25', '2025-11-05 08:45:25'),
-(23, 'KJ20250023', 'ester', 'lupolo', '2000-04-06', 'female', '0683274343', 'adamlwena22@gmai.com', 'mbeya', 'mwasiasa', 'ester', '54673565', NULL, NULL, NULL, NULL, NULL, '2025-11-05 10:24:41', '2025-11-05 10:24:41'),
-(24, 'KJ20250024', 'newton', 'katembo', '2001-04-03', 'male', '34678765', 'katembo@gmail.com', 'uyole', 'fundi', 'jusfhj', '347453534', NULL, NULL, NULL, NULL, NULL, '2025-11-05 20:03:41', '2025-11-05 20:03:41'),
-(25, 'KJ20250025', 'meryciana', 'unami', '2000-04-05', 'female', '45658576', 'unami@gmail.com', 'dar es salaam', 'msamamizi kura', 'adam shongo', '345768978654', NULL, NULL, NULL, NULL, NULL, '2025-11-06 18:25:19', '2025-11-06 18:25:19'),
-(26, 'KJ20250026', 'john', 'magufuri', '1960-04-03', 'male', '34646453', 'magufuri@gmail.com', 'chato', 'raisi', '', '', NULL, NULL, NULL, NULL, NULL, '2025-11-10 06:07:55', '2025-11-10 06:07:55'),
-(27, 'KJ20250027', 'el', 'becerril', '2004-03-03', 'male', '3456462454', 'el@gmail.com', 'facebook', 'content', 'sfs', '04398973495', NULL, NULL, NULL, NULL, NULL, '2025-11-10 07:31:52', '2025-11-10 07:31:52'),
-(28, 'KJ20250028', 'david', 'sembo', '1998-06-03', 'male', '567375465736', 'sembo@gmail.com', 'dar', 'content', 'Magic Fitness.27', '04398973495', NULL, NULL, NULL, NULL, NULL, '2025-11-10 08:09:36', '2025-11-10 08:09:36'),
-(29, 'KJ20250029', 'shaban', 'pepe', '2003-05-04', 'male', '32345465', 'pepe@gmail.com', 'ruvuma', 'content', 'Magic Fitness.27', '04398973495', NULL, NULL, NULL, NULL, NULL, '2025-11-10 08:16:04', '2025-11-10 08:16:04'),
-(30, 'KJ20250030', 'saimon', 'jpseph', '2004-05-04', 'male', '3456754', 'saimon@gmail.com', 'sdhj', 'sdbnsdn', 'dssbndnb', '3456754', NULL, NULL, NULL, NULL, NULL, '2025-11-10 08:41:24', '2025-11-10 08:41:24');
+(33, 'KJ20260001', 'patient', 'one', '2001-07-02', 'male', '0712345678', 'patient@gmail.com', 'Mbeya', 'mkulima', 'jumla', '0683274343', NULL, NULL, NULL, NULL, NULL, '2026-01-08 16:02:17', '2026-01-08 16:02:17'),
+(35, 'KJ20260002', 'patient', 'two', '2025-11-04', 'male', '69937654', 'two@gmail.com', 'Mbeya', 'king', 'jh', '98565689', NULL, NULL, NULL, NULL, NULL, '2026-01-09 08:18:24', '2026-01-09 08:18:24'),
+(36, 'KJ20260003', 'patient', 'two', '2019-03-05', 'male', '37874635', 'two@gmail.com', 'dsbfnm', 'sfhvnd', 'vnv', '6578476546', NULL, NULL, NULL, NULL, NULL, '2026-01-09 08:20:24', '2026-01-09 08:20:24'),
+(37, 'KJ20260004', 'patient', 'three', '2026-01-01', 'female', '3456575645', 'three@gmail.com', 'Mbeya', 'jkaf', 'adfgjh', '756432354', NULL, NULL, NULL, NULL, NULL, '2026-01-09 08:33:12', '2026-01-09 08:33:12'),
+(38, 'KJ20260005', 'dfghjfj.,,', 'avbb', '2026-01-06', 'male', '897657', '', 'sadsfs', 'dfggdf', 'dsa', '345', NULL, NULL, NULL, NULL, NULL, '2026-01-09 09:20:07', '2026-01-09 09:20:07'),
+(42, 'KJ20260006', 'patient', 'five', '2026-01-14', 'female', '243456324', '', 'sdfdgfh', 'sfghgdh', 'dfgdgdhg', '56543355', NULL, NULL, NULL, NULL, NULL, '2026-01-09 10:18:10', '2026-01-09 10:18:10'),
+(43, 'KJ20260007', 'patient', 'six', '2026-01-05', 'female', '23435645434', '', '', '', '', '', NULL, NULL, NULL, NULL, NULL, '2026-01-09 10:50:59', '2026-01-09 10:50:59'),
+(44, 'KJ20260008', 'patient', 'seven', '2026-01-15', 'male', '21345674', 'four@gmai.com', 'sdhk', 'dhfdjf', 'hdbdafn', '345678765', NULL, NULL, NULL, NULL, NULL, '2026-01-11 19:40:50', '2026-01-11 19:40:50'),
+(45, 'KJ20260009', 'patient', 'eight', '2026-01-15', 'male', '21345674', 'four@gmai.com', 'sdhk', 'dhfdjf', 'hdbdafn', '347865643', NULL, NULL, NULL, NULL, NULL, '2026-01-12 13:26:16', '2026-01-12 13:26:16'),
+(46, 'KJ20260010', 'patient', 'ten', '2022-11-10', 'male', '356543343', 'ten@gmail.com', 'majengo', 'mkulima', 'juma', '34546352', NULL, NULL, NULL, NULL, NULL, '2026-01-14 19:19:05', '2026-01-14 19:19:05');
 
 -- --------------------------------------------------------
 
@@ -625,14 +778,14 @@ INSERT INTO `patients` (`id`, `registration_number`, `first_name`, `last_name`, 
 -- (See below for the actual view)
 --
 CREATE TABLE `patient_latest_visit` (
-`patient_id` int
+`created_at` timestamp
+,`patient_id` int
+,`status` enum('active','completed','cancelled')
+,`updated_at` timestamp
+,`visit_date` date
 ,`visit_id` int
 ,`visit_number` int
-,`status` enum('active','completed','cancelled')
 ,`visit_type` enum('consultation','lab_only','minor_service')
-,`visit_date` date
-,`created_at` timestamp
-,`updated_at` timestamp
 );
 
 -- --------------------------------------------------------
@@ -660,41 +813,16 @@ CREATE TABLE `patient_visits` (
 --
 
 INSERT INTO `patient_visits` (`id`, `patient_id`, `visit_number`, `visit_date`, `visit_type`, `assigned_doctor_id`, `registered_by`, `status`, `completed_at`, `created_at`, `updated_at`) VALUES
-(1, 1, 1, '2025-10-11', 'consultation', NULL, 2, 'active', NULL, '2025-10-11 03:50:52', '2025-10-20 06:40:16'),
-(2, 2, 1, '2025-10-11', 'consultation', NULL, 2, 'active', NULL, '2025-10-11 06:04:10', '2025-10-20 06:40:16'),
-(3, 3, 1, '2025-10-11', 'consultation', NULL, 2, 'active', NULL, '2025-10-11 11:12:44', '2025-10-20 06:40:16'),
-(4, 4, 1, '2025-10-17', 'consultation', NULL, 2, 'active', NULL, '2025-10-17 08:02:10', '2025-10-20 06:40:16'),
-(5, 5, 1, '2025-10-17', 'consultation', NULL, 2, 'active', NULL, '2025-10-17 08:35:54', '2025-10-20 06:40:16'),
-(6, 6, 1, '2025-10-18', 'consultation', NULL, 2, 'active', NULL, '2025-10-18 05:02:27', '2025-10-20 06:40:16'),
-(7, 1, 2, '2025-10-20', 'consultation', NULL, 2, 'active', NULL, '2025-10-20 07:00:37', '2025-11-07 12:30:57'),
-(9, 6, 2, '2025-10-20', 'consultation', NULL, 2, 'completed', NULL, '2025-10-20 07:12:12', '2025-10-23 23:13:19'),
-(10, 7, 1, '2025-10-21', 'consultation', NULL, 2, 'active', NULL, '2025-10-21 19:04:49', '2025-10-21 19:04:49'),
-(11, 8, 1, '2025-10-21', 'consultation', NULL, 2, 'active', NULL, '2025-10-21 19:08:48', '2025-11-06 19:37:01'),
-(12, 9, 1, '2025-10-21', 'consultation', NULL, 2, 'active', NULL, '2025-10-21 19:18:47', '2025-10-21 19:18:47'),
-(13, 10, 1, '2025-10-22', 'consultation', NULL, 2, 'active', NULL, '2025-10-22 06:51:49', '2025-10-22 07:48:12'),
-(14, 11, 1, '2025-10-22', 'consultation', NULL, 2, 'active', NULL, '2025-10-22 07:57:57', '2025-10-22 07:57:57'),
-(15, 12, 1, '2025-10-22', 'consultation', NULL, 2, 'active', NULL, '2025-10-22 08:17:18', '2025-10-22 08:21:17'),
-(16, 13, 1, '2025-10-23', 'consultation', NULL, 2, 'completed', NULL, '2025-10-23 11:01:32', '2025-10-23 23:13:04'),
-(17, 14, 1, '2025-10-24', 'consultation', NULL, 2, 'active', NULL, '2025-10-23 21:18:45', '2025-10-23 21:22:07'),
-(18, 15, 1, '2025-10-24', 'consultation', NULL, 2, 'completed', NULL, '2025-10-23 22:47:21', '2025-11-03 09:01:59'),
-(28, 9, 2, '2025-10-24', 'consultation', NULL, 2, 'active', NULL, '2025-10-23 23:16:42', '2025-10-23 23:16:42'),
-(29, 16, 1, '2025-10-25', 'consultation', NULL, 2, 'active', NULL, '2025-10-25 08:16:24', '2025-10-25 08:16:24'),
-(30, 17, 1, '2025-10-26', 'consultation', NULL, 2, 'active', NULL, '2025-10-26 20:48:31', '2025-10-26 20:48:31'),
-(31, 18, 1, '2025-10-29', 'consultation', NULL, 2, 'active', NULL, '2025-10-29 09:12:35', '2025-10-29 09:12:35'),
-(32, 19, 1, '2025-10-29', 'consultation', NULL, 2, 'active', NULL, '2025-10-29 09:42:34', '2025-10-29 09:42:34'),
-(33, 2, 2, '2025-11-01', 'consultation', NULL, 2, 'active', NULL, '2025-11-01 13:38:30', '2025-11-01 13:38:30'),
-(34, 20, 1, '2025-11-01', 'consultation', NULL, 2, 'active', NULL, '2025-11-01 13:44:54', '2025-11-01 13:44:54'),
-(35, 21, 1, '2025-11-04', 'consultation', NULL, 2, 'completed', NULL, '2025-11-04 14:10:05', '2025-11-04 14:19:06'),
-(36, 21, 2, '2025-11-04', 'consultation', NULL, 2, 'active', NULL, '2025-11-04 14:32:43', '2025-11-04 14:32:43'),
-(39, 22, 1, '2025-11-05', 'consultation', NULL, 2, 'completed', NULL, '2025-11-05 08:45:25', '2025-11-05 09:20:55'),
-(40, 23, 1, '2025-11-05', 'consultation', NULL, 2, 'active', NULL, '2025-11-05 10:24:41', '2025-11-10 08:08:06'),
-(41, 24, 1, '2025-11-05', 'consultation', NULL, 2, 'completed', NULL, '2025-11-05 20:03:41', '2025-11-05 20:27:07'),
-(42, 25, 1, '2025-11-06', 'consultation', NULL, 2, 'active', NULL, '2025-11-06 18:25:19', '2025-11-06 19:35:42'),
-(43, 26, 1, '2025-11-10', 'consultation', NULL, 2, 'active', NULL, '2025-11-10 06:07:55', '2025-11-10 06:20:11'),
-(44, 27, 1, '2025-11-10', 'consultation', NULL, 2, 'active', NULL, '2025-11-10 07:31:52', '2025-11-10 07:34:14'),
-(45, 28, 1, '2025-11-10', 'consultation', NULL, 2, 'active', NULL, '2025-11-10 08:09:36', '2025-11-10 08:12:52'),
-(46, 29, 1, '2025-11-10', 'consultation', NULL, 2, 'active', NULL, '2025-11-10 08:16:04', '2025-11-10 08:20:07'),
-(47, 30, 1, '2025-11-10', 'consultation', NULL, 2, 'completed', NULL, '2025-11-10 08:41:24', '2025-11-10 08:43:10');
+(51, 33, 1, '2026-01-08', 'consultation', NULL, 8, 'completed', NULL, '2026-01-08 16:02:17', '2026-01-14 19:14:51'),
+(52, 35, 1, '2026-01-09', 'lab_only', NULL, 8, 'active', NULL, '2026-01-09 08:18:24', '2026-01-09 08:18:24'),
+(53, 36, 1, '2026-01-09', 'lab_only', NULL, 8, 'active', NULL, '2026-01-09 08:20:24', '2026-01-09 08:20:24'),
+(54, 37, 1, '2026-01-09', 'lab_only', NULL, 8, 'active', NULL, '2026-01-09 08:33:12', '2026-01-09 08:37:11'),
+(55, 38, 1, '2026-01-09', 'minor_service', NULL, 8, 'active', NULL, '2026-01-09 09:20:07', '2026-01-09 09:20:07'),
+(59, 42, 1, '2026-01-09', 'consultation', NULL, 8, 'completed', NULL, '2026-01-09 10:18:10', '2026-01-14 19:14:53'),
+(60, 43, 1, '2026-01-09', 'lab_only', NULL, 8, 'active', NULL, '2026-01-09 10:50:59', '2026-01-09 10:53:40'),
+(61, 44, 1, '2026-01-11', 'consultation', NULL, 8, 'completed', NULL, '2026-01-11 19:40:50', '2026-01-14 19:14:47'),
+(62, 45, 1, '2026-01-12', 'consultation', NULL, 8, 'active', NULL, '2026-01-12 13:26:16', '2026-01-12 13:26:16'),
+(63, 46, 1, '2026-01-14', 'consultation', NULL, 8, 'active', NULL, '2026-01-14 19:19:05', '2026-01-14 19:19:05');
 
 -- --------------------------------------------------------
 
@@ -723,71 +851,18 @@ CREATE TABLE `payments` (
 --
 
 INSERT INTO `payments` (`id`, `visit_id`, `patient_id`, `payment_type`, `item_id`, `item_type`, `amount`, `payment_method`, `payment_status`, `reference_number`, `collected_by`, `payment_date`, `notes`) VALUES
-(1, 1, 1, 'registration', NULL, NULL, 3000.00, 'cash', 'paid', NULL, 2, '2025-10-11 03:50:52', 'Initial consultation payment'),
-(2, 2, 2, 'registration', NULL, NULL, 3000.00, 'cash', 'paid', NULL, 2, '2025-10-11 06:04:10', 'Initial consultation payment'),
-(3, 3, 3, 'registration', NULL, NULL, 3000.00, 'cash', 'paid', NULL, 2, '2025-10-11 11:12:44', 'Initial consultation payment'),
-(4, 4, 4, 'registration', NULL, NULL, 3000.00, 'cash', 'paid', NULL, 2, '2025-10-17 08:02:10', 'Initial consultation payment'),
-(5, 4, 4, 'lab_test', 1, 'lab_order', 8000.00, 'cash', 'paid', '', 2, '2025-10-17 08:04:55', NULL),
-(6, 5, 5, 'registration', NULL, NULL, 3000.00, 'cash', 'paid', NULL, 2, '2025-10-17 08:35:54', 'Initial consultation payment'),
-(7, 6, 6, 'registration', NULL, NULL, 3000.00, 'cash', 'paid', NULL, 2, '2025-10-18 05:02:27', 'Initial consultation payment'),
-(8, 7, 1, 'registration', NULL, NULL, 3000.00, 'cash', 'paid', NULL, 2, '2025-10-20 07:00:37', 'Revisit payment - Visit #2'),
-(10, 9, 6, 'registration', NULL, NULL, 3000.00, 'cash', 'paid', NULL, 2, '2025-10-20 07:12:12', 'Revisit payment - Visit #2'),
-(11, 10, 7, 'registration', NULL, NULL, 3000.00, 'cash', 'paid', NULL, 2, '2025-10-21 19:04:49', 'Initial consultation payment'),
-(12, 11, 8, 'registration', NULL, NULL, 3000.00, 'cash', 'paid', NULL, 2, '2025-10-21 19:08:48', 'Initial consultation payment'),
-(13, 12, 9, 'registration', NULL, NULL, 3000.00, 'cash', 'paid', NULL, 2, '2025-10-21 19:18:47', 'Initial consultation payment'),
-(14, 11, 8, 'lab_test', 3, 'lab_order', 13000.00, 'cash', 'paid', '', 2, '2025-10-21 20:08:25', NULL),
-(15, 6, 6, 'medicine', 2, 'prescription', 500.00, 'cash', 'paid', '', 2, '2025-10-22 06:11:55', NULL),
-(16, 6, 6, 'medicine', 2, 'prescription', 500.00, 'cash', 'paid', '', 2, '2025-10-22 06:24:36', NULL),
-(17, 6, 6, 'lab_test', 2, 'lab_order', 8000.00, 'cash', 'paid', '', 2, '2025-10-22 06:25:03', NULL),
-(18, 6, 6, 'lab_test', 2, 'lab_order', 8000.00, 'cash', 'paid', '', 2, '2025-10-22 06:29:58', NULL),
-(19, 13, 10, 'registration', NULL, NULL, 3000.00, 'cash', 'paid', NULL, 2, '2025-10-22 06:51:49', 'Initial consultation payment'),
-(20, 13, 10, 'lab_test', 5, 'lab_order', 8000.00, 'cash', 'paid', '', 2, '2025-10-22 06:53:23', NULL),
-(21, 14, 11, 'registration', NULL, NULL, 3000.00, 'cash', 'paid', NULL, 2, '2025-10-22 07:57:57', 'Initial consultation payment'),
-(22, 15, 12, 'registration', NULL, NULL, 3000.00, 'cash', 'paid', NULL, 2, '2025-10-22 08:17:18', 'Initial consultation payment'),
-(23, 15, 12, 'lab_test', 6, 'lab_order', 5000.00, 'cash', 'paid', '', 2, '2025-10-22 08:20:51', NULL),
-(24, 7, 1, 'medicine', 3, 'prescription', 500.00, 'cash', 'paid', '', 2, '2025-10-22 19:11:12', NULL),
-(25, 16, 13, 'registration', NULL, NULL, 3000.00, 'cash', 'paid', NULL, 2, '2025-10-23 11:01:32', 'Initial consultation payment'),
-(26, 11, 8, 'medicine', 8, 'prescription', 1000.00, 'cash', 'paid', '', 2, '2025-10-23 20:09:26', NULL),
-(27, 17, 14, 'registration', NULL, NULL, 3000.00, 'cash', 'paid', NULL, 2, '2025-10-23 21:18:45', 'Initial consultation payment'),
-(28, 17, 14, 'lab_test', 7, 'lab_order', 14000.00, 'cash', 'paid', '', 2, '2025-10-23 21:22:07', NULL),
-(29, 18, 15, 'registration', NULL, NULL, 3000.00, 'mobile_money', 'paid', NULL, 2, '2025-10-23 22:47:21', 'Initial consultation payment'),
-(30, 18, 15, 'lab_test', 9, 'lab_order', 5000.00, 'cash', 'paid', '', 2, '2025-10-23 22:54:57', NULL),
-(31, 18, 15, 'medicine', 9, 'prescription', 500.00, 'card', 'paid', '', 2, '2025-10-23 22:55:12', NULL),
-(32, 16, 13, 'medicine', 7, 'prescription', 500.00, 'mobile_money', 'paid', '', 2, '2025-10-23 22:55:19', NULL),
-(33, 18, 15, 'medicine', 10, 'prescription', 1000.00, 'insurance', 'paid', '', 2, '2025-10-23 22:58:08', NULL),
-(43, 29, 16, 'registration', NULL, NULL, 3000.00, 'cash', 'paid', NULL, 2, '2025-10-25 08:16:24', 'Initial consultation payment'),
-(44, 30, 17, 'registration', NULL, NULL, 3000.00, 'cash', 'paid', NULL, 2, '2025-10-26 20:48:31', 'Initial consultation payment'),
-(45, 31, 18, 'registration', NULL, NULL, 3000.00, 'cash', 'paid', NULL, 2, '2025-10-29 09:12:35', 'Initial consultation payment'),
-(46, 32, 19, 'registration', NULL, NULL, 3000.00, 'cash', 'paid', NULL, 2, '2025-10-29 09:42:34', 'Initial consultation payment'),
-(47, 33, 2, 'registration', NULL, NULL, 3000.00, 'mobile_money', 'paid', NULL, 2, '2025-11-01 13:38:30', 'Revisit payment - Visit #2'),
-(48, 34, 20, 'registration', NULL, NULL, 3000.00, 'cash', 'paid', NULL, 2, '2025-11-01 13:44:54', 'Initial consultation payment'),
-(49, 18, 15, 'medicine', 11, 'prescription', 500.00, 'card', 'paid', '', 2, '2025-11-03 09:01:43', NULL),
-(50, 35, 21, 'registration', NULL, NULL, 3000.00, 'insurance', 'paid', NULL, 2, '2025-11-04 14:10:05', 'Initial consultation payment'),
-(51, 35, 21, 'lab_test', 10, 'lab_order', 8000.00, 'insurance', 'paid', '', 2, '2025-11-04 14:14:54', NULL),
-(52, 35, 21, 'medicine', 13, 'prescription', 1000.00, 'insurance', 'paid', '', 2, '2025-11-04 14:17:48', NULL),
-(53, 35, 21, 'medicine', 12, 'prescription', 700.00, 'insurance', 'paid', '', 2, '2025-11-04 14:17:57', NULL),
-(54, 36, 21, 'registration', NULL, NULL, 3000.00, 'insurance', 'paid', NULL, 2, '2025-11-04 14:32:43', 'Revisit payment - Visit #2'),
-(55, 39, 22, 'registration', NULL, NULL, 3000.00, 'mobile_money', 'paid', NULL, 2, '2025-11-05 08:45:25', 'Initial consultation payment'),
-(56, 39, 22, 'medicine', 14, 'prescription', 750.00, 'mobile_money', 'paid', '', 2, '2025-11-05 09:20:43', NULL),
-(57, 40, 23, 'registration', NULL, NULL, 3000.00, 'insurance', 'paid', NULL, 2, '2025-11-05 10:24:41', 'Initial consultation payment'),
-(59, 41, 24, 'registration', NULL, NULL, 3000.00, 'mobile_money', 'paid', NULL, 2, '2025-11-05 20:03:41', 'Initial consultation payment'),
-(60, 41, 24, 'medicine', 15, 'prescription', 6500.00, 'cash', 'paid', 'sdfdgh23456', 2, '2025-11-05 20:19:40', NULL),
-(61, 41, 24, 'lab_test', 11, 'lab_order', 15000.00, 'mobile_money', 'paid', '23466y4', 2, '2025-11-05 20:19:49', NULL),
-(62, 41, 24, 'medicine', 16, 'prescription', 6000.00, 'mobile_money', 'paid', '', 2, '2025-11-05 20:26:59', NULL),
-(63, 42, 25, 'registration', NULL, NULL, 3000.00, 'insurance', 'paid', NULL, 2, '2025-11-06 18:25:19', 'Initial consultation payment'),
-(64, 42, 25, 'lab_test', 12, 'lab_order', 5000.00, 'insurance', 'paid', '', 2, '2025-11-06 19:35:42', NULL),
-(66, 1, 1, 'minor_service', 2, 'service_order', 5000.00, 'mobile_money', 'paid', '', 2, '2025-11-07 12:31:46', NULL),
-(67, 40, 23, 'minor_service', 1, 'service_order', 1000.00, 'card', 'paid', '', 2, '2025-11-07 12:52:46', NULL),
-(68, 43, 26, 'registration', NULL, NULL, 3000.00, 'card', 'paid', NULL, 2, '2025-11-10 06:07:55', 'Initial consultation payment'),
-(70, 44, 27, 'registration', NULL, NULL, 3000.00, 'mobile_money', 'paid', NULL, 2, '2025-11-10 07:31:52', 'Initial consultation payment'),
-(72, 44, 27, 'service', 4, 'service_order', 5000.00, 'card', 'paid', '', 2, '2025-11-10 07:55:15', NULL),
-(73, 43, 26, 'service', 3, 'service_order', 5000.00, 'cash', 'paid', '', 2, '2025-11-10 07:55:22', NULL),
-(74, 45, 28, 'registration', NULL, NULL, 3000.00, 'card', 'paid', NULL, 2, '2025-11-10 08:09:36', 'Initial consultation payment'),
-(75, 45, 28, 'lab_test', 14, 'lab_order', 5000.00, 'mobile_money', 'paid', '', 2, '2025-11-10 08:12:28', NULL),
-(76, 46, 29, 'registration', NULL, NULL, 3000.00, 'cash', 'paid', NULL, 2, '2025-11-10 08:16:04', 'Initial consultation payment'),
-(77, 46, 29, 'service', 5, 'service_order', 5000.00, 'card', 'paid', '', 2, '2025-11-10 08:20:38', NULL),
-(78, 47, 30, 'registration', NULL, NULL, 3000.00, 'card', 'paid', NULL, 2, '2025-11-10 08:41:24', 'Initial consultation payment'),
-(79, 47, 30, 'medicine', 17, 'prescription', 650.00, 'mobile_money', 'paid', '', 2, '2025-11-10 08:42:59', NULL);
+(87, 51, 33, 'registration', NULL, NULL, 3000.00, 'cash', 'paid', NULL, 8, '2026-01-08 16:02:17', 'Initial consultation payment'),
+(88, 51, 33, 'medicine', 20, 'prescription', 900.00, 'cash', 'paid', '', 8, '2026-01-09 08:06:08', NULL),
+(89, 54, 37, 'lab_test', NULL, NULL, 5000.00, 'cash', 'paid', NULL, 8, '2026-01-09 08:33:12', 'Lab test payment at registration'),
+(93, 59, 42, 'registration', NULL, NULL, 3000.00, 'cash', 'paid', NULL, 8, '2026-01-09 10:18:10', 'Initial consultation payment'),
+(94, 59, 42, 'medicine', 21, 'prescription', 900.00, 'cash', 'paid', '', 8, '2026-01-09 10:49:24', NULL),
+(95, 60, 43, 'lab_test', NULL, NULL, 8000.00, 'cash', 'paid', NULL, 8, '2026-01-09 10:50:59', 'Lab test payment at registration'),
+(96, 61, 44, 'registration', NULL, NULL, 3000.00, 'cash', 'paid', NULL, 8, '2026-01-11 19:40:50', 'Initial consultation payment'),
+(97, 61, 44, 'lab_test', 22, 'lab_order', 5000.00, 'cash', 'paid', '', 8, '2026-01-11 19:47:19', NULL),
+(98, 61, 44, 'medicine', 22, 'prescription', 300.00, 'cash', 'paid', '', 8, '2026-01-11 19:49:16', NULL),
+(99, 61, 44, 'service', 8, 'service_order', 5000.00, 'cash', 'paid', '', 8, '2026-01-11 19:49:37', NULL),
+(100, 62, 45, 'registration', NULL, NULL, 3000.00, 'cash', 'paid', NULL, 8, '2026-01-12 13:26:16', 'Initial consultation payment'),
+(101, 63, 46, 'registration', NULL, NULL, 3000.00, 'cash', 'paid', NULL, 8, '2026-01-14 19:19:05', 'Initial consultation payment');
 
 -- --------------------------------------------------------
 
@@ -822,19 +897,94 @@ CREATE TABLE `prescriptions` (
 --
 
 INSERT INTO `prescriptions` (`id`, `consultation_id`, `visit_id`, `patient_id`, `doctor_id`, `medicine_id`, `quantity_prescribed`, `quantity_dispensed`, `dosage`, `frequency`, `duration`, `instructions`, `status`, `cancellation_reason`, `dispensed_by`, `dispensed_at`, `notes`, `created_at`, `updated_at`) VALUES
-(2, 6, 6, 6, 3, 1, 10, 10, '200g', 'as prescribed', '', '4', 'dispensed', NULL, 2, '2025-10-23 23:13:19', NULL, '2025-10-18 05:14:25', '2025-10-23 23:13:19'),
-(3, 7, 7, 1, 3, 1, 10, 10, '200g', 'as prescribed', '', '2 kila siku', 'dispensed', NULL, 2, '2025-10-23 23:13:15', NULL, '2025-10-22 06:48:58', '2025-10-23 23:13:15'),
-(7, 16, 16, 13, 3, 1, 10, 10, 'yf', 'as prescribed', '', '2 daily', 'dispensed', NULL, 2, '2025-10-23 23:13:04', NULL, '2025-10-23 19:24:30', '2025-10-23 23:13:04'),
-(8, 11, 11, 8, 3, 9, 10, 10, '1 tablet', 'Once daily', '1', '12', 'dispensed', NULL, 2, '2025-10-23 23:13:12', NULL, '2025-10-23 19:37:14', '2025-10-23 23:13:12'),
-(9, 18, 18, 15, 3, 1, 10, 10, '200g', 'as prescribed', '', '2 daily', 'dispensed', NULL, 2, '2025-10-23 23:13:08', NULL, '2025-10-23 22:52:39', '2025-10-23 23:13:08'),
-(10, 18, 18, 15, 3, 7, 10, 10, '2 daily', 'Once daily', '1', 'i', 'dispensed', NULL, 2, '2025-10-23 23:13:08', NULL, '2025-10-23 22:57:39', '2025-10-23 23:13:08'),
-(11, 18, 18, 15, 3, 1, 10, 10, '1 tablet', 'Once daily', '1', 'always', 'dispensed', NULL, 2, '2025-11-03 09:01:59', NULL, '2025-11-01 13:29:51', '2025-11-03 09:01:59'),
-(12, 25, 35, 21, 3, 1, 14, 14, '200g', 'as prescribed', '', '2 daily', 'dispensed', NULL, 2, '2025-11-04 14:19:06', NULL, '2025-11-04 14:12:24', '2025-11-04 14:19:06'),
-(13, 25, 35, 21, 3, 7, 10, 10, '2 daily', 'Once daily', '10', 'every day', 'dispensed', NULL, 2, '2025-11-04 14:19:06', NULL, '2025-11-04 14:16:40', '2025-11-04 14:19:06'),
-(14, 27, 39, 22, 3, 1, 15, 15, '200g 2 daily', 'Once daily', '1', '', 'dispensed', NULL, 2, '2025-11-05 09:20:55', NULL, '2025-11-05 09:17:00', '2025-11-05 09:20:55'),
-(15, 29, 41, 24, 3, 8, 13, 13, 'sfdsfdghfg', 'Once daily', '1', '', 'dispensed', NULL, 2, '2025-11-05 20:27:07', NULL, '2025-11-05 20:19:10', '2025-11-05 20:27:07'),
-(16, 29, 41, 24, 3, 7, 60, 60, 'sdfgjtfb', 'Once daily', '1', '', 'dispensed', NULL, 2, '2025-11-05 20:27:07', NULL, '2025-11-05 20:21:02', '2025-11-05 20:27:07'),
-(17, 35, 47, 30, 3, 1, 13, 13, 'djhsjs', 'Once daily', '1', '', 'dispensed', NULL, 2, '2025-11-10 08:43:10', NULL, '2025-11-10 08:42:25', '2025-11-10 08:43:10');
+(20, 39, 51, 33, 9, 1, 18, 18, '200gm per 234', 'Once daily', '1', '', 'dispensed', NULL, 11, '2026-01-14 19:14:51', NULL, '2026-01-08 16:09:15', '2026-01-14 19:14:51'),
+(21, 43, 59, 42, 9, 1, 18, 18, 'jhfjgdxch', 'Once daily', '1', '', 'dispensed', NULL, 11, '2026-01-14 19:14:53', NULL, '2026-01-09 10:48:42', '2026-01-14 19:14:53'),
+(22, 44, 61, 44, 9, 1, 10, 10, 'hghsdjsbcxj', 'Once daily', '1', '', 'dispensed', NULL, 11, '2026-01-14 19:14:47', NULL, '2026-01-11 19:44:42', '2026-01-14 19:14:47'),
+(23, 44, 61, 44, 9, 1, 10, 10, '3 daily', 'Once daily', '1', '', 'dispensed', NULL, 11, '2026-01-14 19:14:47', NULL, '2026-01-11 20:08:36', '2026-01-14 19:14:47');
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `role_audit_log`
+--
+
+CREATE TABLE `role_audit_log` (
+  `id` int NOT NULL,
+  `user_id` int NOT NULL,
+  `action` enum('role_added','role_removed','role_activated','role_deactivated') CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL,
+  `role` enum('admin','receptionist','doctor','lab_technician','accountant','pharmacist') CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL,
+  `performed_by` int DEFAULT NULL,
+  `reason` text CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci,
+  `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `role_permissions`
+--
+
+CREATE TABLE `role_permissions` (
+  `id` int NOT NULL,
+  `role` enum('admin','receptionist','doctor','lab_technician','accountant','pharmacist') CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL,
+  `permission` varchar(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL COMMENT 'e.g., patients.register, payments.collect, medicine.dispense',
+  `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+--
+-- Dumping data for table `role_permissions`
+--
+
+INSERT INTO `role_permissions` (`id`, `role`, `permission`, `created_at`) VALUES
+(1, 'receptionist', 'dashboard.view', '2026-01-14 18:56:24'),
+(2, 'receptionist', 'patients.view', '2026-01-14 18:56:24'),
+(3, 'receptionist', 'patients.register', '2026-01-14 18:56:24'),
+(4, 'receptionist', 'patients.edit', '2026-01-14 18:56:24'),
+(5, 'receptionist', 'patients.create_revisit', '2026-01-14 18:56:24'),
+(6, 'receptionist', 'appointments.view', '2026-01-14 18:56:24'),
+(7, 'receptionist', 'appointments.create', '2026-01-14 18:56:24'),
+(8, 'receptionist', 'appointments.edit', '2026-01-14 18:56:24'),
+(9, 'receptionist', 'vital_signs.record', '2026-01-14 18:56:24'),
+(10, 'receptionist', 'reports.view_basic', '2026-01-14 18:56:24'),
+(11, 'accountant', 'dashboard.view', '2026-01-14 18:56:45'),
+(12, 'accountant', 'patients.view', '2026-01-14 18:56:45'),
+(13, 'accountant', 'payments.view', '2026-01-14 18:56:45'),
+(14, 'accountant', 'payments.collect', '2026-01-14 18:56:45'),
+(15, 'accountant', 'payments.record', '2026-01-14 18:56:45'),
+(16, 'accountant', 'payments.history', '2026-01-14 18:56:45'),
+(17, 'accountant', 'payments.refund', '2026-01-14 18:56:45'),
+(18, 'accountant', 'reports.view', '2026-01-14 18:56:45'),
+(19, 'accountant', 'reports.financial', '2026-01-14 18:56:45'),
+(20, 'accountant', 'reports.export', '2026-01-14 18:56:45'),
+(21, 'pharmacist', 'dashboard.view', '2026-01-14 18:57:07'),
+(22, 'pharmacist', 'patients.view', '2026-01-14 18:57:07'),
+(23, 'pharmacist', 'medicine.view', '2026-01-14 18:57:07'),
+(24, 'pharmacist', 'medicine.dispense', '2026-01-14 18:57:07'),
+(25, 'pharmacist', 'medicine.inventory', '2026-01-14 18:57:07'),
+(26, 'pharmacist', 'medicine.stock_update', '2026-01-14 18:57:07'),
+(27, 'pharmacist', 'prescriptions.view', '2026-01-14 18:57:07'),
+(28, 'pharmacist', 'prescriptions.dispense', '2026-01-14 18:57:07'),
+(29, 'pharmacist', 'reports.view_basic', '2026-01-14 18:57:07'),
+(30, 'doctor', 'dashboard.view', '2026-01-14 18:57:24'),
+(31, 'doctor', 'patients.view', '2026-01-14 18:57:24'),
+(32, 'doctor', 'patients.medical_history', '2026-01-14 18:57:24'),
+(33, 'doctor', 'consultations.view', '2026-01-14 18:57:24'),
+(34, 'doctor', 'consultations.create', '2026-01-14 18:57:24'),
+(35, 'doctor', 'consultations.edit', '2026-01-14 18:57:24'),
+(36, 'doctor', 'prescriptions.create', '2026-01-14 18:57:24'),
+(37, 'doctor', 'lab_orders.create', '2026-01-14 18:57:24'),
+(38, 'doctor', 'lab_results.view', '2026-01-14 18:57:24'),
+(39, 'doctor', 'services.allocate', '2026-01-14 18:57:24'),
+(40, 'doctor', 'reports.view_basic', '2026-01-14 18:57:24'),
+(41, 'lab_technician', 'dashboard.view', '2026-01-14 18:57:41'),
+(42, 'lab_technician', 'patients.view', '2026-01-14 18:57:41'),
+(43, 'lab_technician', 'lab_tests.view', '2026-01-14 18:57:41'),
+(44, 'lab_technician', 'lab_tests.collect_sample', '2026-01-14 18:57:41'),
+(45, 'lab_technician', 'lab_tests.record_results', '2026-01-14 18:57:41'),
+(46, 'lab_technician', 'lab_equipment.manage', '2026-01-14 18:57:41'),
+(47, 'lab_technician', 'lab_inventory.manage', '2026-01-14 18:57:41'),
+(48, 'lab_technician', 'lab_quality.manage', '2026-01-14 18:57:41'),
+(49, 'lab_technician', 'reports.view_basic', '2026-01-14 18:57:41');
 
 -- --------------------------------------------------------
 
@@ -863,7 +1013,8 @@ INSERT INTO `services` (`id`, `service_name`, `service_code`, `price`, `descript
 (2, 'Blood Pressure Check', 'BP-CHECK', 1000.00, 'Blood pressure measurement', 0, 1, '2025-10-11 03:12:35', '2025-10-11 03:12:35'),
 (3, 'Wound Dressing', 'DRESS', 5000.00, 'Wound cleaning and dressing', 0, 1, '2025-10-11 03:12:35', '2025-10-11 03:12:35'),
 (4, 'Injection', 'INJ', 2000.00, 'Intramuscular or IV injection', 0, 1, '2025-10-11 03:12:35', '2025-10-11 03:12:35'),
-(5, 'ECG', 'ECG', 20000.00, 'Electrocardiogram recording', 0, 1, '2025-10-11 03:12:35', '2025-10-11 03:12:35');
+(5, 'ECG', 'ECG', 20000.00, 'Electrocardiogram recording', 0, 1, '2025-10-11 03:12:35', '2025-10-11 03:12:35'),
+(7, 'ddskj', '4738udfjkhd', 3000.00, 'hdfxcbm,noeusdfhjesdmncnnuhc', 0, 1, '2025-11-10 09:59:19', '2025-11-10 09:59:19');
 
 -- --------------------------------------------------------
 
@@ -891,12 +1042,7 @@ CREATE TABLE `service_orders` (
 --
 
 INSERT INTO `service_orders` (`id`, `visit_id`, `patient_id`, `service_id`, `ordered_by`, `performed_by`, `status`, `cancellation_reason`, `notes`, `performed_at`, `created_at`, `updated_at`) VALUES
-(1, 40, 23, 2, 3, 2, 'pending', NULL, 'sfdgfhghgf', NULL, '2025-11-05 19:55:54', '2025-11-05 19:55:54'),
-(2, 1, 1, 3, 3, 2, 'pending', NULL, 'mfunge kidonda', NULL, '2025-11-07 12:30:57', '2025-11-07 12:30:57'),
-(3, 43, 26, 3, 3, 2, 'pending', NULL, 'ddfsgfd', NULL, '2025-11-10 06:20:11', '2025-11-10 06:20:11'),
-(4, 44, 27, 3, 3, 2, 'completed', NULL, 'sdfsg', '2025-11-10 08:00:23', '2025-11-10 07:34:14', '2025-11-10 08:00:23'),
-(5, 46, 29, 3, 3, 2, 'completed', NULL, 'jhsfbjfjdkf', '2025-11-10 08:21:15', '2025-11-10 08:20:07', '2025-11-10 08:21:15'),
-(6, 47, 30, 3, 3, 2, 'pending', NULL, 'bjabfa', NULL, '2025-11-10 08:42:25', '2025-11-10 08:42:25');
+(8, 61, 44, 3, 9, 8, 'completed', NULL, 'mshjfberihsfkejk[2026-01-11 19:55:42] ghsjfbjhsd\n', '2026-01-11 19:55:42', '2026-01-11 19:44:42', '2026-01-11 19:55:42');
 
 -- --------------------------------------------------------
 
@@ -905,15 +1051,15 @@ INSERT INTO `service_orders` (`id`, `visit_id`, `patient_id`, `service_id`, `ord
 -- (See below for the actual view)
 --
 CREATE TABLE `staff_performance` (
-`id` int
-,`staff_name` varchar(101)
-,`role` enum('admin','receptionist','doctor','lab_technician')
+`consultations_completed` bigint
+,`id` int
 ,`patients_registered` bigint
 ,`payments_collected` bigint
-,`total_collected` decimal(32,2)
-,`consultations_completed` bigint
 ,`prescriptions_written` bigint
+,`role` enum('admin','receptionist','doctor','lab_technician','accountant','pharmacist')
+,`staff_name` varchar(101)
 ,`tests_completed` bigint
+,`total_collected` decimal(32,2)
 );
 
 -- --------------------------------------------------------
@@ -927,7 +1073,7 @@ CREATE TABLE `users` (
   `username` varchar(50) COLLATE utf8mb4_general_ci NOT NULL,
   `password_hash` varchar(255) COLLATE utf8mb4_general_ci NOT NULL,
   `email` varchar(100) COLLATE utf8mb4_general_ci NOT NULL,
-  `role` enum('admin','receptionist','doctor','lab_technician') COLLATE utf8mb4_general_ci NOT NULL,
+  `role` enum('admin','receptionist','doctor','lab_technician','accountant','pharmacist') CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL,
   `first_name` varchar(50) COLLATE utf8mb4_general_ci NOT NULL,
   `last_name` varchar(50) COLLATE utf8mb4_general_ci NOT NULL,
   `phone` varchar(20) COLLATE utf8mb4_general_ci DEFAULT NULL,
@@ -943,11 +1089,37 @@ CREATE TABLE `users` (
 
 INSERT INTO `users` (`id`, `username`, `password_hash`, `email`, `role`, `first_name`, `last_name`, `phone`, `specialization`, `is_active`, `created_at`, `updated_at`) VALUES
 (1, 'admin', '$2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 'admin@clinic.local', 'admin', 'System', 'Administrator', '0700000001', NULL, 1, '2025-10-11 03:12:35', '2025-10-11 03:12:35'),
-(2, 'reception', '$2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 'reception@clinic.local', 'receptionist', 'Jane', 'Receptionist', '0700000002', NULL, 1, '2025-10-11 03:12:35', '2025-10-11 03:12:35'),
-(3, 'doctor', '$2y$10$fTzmUB8VstFAp0vIB27/CeA/YyVCEVK5.rhptzgntegwB8H1jk7ze', 'doctor@clinic.local', 'doctor', 'Dr. John', 'Smith', '0700000003', NULL, 1, '2025-10-11 03:12:35', '2025-10-21 19:06:03'),
-(4, 'lab', '$2y$10$9IhiDdKHbbxL5UflBKvGP.7JopAxlSgVMO3Ge966PHZiFtqT5PCgu', 'lab@clinic.local', 'lab_technician', 'Mary', 'Technician', '0700000004', NULL, 1, '2025-10-11 03:12:35', '2025-10-21 19:29:06'),
-(5, 'adm', '$2y$10$z5McVHsnkImJ81WlacP4ROypVtt45zj834JsAAMXWhxb4igAhb8TS', 'adamlwena22@gmai.com', 'admin', 'adam', 'lwena', '0683274343', NULL, 1, '2025-10-11 11:10:19', '2025-10-11 11:10:19'),
-(6, 'lab1', '$2y$10$G6XGmh0osvYeXRFmBExQxuByb4V3ddfyx61gNQI.Aw3AD4nYjBtMy', 'mpimaji!@gmail.com', 'lab_technician', 'mpimaji', 'mpimaji', '245321425', NULL, 1, '2025-10-21 19:30:40', '2025-10-21 19:30:40');
+(8, 'hodi', '$2y$10$1sL5S.nhj4AMTQTcYZxMwOpn3tz1JgA/OLgdH1Zz5ESELsPWO7daO', 'hodi@gmail.com', 'receptionist', 'hodi', 'hodi', '083456879', NULL, 1, '2026-01-08 15:58:53', '2026-01-09 08:04:54'),
+(9, 'doctor', '$2y$10$5OpGgpEujYIvjI0PkRdqP./FoCyaYb54UAEWRM8fsfDCrnGTz73.W', 'doctor@gmail.com', 'doctor', 'doctor', 'doctor', '0711345678', NULL, 1, '2026-01-08 16:03:35', '2026-01-08 16:03:35'),
+(10, 'lab', '$2y$10$D66EHAWpLyuNg83Y3LUg6eSa58NtJKrWm/vGY7EX1vklhZIrhSEPe', 'lab@gmail.com', 'lab_technician', 'lab', 'lab', '0711145678', NULL, 1, '2026-01-08 16:06:02', '2026-01-08 16:06:02'),
+(11, 'pharmacy', '$2y$10$VuttxXU17hmI4wJ2wUTDbO6dWZdf7cNbjCV5ciUzn/8OsyQALJKxy', 'aa@gmail.com', 'pharmacist', 'phamarc', 'phamarc', '3456453', NULL, 1, '2026-01-14 19:13:27', '2026-01-14 19:13:27'),
+(12, 'cash', '$2y$10$SoZpg3inUZZh6V5.pimoge5znViepQwM6oe5kBYwG6fNjRVPDGKnm', 'cash@gmail.com', 'accountant', 'cash', 'cash', '233454535', NULL, 1, '2026-01-14 19:16:41', '2026-01-14 19:16:41');
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `user_roles`
+--
+
+CREATE TABLE `user_roles` (
+  `id` int NOT NULL,
+  `user_id` int NOT NULL,
+  `role` enum('admin','receptionist','doctor','lab_technician','accountant','pharmacist') CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL,
+  `is_primary` tinyint(1) DEFAULT '0' COMMENT 'Primary role for dashboard redirect',
+  `granted_by` int DEFAULT NULL COMMENT 'User who granted this role',
+  `granted_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `is_active` tinyint(1) DEFAULT '1'
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+--
+-- Dumping data for table `user_roles`
+--
+
+INSERT INTO `user_roles` (`id`, `user_id`, `role`, `is_primary`, `granted_by`, `granted_at`, `is_active`) VALUES
+(1, 1, 'admin', 1, NULL, '2026-01-14 18:54:38', 1),
+(2, 8, 'receptionist', 1, NULL, '2026-01-14 18:54:38', 1),
+(3, 9, 'doctor', 1, NULL, '2026-01-14 18:54:38', 1),
+(4, 10, 'lab_technician', 1, NULL, '2026-01-14 18:54:38', 1);
 
 -- --------------------------------------------------------
 
@@ -976,35 +1148,12 @@ CREATE TABLE `vital_signs` (
 --
 
 INSERT INTO `vital_signs` (`id`, `visit_id`, `patient_id`, `temperature`, `blood_pressure_systolic`, `blood_pressure_diastolic`, `pulse_rate`, `respiratory_rate`, `weight`, `height`, `recorded_by`, `recorded_at`) VALUES
-(1, 1, 1, 35.0, 120, 80, 75, NULL, 60.0, 127.0, 2, '2025-10-11 03:50:52'),
-(2, 2, 2, 37.0, 120, 270, 76, NULL, 45.0, 3.0, 2, '2025-10-11 06:04:10'),
-(3, 3, 3, 36.0, 120, 270, 76, NULL, 35.0, 123.0, 2, '2025-10-11 11:12:44'),
-(4, 4, 4, 36.0, 120, 270, 120, NULL, 78.0, 178.0, 2, '2025-10-17 08:02:10'),
-(5, 5, 5, 36.0, 120, 80, 75, NULL, 60.0, 127.0, 2, '2025-10-17 08:35:54'),
-(6, 6, 6, 36.0, 120, 80, 75, NULL, 60.0, 127.0, 2, '2025-10-18 05:02:27'),
-(7, 11, 8, 36.0, 120, 57, 120, NULL, 75.0, 178.0, 2, '2025-10-21 19:08:48'),
-(8, 12, 9, 36.0, 120, 57, 120, NULL, 48.0, 123.0, 2, '2025-10-21 19:18:47'),
-(9, 13, 10, 36.0, 120, 80, 80, NULL, 68.0, 120.0, 2, '2025-10-22 06:51:49'),
-(10, 14, 11, 36.0, 120, 80, 120, NULL, 65.0, 102.0, 2, '2025-10-22 07:57:57'),
-(11, 15, 12, 36.0, 120, 80, 120, NULL, 57.0, 120.0, 2, '2025-10-22 08:17:18'),
-(12, 16, 13, 36.0, 120, 57, 120, NULL, 129.0, 200.0, 2, '2025-10-23 11:01:32'),
-(13, 17, 14, 36.0, 120, 80, 71, NULL, 73.0, 180.0, 2, '2025-10-23 21:18:45'),
-(14, 18, 15, 36.0, 120, 80, 71, NULL, 73.0, 180.0, 2, '2025-10-23 22:47:21'),
-(15, 29, 16, 36.0, 120, 80, 120, NULL, 38.0, 56.0, 2, '2025-10-25 08:16:24'),
-(16, 30, 17, 36.0, 120, 80, 120, NULL, 56.0, 138.0, 2, '2025-10-26 20:48:31'),
-(17, 31, 18, 36.0, 120, 80, 120, NULL, 56.0, 120.0, 2, '2025-10-29 09:12:35'),
-(18, 32, 19, 36.0, 120, 80, 40, NULL, 68.0, 120.0, 2, '2025-10-29 09:42:34'),
-(19, 34, 20, 36.0, 129, 87, 40, NULL, 50.0, 123.0, 2, '2025-11-01 13:44:54'),
-(20, 35, 21, 36.0, 120, 80, 120, NULL, 68.0, 156.0, 2, '2025-11-04 14:10:05'),
-(21, 39, 22, 36.0, 119, 67, 80, NULL, 36.0, 178.0, 2, '2025-11-05 08:45:25'),
-(22, 40, 23, 36.0, 120, 80, 80, NULL, 127.0, 187.0, 2, '2025-11-05 10:24:41'),
-(23, 41, 24, 36.0, 120, 80, 78, NULL, 69.0, 149.0, 2, '2025-11-05 20:03:41'),
-(24, 42, 25, 36.0, 120, 57, 70, NULL, 78.0, 167.0, 2, '2025-11-06 18:25:19'),
-(25, 43, 26, 36.0, 120, 80, 78, NULL, 76.0, 176.0, 2, '2025-11-10 06:07:55'),
-(26, 44, 27, 35.0, 120, 79, 70, NULL, 46.0, 129.0, 2, '2025-11-10 07:31:52'),
-(27, 45, 28, 36.0, 120, 79, 80, NULL, 57.0, 176.0, 2, '2025-11-10 08:09:36'),
-(28, 46, 29, 36.0, 120, 79, 79, NULL, 67.0, 120.0, 2, '2025-11-10 08:16:04'),
-(29, 47, 30, 37.0, 120, 60, 40, NULL, 56.0, 129.0, 2, '2025-11-10 08:41:24');
+(33, 51, 33, 36.0, 120, 270, 70, NULL, 75.0, 187.0, 8, '2026-01-08 16:02:17'),
+(34, 55, 38, 37.0, 120, 80, 132, NULL, 23.0, 23.0, 8, '2026-01-09 09:20:07'),
+(35, 59, 42, 36.0, 120, 80, 70, NULL, 32.0, 123.0, 8, '2026-01-09 10:18:10'),
+(36, 61, 44, 36.0, 120, 80, 132, NULL, 23.0, 23.0, 8, '2026-01-11 19:40:50'),
+(37, 62, 45, 36.0, 120, 80, 132, NULL, 23.0, 23.0, 8, '2026-01-12 13:26:16'),
+(38, 63, 46, 36.0, 120, 80, 72, NULL, 56.0, 90.0, 8, '2026-01-14 19:19:05');
 
 -- --------------------------------------------------------
 
@@ -1228,6 +1377,24 @@ ALTER TABLE `prescriptions`
   ADD KEY `dispensed_by` (`dispensed_by`);
 
 --
+-- Indexes for table `role_audit_log`
+--
+ALTER TABLE `role_audit_log`
+  ADD PRIMARY KEY (`id`),
+  ADD KEY `idx_user_id` (`user_id`),
+  ADD KEY `idx_action` (`action`),
+  ADD KEY `idx_created_at` (`created_at`);
+
+--
+-- Indexes for table `role_permissions`
+--
+ALTER TABLE `role_permissions`
+  ADD PRIMARY KEY (`id`),
+  ADD UNIQUE KEY `role_permission_unique` (`role`,`permission`),
+  ADD KEY `idx_role` (`role`),
+  ADD KEY `idx_permission` (`permission`);
+
+--
 -- Indexes for table `services`
 --
 ALTER TABLE `services`
@@ -1258,6 +1425,16 @@ ALTER TABLE `users`
   ADD KEY `idx_users_active` (`is_active`);
 
 --
+-- Indexes for table `user_roles`
+--
+ALTER TABLE `user_roles`
+  ADD PRIMARY KEY (`id`),
+  ADD UNIQUE KEY `user_role_unique` (`user_id`,`role`),
+  ADD KEY `idx_user_id` (`user_id`),
+  ADD KEY `idx_role` (`role`),
+  ADD KEY `fk_user_roles_granted_by` (`granted_by`);
+
+--
 -- Indexes for table `vital_signs`
 --
 ALTER TABLE `vital_signs`
@@ -1274,7 +1451,7 @@ ALTER TABLE `vital_signs`
 -- AUTO_INCREMENT for table `consultations`
 --
 ALTER TABLE `consultations`
-  MODIFY `id` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=36;
+  MODIFY `id` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=47;
 
 --
 -- AUTO_INCREMENT for table `lab_equipment`
@@ -1292,7 +1469,7 @@ ALTER TABLE `lab_inventory`
 -- AUTO_INCREMENT for table `lab_results`
 --
 ALTER TABLE `lab_results`
-  MODIFY `id` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=12;
+  MODIFY `id` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=18;
 
 --
 -- AUTO_INCREMENT for table `lab_tests`
@@ -1316,19 +1493,19 @@ ALTER TABLE `lab_test_items`
 -- AUTO_INCREMENT for table `lab_test_orders`
 --
 ALTER TABLE `lab_test_orders`
-  MODIFY `id` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=16;
+  MODIFY `id` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=23;
 
 --
 -- AUTO_INCREMENT for table `medicines`
 --
 ALTER TABLE `medicines`
-  MODIFY `id` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=16;
+  MODIFY `id` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=233;
 
 --
 -- AUTO_INCREMENT for table `medicine_batches`
 --
 ALTER TABLE `medicine_batches`
-  MODIFY `id` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=16;
+  MODIFY `id` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=17;
 
 --
 -- AUTO_INCREMENT for table `medicine_dispensing`
@@ -1340,49 +1517,67 @@ ALTER TABLE `medicine_dispensing`
 -- AUTO_INCREMENT for table `patients`
 --
 ALTER TABLE `patients`
-  MODIFY `id` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=31;
+  MODIFY `id` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=47;
 
 --
 -- AUTO_INCREMENT for table `patient_visits`
 --
 ALTER TABLE `patient_visits`
-  MODIFY `id` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=48;
+  MODIFY `id` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=64;
 
 --
 -- AUTO_INCREMENT for table `payments`
 --
 ALTER TABLE `payments`
-  MODIFY `id` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=80;
+  MODIFY `id` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=102;
 
 --
 -- AUTO_INCREMENT for table `prescriptions`
 --
 ALTER TABLE `prescriptions`
-  MODIFY `id` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=18;
+  MODIFY `id` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=24;
+
+--
+-- AUTO_INCREMENT for table `role_audit_log`
+--
+ALTER TABLE `role_audit_log`
+  MODIFY `id` int NOT NULL AUTO_INCREMENT;
+
+--
+-- AUTO_INCREMENT for table `role_permissions`
+--
+ALTER TABLE `role_permissions`
+  MODIFY `id` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=50;
 
 --
 -- AUTO_INCREMENT for table `services`
 --
 ALTER TABLE `services`
-  MODIFY `id` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=7;
+  MODIFY `id` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=8;
 
 --
 -- AUTO_INCREMENT for table `service_orders`
 --
 ALTER TABLE `service_orders`
-  MODIFY `id` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=7;
+  MODIFY `id` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=9;
 
 --
 -- AUTO_INCREMENT for table `users`
 --
 ALTER TABLE `users`
-  MODIFY `id` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=7;
+  MODIFY `id` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=13;
+
+--
+-- AUTO_INCREMENT for table `user_roles`
+--
+ALTER TABLE `user_roles`
+  MODIFY `id` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=8;
 
 --
 -- AUTO_INCREMENT for table `vital_signs`
 --
 ALTER TABLE `vital_signs`
-  MODIFY `id` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=30;
+  MODIFY `id` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=39;
 
 --
 -- Constraints for dumped tables
@@ -1487,6 +1682,13 @@ ALTER TABLE `service_orders`
   ADD CONSTRAINT `service_orders_ibfk_3` FOREIGN KEY (`service_id`) REFERENCES `services` (`id`),
   ADD CONSTRAINT `service_orders_ibfk_4` FOREIGN KEY (`ordered_by`) REFERENCES `users` (`id`),
   ADD CONSTRAINT `service_orders_ibfk_5` FOREIGN KEY (`performed_by`) REFERENCES `users` (`id`);
+
+--
+-- Constraints for table `user_roles`
+--
+ALTER TABLE `user_roles`
+  ADD CONSTRAINT `fk_user_roles_granted_by` FOREIGN KEY (`granted_by`) REFERENCES `users` (`id`) ON DELETE SET NULL,
+  ADD CONSTRAINT `fk_user_roles_user` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE;
 
 --
 -- Constraints for table `vital_signs`

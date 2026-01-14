@@ -48,10 +48,149 @@ class BaseController {
         }
     }
 
-    // Check user role
-    protected function requireRole($role) {
+    // Check user role - supports single role or array of roles
+    // If user has any of the specified roles, access is granted
+    protected function requireRole($roles) {
         $this->requireLogin();
-        if ($_SESSION['user_role'] !== $role) {
+        
+        // Convert single role to array
+        if (!is_array($roles)) {
+            $roles = [$roles];
+        }
+        
+        // Check primary role from session
+        $userPrimaryRole = $_SESSION['user_role'] ?? '';
+        
+        // Check if primary role matches any allowed role
+        if (in_array($userPrimaryRole, $roles)) {
+            return true;
+        }
+        
+        // Check additional roles from user_roles table (multi-role support)
+        if ($this->hasAnyRole($roles)) {
+            return true;
+        }
+        
+        // No matching role found - redirect to login
+        $this->redirect('auth/login');
+    }
+    
+    // Check if user has any of the specified roles (multi-role support)
+    protected function hasAnyRole($roles) {
+        if (!isset($_SESSION['user_id'])) {
+            return false;
+        }
+        
+        // Convert single role to array
+        if (!is_array($roles)) {
+            $roles = [$roles];
+        }
+        
+        // First check session cache
+        if (isset($_SESSION['user_roles']) && is_array($_SESSION['user_roles'])) {
+            foreach ($roles as $role) {
+                if (in_array($role, $_SESSION['user_roles'])) {
+                    return true;
+                }
+            }
+            return false;
+        }
+        
+        // Load from database and cache in session
+        try {
+            $placeholders = implode(',', array_fill(0, count($roles), '?'));
+            $params = array_merge([$_SESSION['user_id']], $roles);
+            
+            $stmt = $this->pdo->prepare("
+                SELECT role FROM user_roles 
+                WHERE user_id = ? AND role IN ($placeholders) AND is_active = 1
+                LIMIT 1
+            ");
+            $stmt->execute($params);
+            
+            if ($stmt->fetch()) {
+                return true;
+            }
+        } catch (PDOException $e) {
+            // Table might not exist yet, fall back to primary role check
+            error_log('Multi-role check failed: ' . $e->getMessage());
+        }
+        
+        return false;
+    }
+    
+    // Load all roles for current user into session
+    protected function loadUserRoles() {
+        if (!isset($_SESSION['user_id'])) {
+            return [];
+        }
+        
+        // Return cached roles if available
+        if (isset($_SESSION['user_roles']) && is_array($_SESSION['user_roles'])) {
+            return $_SESSION['user_roles'];
+        }
+        
+        $roles = [$_SESSION['user_role']]; // Start with primary role
+        
+        try {
+            $stmt = $this->pdo->prepare("
+                SELECT role FROM user_roles 
+                WHERE user_id = ? AND is_active = 1
+            ");
+            $stmt->execute([$_SESSION['user_id']]);
+            
+            while ($row = $stmt->fetch()) {
+                if (!in_array($row['role'], $roles)) {
+                    $roles[] = $row['role'];
+                }
+            }
+        } catch (PDOException $e) {
+            // Table might not exist yet
+            error_log('Loading user roles failed: ' . $e->getMessage());
+        }
+        
+        $_SESSION['user_roles'] = $roles;
+        return $roles;
+    }
+    
+    // Check if user has a specific permission
+    protected function hasPermission($permission) {
+        if (!isset($_SESSION['user_id'])) {
+            return false;
+        }
+        
+        // Admin has all permissions
+        if ($_SESSION['user_role'] === 'admin' || $this->hasAnyRole(['admin'])) {
+            return true;
+        }
+        
+        $roles = $this->loadUserRoles();
+        
+        try {
+            $placeholders = implode(',', array_fill(0, count($roles), '?'));
+            $params = array_merge($roles, [$permission]);
+            
+            $stmt = $this->pdo->prepare("
+                SELECT id FROM role_permissions 
+                WHERE role IN ($placeholders) AND permission = ?
+                LIMIT 1
+            ");
+            $stmt->execute($params);
+            
+            return (bool)$stmt->fetch();
+        } catch (PDOException $e) {
+            // Table might not exist, fall back to role-based check
+            error_log('Permission check failed: ' . $e->getMessage());
+            return false;
+        }
+    }
+    
+    // Require a specific permission
+    protected function requirePermission($permission) {
+        $this->requireLogin();
+        
+        if (!$this->hasPermission($permission)) {
+            $_SESSION['error'] = 'You do not have permission to access this feature.';
             $this->redirect('auth/login');
         }
     }

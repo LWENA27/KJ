@@ -166,18 +166,25 @@
                     </div>
                 </div>
 
-
-
-                
-                <!-- Visit Type Badge -->
+                <!-- Visit Type Info Badge -->
                 <div id="visitBadge" class="mt-4 hidden">
-                    <div class="bg-yellow-50 border-l-4 border-yellow-400 p-4">
+                    <div class="bg-blue-50 border-l-4 border-blue-400 p-4">
                         <div class="flex">
-                            <i class="fas fa-info-circle text-yellow-400 mt-1"></i>
-                            <p class="ml-3 text-sm text-yellow-700" id="visitBadgeText">
+                            <i class="fas fa-info-circle text-blue-400 mt-1"></i>
+                            <p class="ml-3 text-sm text-blue-700" id="visitBadgeText">
                                 Please select a visit type
                             </p>
                         </div>
+                    </div>
+                </div>
+
+                <!-- Payment Notice -->
+                <div class="mt-4 bg-yellow-50 border-l-4 border-yellow-400 p-4">
+                    <div class="flex">
+                        <i class="fas fa-exclamation-triangle text-yellow-400 mt-1"></i>
+                        <p class="ml-3 text-sm text-yellow-700">
+                            <strong>Note:</strong> After registration, please direct the patient to the <strong>Accountant</strong> to pay the consultation/service fee before seeing the doctor.
+                        </p>
                     </div>
                 </div>
             </div>
@@ -251,57 +258,6 @@
                 </div>
             </div>
 
-            <!-- Consultation Payment Section (Hidden by default) -->
-            <div id="consultationPaymentSection" class="border-b pb-6 hidden">
-                <h3 class="text-xl font-semibold text-gray-900 mb-4 flex items-center">
-                    <i class="fas fa-credit-card mr-3 text-green-600"></i>Consultation Payment
-                </h3>
-                
-                <div class="bg-blue-50 border-l-4 border-blue-400 p-4 mb-4">
-                    <div class="flex">
-                        <i class="fas fa-info-circle text-blue-400 mt-1"></i>
-                        <p class="ml-3 text-sm text-blue-700">
-                            Consultation fee must be paid before seeing the doctor. Standard fee: TZS 3,000
-                        </p>
-                    </div>
-                </div>
-
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div>
-                        <label for="consultation_fee" class="block text-sm font-medium text-gray-700 mb-1">
-                            Consultation Fee (TZS) <span class="text-red-500">*</span>
-                        </label>
-               <input type="number" id="consultation_fee" name="consultation_fee" 
-                               min="0" step="100" value="3000"
-                   class="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-colors"
-                   value="<?php echo htmlspecialchars($_POST['consultation_fee'] ?? '3000'); ?>">
-                        <span class="error-message text-red-500 text-xs mt-1 hidden"></span>
-                    </div>
-
-                    <div>
-                        <label for="payment_method" class="block text-sm font-medium text-gray-700 mb-1">
-                            Payment Method <span class="text-red-500">*</span>
-                        </label>
-                        <select id="payment_method" name="payment_method"
-                                class="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-colors">
-                            <option value="">Select Payment Method</option>
-                            <option value="cash" <?php echo (isset($_POST['payment_method']) && $_POST['payment_method']==='cash') ? 'selected' : ''; ?>>Cash Payment</option>
-                            <option value="card" <?php echo (isset($_POST['payment_method']) && $_POST['payment_method']==='card') ? 'selected' : ''; ?>>Credit/Debit Card</option>
-                            <option value="mobile_money" <?php echo (isset($_POST['payment_method']) && $_POST['payment_method']==='mobile_money') ? 'selected' : ''; ?>>Mobile Money (M-Pesa, Tigo Pesa, etc.)</option>
-                            <option value="insurance" <?php echo (isset($_POST['payment_method']) && $_POST['payment_method']==='insurance') ? 'selected' : ''; ?>>Insurance Coverage</option>
-                        </select>
-                        <span class="error-message text-red-500 text-xs mt-1 hidden"></span>
-                    </div>
-                </div>
-
-                <div class="mt-4 p-4 bg-gray-50 rounded-md border">
-                    <div class="flex justify-between items-center">
-                        <span class="text-sm font-medium text-gray-700">Total Payment:</span>
-                        <span id="totalAmount" class="text-2xl font-bold text-green-600">TZS 3,000</span>
-                    </div>
-                </div>
-            </div>
-
             <!-- Lab Tests Selection Section (Hidden by default) -->
             <div id="labTestsSection" class="border-b pb-6 hidden">
                 <h3 class="text-xl font-semibold text-gray-900 mb-4 flex items-center">
@@ -328,22 +284,17 @@
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
                         <label for="lab_total_amount" class="block text-sm font-medium text-gray-700 mb-1">
-                            Total Lab Amount (TZS)
-                            <span class="text-xs text-green-600 font-normal">• Auto-calculated from selected tests</span>
+                            Estimated Lab Amount (TZS)
+                            <span class="text-xs text-blue-600 font-normal">• Payment will be collected by Accountant</span>
                         </label>
                         <input type="number" id="lab_total_amount" name="lab_total_amount" readonly value="0"
-                               class="w-full px-3 py-2 border border-gray-300 rounded-md bg-gray-50 text-lg font-semibold text-green-700">
+                               class="w-full px-3 py-2 border border-gray-300 rounded-md bg-gray-50 text-lg font-semibold text-blue-700">
                     </div>
 
-                    <div>
-                        <label for="payment_method_lab" class="block text-sm font-medium text-gray-700 mb-1">Payment Method</label>
-                        <select id="payment_method_lab" name="payment_method_lab" class="w-full px-3 py-2 border border-gray-300 rounded-md">
-                            <option value="">Select Payment Method</option>
-                            <option value="cash">Cash</option>
-                            <option value="card">Card</option>
-                            <option value="mobile_money">Mobile Money</option>
-                            <option value="insurance">Insurance</option>
-                        </select>
+                    <div class="flex items-end">
+                        <p class="text-sm text-gray-500 italic">
+                            <i class="fas fa-info-circle mr-1"></i>Direct patient to Accountant for payment after registration.
+                        </p>
                     </div>
                 </div>
             </div>
@@ -372,16 +323,8 @@
 (function() {
     'use strict';
 
-    const CONFIG = {
-        CONSULTATION_FEE: 3000
-    };
-
     let elements = {
         visitType: null,
-        consultationSection: null,
-        consultationFee: null,
-        paymentMethod: null,
-        totalAmount: null,
         visitBadge: null,
         visitBadgeText: null,
         vitalSignsSection: null
@@ -389,10 +332,6 @@
 
     function initElements() {
         elements.visitType = document.getElementById('visit_type');
-        elements.consultationSection = document.getElementById('consultationPaymentSection');
-        elements.consultationFee = document.getElementById('consultation_fee');
-        elements.paymentMethod = document.getElementById('payment_method');
-        elements.totalAmount = document.getElementById('totalAmount');
         elements.visitBadge = document.getElementById('visitBadge');
         elements.visitBadgeText = document.getElementById('visitBadgeText');
         elements.vitalSignsSection = document.getElementById('vitalSignsSection');
@@ -402,9 +341,6 @@
         const visitType = elements.visitType ? elements.visitType.value : '';
 
         // Hide all optional sections initially
-        if (elements.consultationSection) {
-            elements.consultationSection.classList.add('hidden');
-        }
         if (elements.vitalSignsSection) {
             elements.vitalSignsSection.classList.add('hidden');
         }
@@ -412,9 +348,6 @@
             elements.visitBadge.classList.add('hidden');
         }
 
-        // Clear required attributes
-        if (elements.consultationFee) elements.consultationFee.removeAttribute('required');
-        if (elements.paymentMethod) elements.paymentMethod.removeAttribute('required');
         // Remove required from vital signs by default
         const tempField = document.getElementById('temperature');
         const bpField = document.getElementById('blood_pressure');
@@ -426,31 +359,18 @@
         // Show relevant sections based on visit type
         switch(visitType) {
             case 'consultation':
-                // Show consultation payment and vital signs for doctor consultation
-                if (elements.consultationSection) {
-                    elements.consultationSection.classList.remove('hidden');
-                }
+                // Show vital signs for doctor consultation
                 if (elements.vitalSignsSection) {
                     elements.vitalSignsSection.classList.remove('hidden');
                 }
-                if (elements.consultationFee) {
-                    elements.consultationFee.setAttribute('required', 'required');
-                    if (!elements.consultationFee.value) {
-                        elements.consultationFee.value = CONFIG.CONSULTATION_FEE;
-                    }
-                }
-                if (elements.paymentMethod) {
-                    elements.paymentMethod.setAttribute('required', 'required');
-                }
                 if (elements.visitBadge && elements.visitBadgeText) {
                     elements.visitBadge.classList.remove('hidden');
-                    elements.visitBadgeText.textContent = 'Payment required for consultation';
+                    elements.visitBadgeText.textContent = 'Patient will need to pay consultation fee at Accountant desk';
                 }
                 // Make vital signs required for consultations
                 if (tempField) tempField.setAttribute('required', 'required');
                 if (bpField) bpField.setAttribute('required', 'required');
                 if (pulseField) pulseField.setAttribute('required', 'required');
-                updateTotalAmount();
                 break;
                 
             case 'lab_test':
@@ -482,9 +402,6 @@
                 
             default:
                 // No visit type selected - hide all optional sections
-                if (elements.consultationSection) {
-                    elements.consultationSection.classList.add('hidden');
-                }
                 if (elements.vitalSignsSection) {
                     elements.vitalSignsSection.classList.add('hidden');
                 }
@@ -495,23 +412,12 @@
         }
     }
 
-    function updateTotalAmount() {
-        if (!elements.totalAmount || !elements.consultationFee) return;
-        
-        const fee = parseFloat(elements.consultationFee.value) || 0;
-        elements.totalAmount.textContent = `TZS ${fee.toLocaleString('en-US')}`;
-    }
-
     function init() {
         initElements();
         
         // Set up event listeners
         if (elements.visitType) {
             elements.visitType.addEventListener('change', toggleVisitSections);
-        }
-
-        if (elements.consultationFee) {
-            elements.consultationFee.addEventListener('input', updateTotalAmount);
         }
         
         // Initial setup

@@ -138,8 +138,14 @@ if (!isset($_SESSION['user_id']) || $_SESSION['user_role'] !== 'admin') {
                                     <option value="admin">🔐 Administrator</option>
                                     <option value="doctor">👨‍⚕️ Doctor</option>
                                     <option value="receptionist">📋 Receptionist</option>
+                                    <option value="accountant">💰 Accountant</option>
+                                    <option value="pharmacist">💊 Pharmacist</option>
                                     <option value="lab_technician">🔬 Lab Technician</option>
                                 </select>
+                                <p class="text-sm text-gray-500 flex items-center mt-2">
+                                    <i class="fas fa-info-circle mr-1"></i>
+                                    Primary role. Additional roles can be assigned after creation.
+                                </p>
                             </div>
                         </div>
                     </div>

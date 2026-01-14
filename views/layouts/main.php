@@ -1102,11 +1102,9 @@
                             $menu_items = [
                                 ['url' => 'receptionist/dashboard', 'icon' => 'fas fa-chart-line', 'text' => 'Dashboard', 'badge' => '', 'color' => 'blue'],
                                 ['url' => 'receptionist/patients', 'icon' => 'fas fa-users', 'text' => 'Patients', 'badge' => isset($sidebar_data['pending_patients']) ? $sidebar_data['pending_patients'] : '0', 'color' => 'blue'],
-                                ['url' => 'receptionist/tasks', 'icon' => 'fas fa-tasks', 'text' => 'Tasks', 'badge' => isset($sidebar_data['pending_tasks']) ? $sidebar_data['pending_tasks'] : '', 'color' => 'orange'],
+                                ['url' => 'receptionist/register_patient', 'icon' => 'fas fa-user-plus', 'text' => 'Register Patient', 'badge' => '', 'color' => 'green'],
                                 ['url' => 'receptionist/appointments', 'icon' => 'fas fa-calendar-check', 'text' => 'Appointments', 'badge' => isset($sidebar_data['upcoming_appointments']) ? $sidebar_data['upcoming_appointments'] : '0', 'color' => 'green'],
-                                ['url' => 'receptionist/payments', 'icon' => 'fas fa-exclamation-circle', 'text' => 'Pending Payments', 'badge' => '', 'color' => 'red'],
-                                ['url' => 'receptionist/payment_history', 'icon' => 'fas fa-history', 'text' => 'Payment History', 'badge' => '', 'color' => 'purple'],
-                                ['url' => 'receptionist/medicine', 'icon' => 'fas fa-pills', 'text' => 'Medicine', 'badge' => isset($sidebar_data['low_stock_medicines']) && $sidebar_data['low_stock_medicines'] > 0 ? '!' : '', 'color' => 'yellow'],
+                                ['url' => 'receptionist/tasks', 'icon' => 'fas fa-tasks', 'text' => 'Tasks', 'badge' => isset($sidebar_data['pending_tasks']) ? $sidebar_data['pending_tasks'] : '', 'color' => 'orange'],
                                 ['url' => 'receptionist/reports', 'icon' => 'fas fa-chart-bar', 'text' => 'Reports', 'badge' => '', 'color' => 'indigo'],
                             ];
                         } elseif ($role === 'doctor') {
@@ -1129,6 +1127,19 @@
                                 ['url' => 'lab/inventory', 'icon' => 'fas fa-boxes', 'text' => 'Inventory', 'badge' => '!', 'color' => 'orange'],
                                 ['url' => 'lab/quality', 'icon' => 'fas fa-check-double', 'text' => 'Quality Control', 'badge' => '', 'color' => 'emerald'],
                                 ['url' => 'lab/reports', 'icon' => 'fas fa-chart-bar', 'text' => 'Reports', 'badge' => '', 'color' => 'rose'],
+                            ];
+                        } elseif ($role === 'accountant') {
+                            $menu_items = [
+                                ['url' => 'accountant/dashboard', 'icon' => 'fas fa-chart-line', 'text' => 'Dashboard', 'badge' => '', 'color' => 'blue'],
+                                ['url' => 'accountant/payments', 'icon' => 'fas fa-hand-holding-usd', 'text' => 'Collect Payments', 'badge' => isset($sidebar_data['pending_payments']) && $sidebar_data['pending_payments'] > 0 ? $sidebar_data['pending_payments'] : '', 'color' => 'green'],
+                                ['url' => 'accountant/payment_history', 'icon' => 'fas fa-history', 'text' => 'Payment History', 'badge' => '', 'color' => 'purple'],
+                                ['url' => 'accountant/reports', 'icon' => 'fas fa-chart-bar', 'text' => 'Financial Reports', 'badge' => '', 'color' => 'indigo'],
+                            ];
+                        } elseif ($role === 'pharmacist') {
+                            $menu_items = [
+                                ['url' => 'pharmacist/dashboard', 'icon' => 'fas fa-chart-line', 'text' => 'Dashboard', 'badge' => '', 'color' => 'blue'],
+                                ['url' => 'pharmacist/prescriptions', 'icon' => 'fas fa-prescription', 'text' => 'Prescriptions', 'badge' => isset($sidebar_data['pending_prescriptions']) && $sidebar_data['pending_prescriptions'] > 0 ? $sidebar_data['pending_prescriptions'] : '', 'color' => 'green'],
+                                ['url' => 'pharmacist/inventory', 'icon' => 'fas fa-boxes', 'text' => 'Inventory', 'badge' => isset($sidebar_data['low_stock_medicines']) && $sidebar_data['low_stock_medicines'] > 0 ? '!' : '', 'color' => 'orange'],
                             ];
                         }
                         ?>

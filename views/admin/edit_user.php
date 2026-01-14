@@ -74,12 +74,14 @@ if (!isset($_SESSION['user_id']) || $_SESSION['user_role'] !== 'admin') {
                         </div>
                         
                         <div class="form-group">
-                            <label class="form-label">Role *</label>
+                            <label class="form-label">Primary Role *</label>
                             <select name="role" class="form-select" required>
-                                <option value="admin" <?= $user['role'] === 'admin' ? 'selected' : '' ?>>Administrator</option>
-                                <option value="doctor" <?= $user['role'] === 'doctor' ? 'selected' : '' ?>>Doctor</option>
-                                <option value="receptionist" <?= $user['role'] === 'receptionist' ? 'selected' : '' ?>>Receptionist</option>
-                                <option value="lab_technician" <?= $user['role'] === 'lab_technician' ? 'selected' : '' ?>>Lab Technician</option>
+                                <option value="admin" <?= $user['role'] === 'admin' ? 'selected' : '' ?>>🔐 Administrator</option>
+                                <option value="doctor" <?= $user['role'] === 'doctor' ? 'selected' : '' ?>>👨‍⚕️ Doctor</option>
+                                <option value="receptionist" <?= $user['role'] === 'receptionist' ? 'selected' : '' ?>>📋 Receptionist</option>
+                                <option value="accountant" <?= $user['role'] === 'accountant' ? 'selected' : '' ?>>💰 Accountant</option>
+                                <option value="pharmacist" <?= $user['role'] === 'pharmacist' ? 'selected' : '' ?>>💊 Pharmacist</option>
+                                <option value="lab_technician" <?= $user['role'] === 'lab_technician' ? 'selected' : '' ?>>🔬 Lab Technician</option>
                             </select>
                         </div>
                     </div>

@@ -145,10 +145,18 @@
                                     </span>
                                 </td>
                                 <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                                    <a href="<?php echo htmlspecialchars($BASE_PATH); ?>/doctor/attend_patient/<?php echo $patient['id']; ?>"
-                                            class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded mr-2 inline-block">
-                                        <i class="fas fa-stethoscope mr-1"></i>Attend
-                                    </a>
+                                    <?php if ($patient['consultation_registration_paid']): ?>
+                                        <a href="<?php echo htmlspecialchars($BASE_PATH); ?>/doctor/attend_patient/<?php echo $patient['id']; ?>"
+                                                class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded mr-2 inline-block">
+                                            <i class="fas fa-stethoscope mr-1"></i>Attend
+                                        </a>
+                                    <?php else: ?>
+                                        <a href="<?php echo htmlspecialchars($BASE_PATH); ?>/doctor/attend_patient/<?php echo $patient['id']; ?>"
+                                                class="bg-orange-500 hover:bg-orange-600 text-white font-bold py-2 px-4 rounded mr-2 inline-block"
+                                                title="Payment required - Click to see override options">
+                                            <i class="fas fa-exclamation-triangle mr-1"></i>Attend
+                                        </a>
+                                    <?php endif; ?>
                                     <button onclick="viewPatientDetails(<?php echo $patient['id']; ?>)"
                                             class="bg-gray-500 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded">
                                         <i class="fas fa-eye mr-1"></i>View
