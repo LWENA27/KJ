@@ -105,6 +105,7 @@ class DoctorController extends BaseController {
 
         $sql = "
             SELECT p.*,
+                   pv.id as visit_id,
                    pv.visit_date,
                    pv.visit_type,
                    pv.created_at as visit_created_at,
@@ -114,7 +115,7 @@ class DoctorController extends BaseController {
                    IF(EXISTS(
                        SELECT 1 FROM payments pay 
                        WHERE pay.visit_id = pv.id 
-                       AND pay.payment_type = 'registration' 
+                       AND pay.payment_type IN ('consultation', 'registration')
                        AND pay.payment_status = 'paid'
                    ), 1, 0) as consultation_registration_paid
             FROM patients p
@@ -128,7 +129,12 @@ class DoctorController extends BaseController {
             WHERE pv.visit_type = 'consultation' 
             AND DATE(pv.visit_date) = CURDATE()
             AND pv.status = 'active'
-            AND (c.status IS NULL OR c.status NOT IN ('completed', 'cancelled'))
+            AND NOT EXISTS (
+                SELECT 1 FROM consultations c2 
+                WHERE c2.patient_id = p.id 
+                AND c2.visit_id = pv.id 
+                AND c2.status IN ('in_progress', 'completed', 'cancelled')
+            )
             ORDER BY pv.created_at ASC
         ";
 
@@ -139,7 +145,7 @@ class DoctorController extends BaseController {
                 // Pending consultations (registered / scheduled / waiting) for this doctor
                         $stmt = $this->pdo->prepare(
                         "SELECT c.*, p.first_name AS patient_first, p.last_name AS patient_last, p.date_of_birth AS patient_dob, p.phone AS patient_phone,
-                         (SELECT IF(EXISTS(SELECT 1 FROM payments pay WHERE pay.visit_id = (SELECT id FROM patient_visits pv WHERE pv.patient_id = p.id ORDER BY pv.created_at DESC LIMIT 1) AND pay.payment_type = 'registration' AND pay.payment_status = 'paid'),1,0)) as consultation_registration_paid
+                         (SELECT IF(EXISTS(SELECT 1 FROM payments pay WHERE pay.visit_id = (SELECT id FROM patient_visits pv WHERE pv.patient_id = p.id ORDER BY pv.created_at DESC LIMIT 1) AND pay.payment_type IN ('consultation', 'registration') AND pay.payment_status = 'paid'),1,0)) as consultation_registration_paid
                          FROM consultations c
                          JOIN patients p ON c.patient_id = p.id
                          WHERE c.doctor_id = ?
@@ -194,7 +200,7 @@ class DoctorController extends BaseController {
         $stmt = $this->pdo->prepare("
             SELECT c.*, p.first_name, p.last_name, p.date_of_birth, p.phone,
                    pv.visit_date,
-                   (SELECT IF(EXISTS(SELECT 1 FROM payments pay WHERE pay.visit_id = (SELECT id FROM patient_visits pv WHERE pv.patient_id = p.id ORDER BY pv.created_at DESC LIMIT 1) AND pay.payment_type = 'registration' AND pay.payment_status = 'paid'),1,0)) as consultation_registration_paid,
+                   (SELECT IF(EXISTS(SELECT 1 FROM payments pay WHERE pay.visit_id = (SELECT id FROM patient_visits pv WHERE pv.patient_id = p.id ORDER BY pv.created_at DESC LIMIT 1) AND pay.payment_type IN ('consultation', 'registration') AND pay.payment_status = 'paid'),1,0)) as consultation_registration_paid,
                    (SELECT IF(EXISTS(SELECT 1 FROM payments pay2 WHERE pay2.visit_id = (SELECT id FROM patient_visits pv2 WHERE pv2.patient_id = p.id ORDER BY pv2.created_at DESC LIMIT 1) AND pay2.payment_type = 'lab_test' AND pay2.payment_status = 'paid'),1,0)) as lab_tests_paid,
                    (SELECT IF(EXISTS(SELECT 1 FROM payments pay3 WHERE pay3.visit_id = (SELECT id FROM patient_visits pv3 WHERE pv3.patient_id = p.id ORDER BY pv3.created_at DESC LIMIT 1) AND pay3.payment_type = 'lab_test' AND pay3.payment_status = 'paid'),1,0)) as results_review_paid,
                    c.main_complaint,
@@ -210,7 +216,7 @@ class DoctorController extends BaseController {
         $stmt->execute([$doctor_id]);
         $consultations = $stmt->fetchAll();
 
-        // Pending consultations (not completed/cancelled)
+        // Pending consultations (awaiting consultation - only status='pending', not in_progress or completed)
         // Show consultations assigned to this doctor OR unassigned consultations (doctor_id = 1)
         $stmt = $this->pdo->prepare("
             SELECT c.*, p.first_name AS patient_first, p.last_name AS patient_last, p.date_of_birth AS patient_dob, p.phone AS patient_phone, pv.visit_date, COALESCE(c.follow_up_date, pv.visit_date, c.created_at) as appointment_date
@@ -218,7 +224,7 @@ class DoctorController extends BaseController {
             JOIN patients p ON c.patient_id = p.id
             LEFT JOIN patient_visits pv ON c.visit_id = pv.id
             WHERE (c.doctor_id = ? OR c.doctor_id = 1) 
-              AND (c.status IS NULL OR c.status NOT IN ('completed','cancelled'))
+              AND c.status = 'pending'
             ORDER BY COALESCE(c.created_at, c.follow_up_date, pv.visit_date) ASC
         ");
         $stmt->execute([$doctor_id]);
@@ -470,7 +476,7 @@ class DoctorController extends BaseController {
          SELECT p.*,
              COALESCE(consultation_counts.consultation_count, 0) as consultation_count,
                    (SELECT pv3.status FROM patient_visits pv3 WHERE pv3.patient_id = p.id ORDER BY pv3.created_at DESC LIMIT 1) as workflow_status,
-             (SELECT IF(EXISTS(SELECT 1 FROM payments pay WHERE pay.visit_id = (SELECT id FROM patient_visits pv2 WHERE pv2.patient_id = p.id ORDER BY pv2.created_at DESC LIMIT 1) AND pay.payment_type = 'registration' AND pay.payment_status = 'paid'),1,0)) AS consultation_registration_paid,
+             (SELECT IF(EXISTS(SELECT 1 FROM payments pay WHERE pay.visit_id = (SELECT id FROM patient_visits pv2 WHERE pv2.patient_id = p.id ORDER BY pv2.created_at DESC LIMIT 1) AND pay.payment_type IN ('consultation', 'registration') AND pay.payment_status = 'paid'),1,0)) AS consultation_registration_paid,
              (SELECT IF(EXISTS(SELECT 1 FROM payments pay2 WHERE pay2.visit_id = (SELECT id FROM patient_visits pv3 WHERE pv3.patient_id = p.id ORDER BY pv3.created_at DESC LIMIT 1) AND pay2.payment_type = 'lab_test' AND pay2.payment_status = 'paid'),1,0)) AS lab_tests_paid,
              (SELECT IF(EXISTS(SELECT 1 FROM payments pay3 WHERE pay3.visit_id = (SELECT id FROM patient_visits pv4 WHERE pv4.patient_id = p.id ORDER BY pv4.created_at DESC LIMIT 1) AND pay3.payment_type = 'lab_test' AND pay3.payment_status = 'paid'),1,0)) AS results_review_paid
          FROM patients p
@@ -480,7 +486,7 @@ class DoctorController extends BaseController {
                 WHERE doctor_id = ?
                 GROUP BY patient_id
             ) consultation_counts ON p.id = consultation_counts.patient_id
-                WHERE (SELECT IF(EXISTS(SELECT 1 FROM payments pay WHERE pay.visit_id = (SELECT id FROM patient_visits pv WHERE pv.patient_id = p.id ORDER BY pv.created_at DESC LIMIT 1) AND pay.payment_type = 'registration' AND pay.payment_status = 'paid'),1,0)) = 1
+                WHERE (SELECT IF(EXISTS(SELECT 1 FROM payments pay WHERE pay.visit_id = (SELECT id FROM patient_visits pv WHERE pv.patient_id = p.id ORDER BY pv.created_at DESC LIMIT 1) AND pay.payment_type IN ('consultation', 'registration') AND pay.payment_status = 'paid'),1,0)) = 1
             ORDER BY p.first_name
         ");
         $stmt->execute([$doctor_id]);
@@ -493,8 +499,12 @@ class DoctorController extends BaseController {
     }
 
     public function start_consultation() {
+    error_log('[start_consultation] METHOD CALLED - REQUEST_METHOD: ' . $_SERVER['REQUEST_METHOD']);
+    
     if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+        error_log('[start_consultation] Not POST request, redirecting to dashboard');
         $this->redirect('doctor/dashboard');
+        return;
     }
 
     $this->validateCSRF();
@@ -512,6 +522,7 @@ class DoctorController extends BaseController {
     if (!$visit_id) {
         $_SESSION['error'] = 'No visit found for this patient';
         $this->redirect('doctor/view_patient/' . $patient_id);
+        return;
     }
 
     // Check if doctor can attend this visit
@@ -519,6 +530,7 @@ class DoctorController extends BaseController {
     if (!$can['ok']) {
         $_SESSION['error'] = 'Cannot start consultation: ' . $can['reason'];
         $this->redirect('doctor/view_patient/' . $patient_id);
+        return;
     }
 
     // Start or resume consultation using BaseController helper
@@ -526,23 +538,20 @@ class DoctorController extends BaseController {
     if (!$start['ok']) {
         $_SESSION['error'] = 'Failed to start consultation: ' . ($start['message'] ?? $start['reason'] ?? 'unknown');
         $this->redirect('doctor/view_patient/' . $patient_id);
+        return;
     }
 
     $consultation_id = $start['consultation_id'];
 
-    // Debug logging: record incoming POST keys and selected_allocations payload for troubleshooting
-    try {
-        error_log('[start_consultation] POST keys: ' . json_encode(array_keys($_POST)));
-        if (isset($_POST['selected_allocations'])) {
-            error_log('[start_consultation] selected_allocations (raw): ' . $_POST['selected_allocations']);
-            $decodedAlloc = json_decode($_POST['selected_allocations'], true);
-            error_log('[start_consultation] selected_allocations (decoded): ' . json_encode($decodedAlloc));
-        } else {
-            error_log('[start_consultation] selected_allocations: <not set>');
-        }
-    } catch (Exception $e) {
-        error_log('[start_consultation] logging error: ' . $e->getMessage());
-    }
+    // Debug logging: record ALL incoming POST data for troubleshooting
+    error_log('[start_consultation] ========== FORM SUBMISSION ==========');
+    error_log('[start_consultation] patient_id: ' . $patient_id);
+    error_log('[start_consultation] next_step: ' . $next_step);
+    error_log('[start_consultation] selected_tests: ' . ($_POST['selected_tests'] ?? '<empty>'));
+    error_log('[start_consultation] selected_medicines: ' . ($_POST['selected_medicines'] ?? '<empty>'));
+    error_log('[start_consultation] selected_allocations: ' . ($_POST['selected_allocations'] ?? '<empty>'));
+    error_log('[start_consultation] main_complaint: ' . ($_POST['main_complaint'] ?? '<empty>'));
+    error_log('[start_consultation] on_examination: ' . ($_POST['on_examination'] ?? '<empty>'));
 
     // Now proceed to handle submitted consultation details
     try {
@@ -589,13 +598,8 @@ class DoctorController extends BaseController {
             $params[] = $_POST['treatment_plan'] ?? '';
         }
 
-        // Always try to set status/completed/updated if those columns exist
-        if (in_array('status', $cols)) {
-            $updateParts[] = "status = 'completed'";
-        }
-        if (in_array('completed_at', $cols)) {
-            $updateParts[] = 'completed_at = NOW()';
-        }
+        // Don't mark as completed yet - consultation will be marked complete only when there are no pending payments/tests/medicines
+        // Only update the updated_at timestamp
         if (in_array('updated_at', $cols)) {
             $updateParts[] = 'updated_at = NOW()';
         }
@@ -639,6 +643,21 @@ class DoctorController extends BaseController {
                         $doctor_id,
                         $technician_id
                     ]);
+                    
+                    // Get test price to create pending payment record
+                    $stmtTest = $this->pdo->prepare("SELECT price FROM lab_tests WHERE id = ?");
+                    $stmtTest->execute([$test_id]);
+                    $test = $stmtTest->fetch();
+                    $test_price = $test['price'] ?? 0;
+                    
+                    if ($test_price > 0) {
+                        // Create pending payment record for this test
+                        $stmtPayment = $this->pdo->prepare("
+                            INSERT INTO payments (visit_id, patient_id, payment_type, item_id, item_type, amount, payment_status, created_at, updated_at)
+                            VALUES (?, ?, 'lab_test', ?, 'lab_test', ?, 'pending', NOW(), NOW())
+                        ");
+                        $stmtPayment->execute([$visit_id, $patient_id, $test_id, $test_price]);
+                    }
                 }
                 
                 $this->updateWorkflowStatus($patient_id, 'pending_payment', ['lab_tests_ordered' => true]);
@@ -671,6 +690,22 @@ class DoctorController extends BaseController {
                         $medicine_data['duration'] ?? 1,
                         $medicine_data['instructions'] ?? '',
                     ]);
+                    
+                    // Get medicine price to create pending payment record
+                    $stmtMed = $this->pdo->prepare("SELECT unit_price FROM medicines WHERE id = ?");
+                    $stmtMed->execute([$medicine_data['id']]);
+                    $medicine = $stmtMed->fetch();
+                    $medicine_unit_price = $medicine['unit_price'] ?? 0;
+                    $medicine_total_price = $medicine_unit_price * ($medicine_data['quantity'] ?? 1);
+                    
+                    if ($medicine_total_price > 0) {
+                        // Create pending payment record for this medicine
+                        $stmtPayment = $this->pdo->prepare("
+                            INSERT INTO payments (visit_id, patient_id, payment_type, item_id, item_type, amount, payment_status, created_at, updated_at)
+                            VALUES (?, ?, 'medicine', ?, 'medicine', ?, 'pending', NOW(), NOW())
+                        ");
+                        $stmtPayment->execute([$visit_id, $patient_id, $medicine_data['id'], $medicine_total_price]);
+                    }
                 }
                 
                 $this->updateWorkflowStatus($patient_id, 'pending_payment', ['medicine_prescribed' => true]);
@@ -702,9 +737,6 @@ class DoctorController extends BaseController {
                     
                     if (!$service) continue;
 
-                    // Don't create pending payment records - payments should only be created when actually received
-                    // The service_orders table is the source of truth for services that need payment
-
                     // Create service order
                     $stmt = $this->pdo->prepare("
                         INSERT INTO service_orders (
@@ -727,6 +759,15 @@ class DoctorController extends BaseController {
                     ]);
 
                     $order_id = $this->pdo->lastInsertId();
+                    
+                    // Create pending payment record for this service
+                    if ($service['price'] > 0) {
+                        $stmtPayment = $this->pdo->prepare("
+                            INSERT INTO payments (visit_id, patient_id, payment_type, item_id, item_type, amount, payment_status, created_at, updated_at)
+                            VALUES (?, ?, 'service', ?, 'service', ?, 'pending', NOW(), NOW())
+                        ");
+                        $stmtPayment->execute([$visit_id, $patient_id, $service_id, $service['price']]);
+                    }
                     
                     // Send notification if staff assigned
                     if ($performed_by) {
@@ -752,7 +793,16 @@ class DoctorController extends BaseController {
                           ($next_step === 'allocation' || $next_step === 'all');
         
         if (!$has_lab_tests && !$has_medicines && !$has_allocations) {
+            // Only mark consultation as 'completed' when there's nothing else to do (discharge case)
+            $stmt = $this->pdo->prepare("
+                UPDATE consultations 
+                SET status = 'completed', completed_at = NOW()
+                WHERE id = ?
+            ");
+            $stmt->execute([$consultation_id]);
+            
             $this->updateWorkflowStatus($patient_id, 'completed');
+            // Note: patient_visits.status remains 'active' until patient is discharged (entire journey complete)
         }
 
         $this->pdo->commit();
@@ -762,8 +812,8 @@ class DoctorController extends BaseController {
             $_SESSION['success'] = 'Consultation completed successfully. Patient needs to make payment.';
             $this->redirect('receptionist/payments');
         } else {
-            $_SESSION['success'] = 'Consultation completed successfully';
-            $this->redirect('doctor/view_patient/' . $patient_id);
+            $_SESSION['success'] = 'Consultation completed and patient discharged successfully';
+            $this->redirect('doctor/dashboard');
         }
         
     } catch (Exception $e) {
@@ -1256,7 +1306,7 @@ class DoctorController extends BaseController {
             }
             $visit_id = $visit['id'];
 
-            $stmt = $this->pdo->prepare("SELECT COUNT(*) FROM payments WHERE visit_id = ? AND payment_type = 'registration' AND payment_status = 'paid'");
+            $stmt = $this->pdo->prepare("SELECT COUNT(*) FROM payments WHERE visit_id = ? AND payment_type IN ('consultation', 'registration') AND payment_status = 'paid'");
             $stmt->execute([$visit_id]);
             $paid = (int)$stmt->fetchColumn();
             if ($paid === 0) {
@@ -1412,11 +1462,60 @@ class DoctorController extends BaseController {
         $latest_visit_row = $stmt->fetch();
         $latest_visit_id = $latest_visit_row['id'] ?? null;
 
+        // Mark consultation as 'in_progress' when doctor starts attending
+        // This removes the patient from the "waiting" list
+        $consultation = null;
+        $is_reopening = false;
+        
+        if ($latest_visit_id) {
+            // Find or create consultation for this visit
+            $stmt = $this->pdo->prepare("
+                SELECT * FROM consultations 
+                WHERE patient_id = ? AND visit_id = ? 
+                ORDER BY created_at DESC LIMIT 1
+            ");
+            $stmt->execute([$patient_id, $latest_visit_id]);
+            $consultation = $stmt->fetch();
+            
+            if (!$consultation) {
+                // Create new consultation if doesn't exist
+                $stmt = $this->pdo->prepare("
+                    INSERT INTO consultations 
+                    (visit_id, patient_id, doctor_id, status, started_at, created_at, updated_at)
+                    VALUES (?, ?, ?, 'in_progress', NOW(), NOW(), NOW())
+                ");
+                $stmt->execute([$latest_visit_id, $patient_id, $_SESSION['user_id']]);
+                
+                // Fetch the newly created consultation
+                $stmt = $this->pdo->prepare("
+                    SELECT * FROM consultations 
+                    WHERE patient_id = ? AND visit_id = ? 
+                    ORDER BY created_at DESC LIMIT 1
+                ");
+                $stmt->execute([$patient_id, $latest_visit_id]);
+                $consultation = $stmt->fetch();
+            } else {
+                // Mark existing as in_progress and note that this is a reopening
+                if ($consultation['status'] === 'in_progress') {
+                    $is_reopening = true;
+                }
+                
+                $stmt = $this->pdo->prepare("
+                    UPDATE consultations 
+                    SET status = 'in_progress', started_at = COALESCE(started_at, NOW()), updated_at = NOW()
+                    WHERE id = ? AND status IN ('pending', 'in_progress')
+                ");
+                $stmt->execute([$consultation['id']]);
+            }
+        }
+
         $this->render('doctor/attend_patient', [
             'patient' => $patient,
             'csrf_token' => $this->generateCSRF(),
             'visit_id' => $latest_visit_id,
-            'payment_override' => $_SESSION['payment_override'] ?? null
+            'payment_override' => $_SESSION['payment_override'] ?? null,
+            'consultation' => $consultation,
+            'is_reopening' => $is_reopening
         ]);
         
         // Clear the override session after use
@@ -1496,7 +1595,7 @@ class DoctorController extends BaseController {
             SELECT pv.id as visit_id, pv.visit_date, pv.visit_type,
                    pay.payment_status, pay.amount, pay.payment_type
             FROM patient_visits pv
-            LEFT JOIN payments pay ON pay.visit_id = pv.id AND pay.payment_type = 'registration'
+            LEFT JOIN payments pay ON pay.visit_id = pv.id AND pay.payment_type IN ('consultation', 'registration')
             WHERE pv.patient_id = ?
             ORDER BY pv.created_at DESC
             LIMIT 1

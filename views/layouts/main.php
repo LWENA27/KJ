@@ -1824,7 +1824,8 @@
                 info: 'fas fa-info-circle'
             };
 
-            toast.classList.add(bgColors[type] || bgColors.info);
+            const colorClass = bgColors[type] || bgColors.info;
+            colorClass.split(' ').forEach(cls => toast.classList.add(cls));
             toast.innerHTML = `
                 <div class="flex items-center space-x-3">
                     <i class="${icons[type] || icons.info}"></i>

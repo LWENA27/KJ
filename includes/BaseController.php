@@ -248,16 +248,28 @@ class BaseController {
         $visit_id = $visit['id'];
 
         $step_requirements = [
-            'consultation' => 'registration',
+            'consultation' => ['consultation', 'registration'],  // Check for either 'consultation' or 'registration' payment type
             'lab_tests' => 'lab_test',
             'results_review' => 'lab_test',
             'medicine' => 'medicine'
         ];
 
         if (isset($step_requirements[$required_step])) {
-            $payment_type = $step_requirements[$required_step];
-            $stmt = $this->pdo->prepare("SELECT COUNT(*) FROM payments WHERE visit_id = ? AND payment_type = ? AND payment_status = 'paid'");
-            $stmt->execute([$visit_id, $payment_type]);
+            $payment_types = $step_requirements[$required_step];
+            
+            // Handle both single string and array of payment types
+            if (!is_array($payment_types)) {
+                $payment_types = [$payment_types];
+            }
+            
+            // Check if any of the payment types are paid
+            $placeholders = implode(',', array_fill(0, count($payment_types), '?'));
+            $stmt = $this->pdo->prepare("SELECT COUNT(*) FROM payments WHERE visit_id = ? AND payment_type IN ({$placeholders}) AND payment_status = 'paid'");
+            
+            $params = [$visit_id];
+            $params = array_merge($params, $payment_types);
+            $stmt->execute($params);
+            
             $count = (int)$stmt->fetchColumn();
             if ($count === 0) {
                 return ['access' => false, 'message' => 'Payment required for ' . str_replace('_', ' ', $required_step), 'step' => $required_step];
@@ -276,8 +288,8 @@ class BaseController {
 
         $visit_id = $visit['id'];
 
-        // Payments
-        $stmt = $this->pdo->prepare("SELECT COUNT(*) FROM payments WHERE visit_id = ? AND payment_type = 'registration' AND payment_status = 'paid'");
+        // Payments - Check for either 'consultation' or 'registration' payment type
+        $stmt = $this->pdo->prepare("SELECT COUNT(*) FROM payments WHERE visit_id = ? AND payment_type IN ('consultation', 'registration') AND payment_status = 'paid'");
         $stmt->execute([$visit_id]);
         $consultation_registration_paid = (bool)$stmt->fetchColumn();
 
@@ -384,12 +396,15 @@ class BaseController {
         if (empty($status)) return ['ok' => false, 'reason' => 'visit_not_found'];
         if ($status['current_step'] === 'completed') return ['ok' => false, 'reason' => 'visit_completed'];
 
-        // if a consultation is already in progress or completed, block
+        // Check if a consultation already exists for this visit
         $stmt = $this->pdo->prepare("SELECT id, status FROM consultations WHERE visit_id = ? ORDER BY created_at DESC LIMIT 1");
         $stmt->execute([$visit_id]);
         $c = $stmt->fetch();
-        if ($c && in_array($c['status'], ['in_progress','completed'])) {
-            return ['ok' => false, 'reason' => 'consultation_already_in_progress_or_done'];
+        
+        // Allow if consultation is 'in_progress' (doctor is currently attending)
+        // Block only if consultation is already 'completed'
+        if ($c && $c['status'] === 'completed') {
+            return ['ok' => false, 'reason' => 'consultation_already_completed'];
         }
 
         if ($requirePayment && intval($status['consultation_registration_paid']) <= 0) {

@@ -23,6 +23,26 @@
             </div>
         </div>
 
+        <!-- Reopening Notification -->
+        <?php if ($is_reopening ?? false): ?>
+        <div class="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
+            <div class="flex items-start">
+                <div class="flex-shrink-0">
+                    <i class="fas fa-info-circle text-blue-600 text-lg"></i>
+                </div>
+                <div class="ml-3">
+                    <h3 class="text-sm font-medium text-blue-900">Consultation in Progress</h3>
+                    <p class="text-sm text-blue-800 mt-1">This is a previous consultation session. The form below contains your earlier notes. You can continue where you left off or make updates.</p>
+                    <?php if ($consultation && $consultation['started_at']): ?>
+                        <p class="text-xs text-blue-700 mt-1">
+                            <i class="fas fa-clock mr-1"></i>Started: <?php echo date('d/m/Y H:i', strtotime($consultation['started_at'])); ?>
+                        </p>
+                    <?php endif; ?>
+                </div>
+            </div>
+        </div>
+        <?php endif; ?>
+
         <!-- Patient Info Summary -->
         <div class="bg-white p-4 rounded-lg shadow mb-6">
             <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -61,7 +81,7 @@
                             <label class="block text-sm font-medium text-gray-700 mb-2">M/C - Main Complaint *</label>
                             <textarea id="mainComplaint" name="main_complaint" rows="3" required
                                 class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                                placeholder="Patient's main complaint and symptoms..."></textarea>
+                                placeholder="Patient's main complaint and symptoms..."><?php echo htmlspecialchars($consultation['main_complaint'] ?? ''); ?></textarea>
                         </div>
 
                         <!-- O/E (On Examination) -->
@@ -69,7 +89,7 @@
                             <label class="block text-sm font-medium text-gray-700 mb-2">O/E - On Examination *</label>
                             <textarea id="onExamination" name="on_examination" rows="3" required
                                 class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                                placeholder="Physical examination findings..."></textarea>
+                                placeholder="Physical examination findings..."><?php echo htmlspecialchars($consultation['on_examination'] ?? ''); ?></textarea>
                         </div>
 
                         <!-- Preliminary Diagnosis -->
@@ -77,7 +97,7 @@
                             <label class="block text-sm font-medium text-gray-700 mb-2">Preliminary Diagnosis</label>
                             <textarea id="preliminaryDiagnosis" name="preliminary_diagnosis" rows="2"
                                 class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                                placeholder="Initial working diagnosis..."></textarea>
+                                placeholder="Initial working diagnosis..."><?php echo htmlspecialchars($consultation['preliminary_diagnosis'] ?? ''); ?></textarea>
                         </div>
 
                         <!-- Final Diagnosis -->
@@ -85,7 +105,7 @@
                             <label class="block text-sm font-medium text-gray-700 mb-2">Final Diagnosis</label>
                             <textarea id="finalDiagnosis" name="final_diagnosis" rows="2"
                                 class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                                placeholder="Final confirmed diagnosis..."></textarea>
+                                placeholder="Final confirmed diagnosis..."><?php echo htmlspecialchars($consultation['diagnosis'] ?? ''); ?></textarea>
                         </div>
                     </div>
                 </div>
@@ -125,7 +145,15 @@
 
                 <!-- Lab Tests Section -->
                 <div id="labSection" class="bg-purple-50 p-4 rounded-lg hidden">
-                    <h4 class="text-lg font-medium text-purple-900 mb-4">Laboratory Tests</h4>
+                    <h4 class="text-lg font-medium text-purple-900 mb-4">
+                        <i class="fas fa-flask mr-2"></i>Laboratory Tests
+                    </h4>
+                    <div class="bg-purple-100 border border-purple-300 rounded p-3 mb-4">
+                        <p class="text-sm text-purple-800">
+                            <i class="fas fa-info-circle mr-1"></i>
+                            <strong>Required:</strong> Search and select at least one lab test below before completing consultation.
+                        </p>
+                    </div>
                     <div class="space-y-4">
                         <div>
                             <label class="block text-sm font-medium text-gray-700 mb-2">Search & Select Lab Tests</label>
@@ -149,7 +177,15 @@
 
                 <!-- Medicine Section -->
                 <div id="medicineSection" class="bg-green-50 p-4 rounded-lg hidden">
-                    <h4 class="text-lg font-medium text-green-900 mb-4">Medicine Prescription</h4>
+                    <h4 class="text-lg font-medium text-green-900 mb-4">
+                        <i class="fas fa-pills mr-2"></i>Medicine Prescription
+                    </h4>
+                    <div class="bg-green-100 border border-green-300 rounded p-3 mb-4">
+                        <p class="text-sm text-green-800">
+                            <i class="fas fa-info-circle mr-1"></i>
+                            <strong>Required:</strong> Search and select at least one medicine below before completing consultation.
+                        </p>
+                    </div>
                     <div class="space-y-4">
                         <div>
                             <label class="block text-sm font-medium text-gray-700 mb-2">Search & Select Medicines</label>
@@ -173,7 +209,15 @@
 
                 <!-- Allocation Section -->
                 <div id="allocationSection" class="bg-indigo-50 p-4 rounded-lg hidden">
-                    <h4 class="text-lg font-medium text-indigo-900 mb-4">Allocate Service(s)</h4>
+                    <h4 class="text-lg font-medium text-indigo-900 mb-4">
+                        <i class="fas fa-user-md mr-2"></i>Allocate Service(s)
+                    </h4>
+                    <div class="bg-indigo-100 border border-indigo-300 rounded p-3 mb-4">
+                        <p class="text-sm text-indigo-800">
+                            <i class="fas fa-info-circle mr-1"></i>
+                            <strong>Required:</strong> Search and select at least one service below before completing consultation.
+                        </p>
+                    </div>
                     <div class="space-y-4">
                         <div>
                             <label class="block text-sm font-medium text-gray-700 mb-2">Search & Select Services</label>
@@ -202,7 +246,7 @@
                         <label class="block text-sm font-medium text-gray-700 mb-2">Treatment Plan & Instructions</label>
                         <textarea id="treatmentPlan" name="treatment_plan" rows="3"
                             class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                            placeholder="Treatment plan, follow-up instructions, lifestyle advice..."></textarea>
+                            placeholder="Treatment plan, follow-up instructions, lifestyle advice..."><?php echo htmlspecialchars($consultation['treatment_plan'] ?? ''); ?></textarea>
                     </div>
                 </div>
 
@@ -276,15 +320,11 @@
                 }
                 // Ensure numeric comparison (quantities may be strings after being edited)
                 const qty = Number(medicine.quantity);
-                const stock = Number(medicine.stock_quantity);
                 if (isNaN(qty) || qty < 1) {
                     alert(`Please enter a valid quantity for ${medicine.name}`);
                     return false;
                 }
-                if (qty > stock) {
-                    alert(`Cannot prescribe ${qty} units of ${medicine.name}. Only ${stock} available in stock.`);
-                    return false;
-                }
+                // Allow prescription even if stock is 0 - patient can get medicine elsewhere
             }
 
             console.log('🚀🚀🚀 RETURNING TRUE - FORM WILL NOW SUBMIT TO SERVER 🚀🚀🚀');
@@ -782,10 +822,11 @@
                     const div = document.createElement('div');
                     div.className = `p-3 hover:bg-gray-100 cursor-pointer border-b search-result-item ${isSelected ? 'bg-green-50' : ''}`;
                     div.setAttribute('data-index', index);
+                    const stockBadge = medicine.stock_quantity === 0 ? '<span class="ml-2 text-xs bg-red-100 text-red-700 px-2 py-1 rounded">OUT OF STOCK</span>' : '';
                     div.innerHTML = `
                     <div class="font-medium">${medicine.name}</div>
                     <div class="text-sm text-gray-600">${medicine.generic_name} - Tsh ${parseFloat(medicine.unit_price).toLocaleString('en-US')}</div>
-                    <div class="text-xs text-gray-500">Stock: ${medicine.stock_quantity}</div>
+                    <div class="text-xs text-gray-500">Stock: ${medicine.stock_quantity} ${stockBadge}</div>
                 `;
 
                     if (!isSelected) {
@@ -826,17 +867,17 @@
             let value = (typeof elementOrValue === 'object') ? elementOrValue.value : elementOrValue;
 
             if (field === 'quantity') {
-                // Parse integer and clamp
+                // Parse integer - allow any positive quantity
                 let quantity = parseInt(value, 10);
                 const stock = Number(medicine.stock_quantity);
                 if (isNaN(quantity) || quantity < 1) {
                     quantity = 1;
                     if (typeof elementOrValue === 'object') elementOrValue.value = quantity;
                 }
-                if (quantity > stock) {
-                    alert(`Cannot prescribe more than available stock (${stock})`);
-                    quantity = stock;
-                    if (typeof elementOrValue === 'object') elementOrValue.value = quantity;
+                // Allow prescription even if stock is 0 - patient can get medicine elsewhere
+                // Just warn if prescribing more than in stock
+                if (quantity > stock && stock > 0) {
+                    console.warn(`Prescribing ${quantity} but only ${stock} in stock`);
                 }
                 medicine[field] = quantity;
             } else {

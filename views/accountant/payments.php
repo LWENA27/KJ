@@ -15,11 +15,20 @@ $title = 'Pending Payments';
     <div class="bg-white rounded-xl shadow-sm border border-neutral-200">
         <div class="border-b border-neutral-200">
             <nav class="flex space-x-8 px-6" aria-label="Tabs">
-                <button onclick="showTab('lab')" id="tab-lab" 
+                <button onclick="showTab('consultation')" id="tab-consultation" 
                         class="tab-btn py-4 px-1 border-b-2 border-blue-500 font-medium text-sm text-blue-600">
+                    Consultations
+                    <?php if (!empty($pending_consultation_payments)): ?>
+                    <span class="ml-2 bg-blue-100 text-blue-600 py-0.5 px-2 rounded-full text-xs">
+                        <?= count($pending_consultation_payments) ?>
+                    </span>
+                    <?php endif; ?>
+                </button>
+                <button onclick="showTab('lab')" id="tab-lab" 
+                        class="tab-btn py-4 px-1 border-b-2 border-transparent font-medium text-sm text-neutral-500 hover:text-neutral-700 hover:border-neutral-300">
                     Lab Tests
                     <?php if (!empty($pending_lab_payments)): ?>
-                    <span class="ml-2 bg-blue-100 text-blue-600 py-0.5 px-2 rounded-full text-xs">
+                    <span class="ml-2 bg-neutral-100 text-neutral-600 py-0.5 px-2 rounded-full text-xs">
                         <?= count($pending_lab_payments) ?>
                     </span>
                     <?php endif; ?>
@@ -43,6 +52,57 @@ $title = 'Pending Payments';
                     <?php endif; ?>
                 </button>
             </nav>
+        </div>
+
+        <!-- Consultations Tab -->
+        <div id="content-consultation" class="tab-content p-6">
+            <?php if (empty($pending_consultation_payments)): ?>
+            <div class="text-center py-12">
+                <i class="fas fa-check-circle text-5xl text-green-400 mb-4"></i>
+                <p class="text-neutral-600">No pending consultation payments</p>
+            </div>
+            <?php else: ?>
+            <div class="overflow-x-auto">
+                <table class="w-full">
+                    <thead class="bg-neutral-50">
+                        <tr>
+                            <th class="px-4 py-3 text-left text-xs font-medium text-neutral-500 uppercase">Patient</th>
+                            <th class="px-4 py-3 text-left text-xs font-medium text-neutral-500 uppercase">Consultation Fee</th>
+                            <th class="px-4 py-3 text-left text-xs font-medium text-neutral-500 uppercase">Visit Date</th>
+                            <th class="px-4 py-3 text-left text-xs font-medium text-neutral-500 uppercase">Status</th>
+                            <th class="px-4 py-3 text-left text-xs font-medium text-neutral-500 uppercase">Action</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-neutral-200">
+                        <?php foreach ($pending_consultation_payments as $payment): ?>
+                        <tr class="hover:bg-neutral-50">
+                            <td class="px-4 py-4">
+                                <p class="font-medium text-neutral-800"><?= htmlspecialchars($payment['first_name'] . ' ' . $payment['last_name']) ?></p>
+                                <p class="text-xs text-neutral-500"><?= htmlspecialchars($payment['registration_number']) ?></p>
+                            </td>
+                            <td class="px-4 py-4 font-medium text-neutral-800">
+                                TZS <?= number_format($payment['consultation_fee'], 0) ?>
+                            </td>
+                            <td class="px-4 py-4 text-neutral-500 text-sm">
+                                <?= date('M d, Y', strtotime($payment['visit_date'])) ?>
+                            </td>
+                            <td class="px-4 py-4">
+                                <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-red-100 text-red-800">
+                                    <i class="fas fa-clock mr-1"></i>Pending
+                                </span>
+                            </td>
+                            <td class="px-4 py-4">
+                                <button onclick="openPaymentModal('consultation', <?= htmlspecialchars(json_encode($payment)) ?>)"
+                                        class="px-3 py-1.5 bg-blue-500 text-white text-sm rounded-lg hover:bg-blue-600 transition-colors">
+                                    <i class="fas fa-money-bill-wave mr-1"></i>Collect
+                                </button>
+                            </td>
+                        </tr>
+                        <?php endforeach; ?>
+                    </tbody>
+                </table>
+            </div>
+            <?php endif; ?>
         </div>
 
         <!-- Lab Tests Tab -->
@@ -261,16 +321,20 @@ function showTab(tab) {
     document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
     // Reset all tabs
     document.querySelectorAll('.tab-btn').forEach(el => {
-        el.classList.remove('border-blue-500', 'text-blue-600');
-        el.classList.add('border-transparent', 'text-neutral-500');
+        el.classList.remove('border-blue-500');
+        el.classList.remove('text-blue-600');
+        el.classList.add('border-transparent');
+        el.classList.add('text-neutral-500');
     });
     
     // Show selected content
     document.getElementById('content-' + tab).classList.remove('hidden');
     // Activate selected tab
     const tabBtn = document.getElementById('tab-' + tab);
-    tabBtn.classList.remove('border-transparent', 'text-neutral-500');
-    tabBtn.classList.add('border-blue-500', 'text-blue-600');
+    tabBtn.classList.remove('border-transparent');
+    tabBtn.classList.remove('text-neutral-500');
+    tabBtn.classList.add('border-blue-500');
+    tabBtn.classList.add('text-blue-600');
 }
 
 function openPaymentModal(type, data) {
@@ -279,7 +343,10 @@ function openPaymentModal(type, data) {
     document.getElementById('modal_payment_type').value = type;
     document.getElementById('modal_patient_name').textContent = data.first_name + ' ' + data.last_name;
     
-    if (type === 'lab_test') {
+    if (type === 'consultation') {
+        document.getElementById('modal_payment_for').textContent = 'Consultation Fee';
+        document.getElementById('modal_amount').value = data.consultation_fee;
+    } else if (type === 'lab_test') {
         document.getElementById('modal_payment_for').textContent = data.test_count + ' Lab Test(s)';
         document.getElementById('modal_amount').value = data.remaining_amount_to_pay;
     } else if (type === 'medicine') {

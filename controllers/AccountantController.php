@@ -115,6 +115,51 @@ class AccountantController extends BaseController
         $stmt->execute();
         $payments = $stmt->fetchAll();
 
+        // Get pending consultation payments (patients who registered but haven't paid)
+        $stmt = $this->pdo->prepare("
+            SELECT 
+                c.id as consultation_id,
+                c.visit_id,
+                c.patient_id,
+                p.first_name,
+                p.last_name,
+                p.registration_number,
+                pv.visit_date,
+                pv.visit_type,
+                CASE 
+                    WHEN EXISTS (
+                        SELECT 1 FROM payments 
+                        WHERE visit_id = c.visit_id 
+                        AND payment_type IN ('consultation', 'registration')
+                        AND payment_status = 'paid'
+                    ) THEN 'paid'
+                    ELSE 'pending'
+                END as payment_status,
+                CASE 
+                    WHEN EXISTS (
+                        SELECT 1 FROM payments 
+                        WHERE visit_id = c.visit_id 
+                        AND payment_type IN ('consultation', 'registration')
+                        AND payment_status = 'paid'
+                    ) THEN (SELECT amount FROM payments WHERE visit_id = c.visit_id AND payment_type IN ('consultation', 'registration') AND payment_status = 'paid' LIMIT 1)
+                    ELSE 0
+                END as paid_amount,
+                5000 as consultation_fee
+            FROM consultations c
+            JOIN patients p ON c.patient_id = p.id
+            JOIN patient_visits pv ON c.visit_id = pv.id
+            WHERE c.status = 'pending' 
+                AND NOT EXISTS (
+                    SELECT 1 FROM payments 
+                    WHERE visit_id = c.visit_id 
+                    AND payment_type IN ('consultation', 'registration')
+                    AND payment_status = 'paid'
+                )
+            ORDER BY pv.visit_date DESC, c.created_at DESC
+        ");
+        $stmt->execute();
+        $pending_consultation_payments = $stmt->fetchAll();
+
         // Get pending lab test payments
         $stmt = $this->pdo->prepare("
             SELECT 
@@ -212,6 +257,7 @@ class AccountantController extends BaseController
 
         $this->render('accountant/payments', [
             'payments' => $payments,
+            'pending_consultation_payments' => $pending_consultation_payments,
             'pending_lab_payments' => $pending_lab_payments,
             'pending_medicine_payments' => $pending_medicine_payments,
             'pending_service_payments' => $pending_service_payments,
@@ -304,8 +350,8 @@ class AccountantController extends BaseController
         $amount = floatval($_POST['amount'] ?? 0);
         $payment_method = $_POST['payment_method'] ?? 'cash';
         $reference_number = $_POST['reference_number'] ?? null;
-        $item_id = $_POST['item_id'] ?? null;
-        $item_type = $_POST['item_type'] ?? null;
+        $item_id = !empty($_POST['item_id']) ? $_POST['item_id'] : null;
+        $item_type = !empty($_POST['item_type']) ? $_POST['item_type'] : null;
 
         if (!$patient_id || !$visit_id || !$payment_type || $amount <= 0) {
             $_SESSION['error'] = 'Invalid payment details';
@@ -336,7 +382,10 @@ class AccountantController extends BaseController
             ]);
 
             // Update workflow status based on payment type
-            if ($payment_type === 'lab_test') {
+            if ($payment_type === 'consultation') {
+                // For consultation payments, no additional workflow update needed
+                // Payment status is tracked in the payments table
+            } elseif ($payment_type === 'lab_test') {
                 $this->updateWorkflowStatus($patient_id, 'lab_testing', ['lab_tests_paid' => true]);
             } elseif ($payment_type === 'medicine') {
                 $this->updateWorkflowStatus($patient_id, 'medicine_dispensing', ['medicine_payment_received' => true]);
