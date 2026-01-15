@@ -81,7 +81,11 @@
                 <div class="bg-white border border-amber-200 rounded p-3 <?php echo $index >= 2 ? 'hidden complaints-extra' : ''; ?>">
                     <div class="flex justify-between items-start mb-1">
                         <div class="text-xs text-gray-500">
-                            <i class="fas fa-calendar-alt mr-1"></i><?php echo date('d/m/Y', strtotime($complaint['created_at'])); ?>
+                            <i class="fas fa-calendar-alt mr-1"></i>
+                            <?php 
+                            $timestamp = strtotime($complaint['created_at']);
+                            echo $timestamp ? date('d/m/Y', $timestamp) : 'Unknown date';
+                            ?>
                             <?php if (!empty($complaint['doctor_name'])): ?>
                             | <i class="fas fa-user-md mr-1"></i><?php echo htmlspecialchars($complaint['doctor_name']); ?>
                             <?php endif; ?>
@@ -91,11 +95,19 @@
                         <strong class="text-gray-700">Chief Complaint:</strong>
                         <span class="text-gray-900"><?php echo htmlspecialchars($complaint['main_complaint']); ?></span>
                     </div>
-                    <?php if (!empty($complaint['preliminary_diagnosis']) || !empty($complaint['final_diagnosis'])): ?>
+                    <?php 
+                    $diagnosis = '';
+                    if (!empty(trim($complaint['final_diagnosis'] ?? ''))) {
+                        $diagnosis = $complaint['final_diagnosis'];
+                    } elseif (!empty(trim($complaint['preliminary_diagnosis'] ?? ''))) {
+                        $diagnosis = $complaint['preliminary_diagnosis'];
+                    }
+                    if ($diagnosis):
+                    ?>
                     <div class="text-xs text-gray-600 mt-1">
                         <i class="fas fa-stethoscope mr-1"></i>
                         <strong>Diagnosis:</strong> 
-                        <?php echo htmlspecialchars($complaint['final_diagnosis'] ?? $complaint['preliminary_diagnosis']); ?>
+                        <?php echo htmlspecialchars($diagnosis); ?>
                     </div>
                     <?php endif; ?>
                 </div>
@@ -1059,10 +1071,18 @@
 
                 preliminaryDiagnosisSearchTimeout = setTimeout(() => {
                     fetch(`${BASE_PATH}/doctor/search_diagnoses?q=${encodeURIComponent(query)}`)
-                        .then(response => response.json())
+                        .then(response => {
+                            if (!response.ok) {
+                                throw new Error(`HTTP error! status: ${response.status}`);
+                            }
+                            return response.json();
+                        })
                         .then(diagnoses => displayPreliminaryDiagnosisResults(diagnoses))
                         .catch(error => {
                             console.error('Error searching diagnoses:', error);
+                            const resultsDiv = document.getElementById('preliminaryDiagnosisResults');
+                            resultsDiv.innerHTML = '<div class="p-3 text-red-500"><i class="fas fa-exclamation-triangle mr-2"></i>Error loading diagnoses</div>';
+                            resultsDiv.classList.remove('hidden');
                         });
                 }, 300);
             });
@@ -1148,10 +1168,18 @@
 
                 finalDiagnosisSearchTimeout = setTimeout(() => {
                     fetch(`${BASE_PATH}/doctor/search_diagnoses?q=${encodeURIComponent(query)}`)
-                        .then(response => response.json())
+                        .then(response => {
+                            if (!response.ok) {
+                                throw new Error(`HTTP error! status: ${response.status}`);
+                            }
+                            return response.json();
+                        })
                         .then(diagnoses => displayFinalDiagnosisResults(diagnoses))
                         .catch(error => {
                             console.error('Error searching diagnoses:', error);
+                            const resultsDiv = document.getElementById('finalDiagnosisResults');
+                            resultsDiv.innerHTML = '<div class="p-3 text-red-500"><i class="fas fa-exclamation-triangle mr-2"></i>Error loading diagnoses</div>';
+                            resultsDiv.classList.remove('hidden');
                         });
                 }, 300);
             });

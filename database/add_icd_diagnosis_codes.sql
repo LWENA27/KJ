@@ -5,8 +5,8 @@
 -- Create ICD codes reference table
 CREATE TABLE IF NOT EXISTS `icd_codes` (
   `id` int NOT NULL AUTO_INCREMENT,
-  `code` varchar(20) NOT NULL COMMENT 'ICD-10 code (e.g., B50, A09)',
-  `name` varchar(255) NOT NULL COMMENT 'Diagnosis name',
+  `code` varchar(20) COLLATE utf8mb4_general_ci NOT NULL COMMENT 'ICD-10 code (e.g., B50, A09)',
+  `name` varchar(255) COLLATE utf8mb4_general_ci NOT NULL COMMENT 'Diagnosis name',
   `description` text COLLATE utf8mb4_general_ci COMMENT 'Detailed description',
   `category` varchar(100) COLLATE utf8mb4_general_ci DEFAULT NULL COMMENT 'Disease category',
   `is_active` tinyint(1) DEFAULT '1',

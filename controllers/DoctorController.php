@@ -1029,7 +1029,7 @@ class DoctorController extends BaseController {
             echo json_encode($diagnoses);
         } catch (Exception $e) {
             http_response_code(500);
-            echo json_encode(['error' => 'Database error: ' . $e->getMessage()]);
+            echo json_encode(['error' => 'Failed to search diagnoses']);
             error_log('search_diagnoses error: ' . $e->getMessage());
         }
         exit;
