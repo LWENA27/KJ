@@ -61,6 +61,54 @@
             </div>
         </div>
 
+        <!-- Previous Chief Complaints History -->
+        <?php if (!empty($previous_complaints)): ?>
+        <div class="bg-amber-50 border border-amber-200 rounded-lg p-4 mb-6">
+            <div class="flex items-start mb-3">
+                <div class="flex-shrink-0">
+                    <i class="fas fa-history text-amber-600 text-lg"></i>
+                </div>
+                <div class="ml-3 flex-1">
+                    <h3 class="text-sm font-semibold text-amber-900">Previous Chief Complaints</h3>
+                    <p class="text-xs text-amber-800 mt-1">Patient's recent medical history for reference</p>
+                </div>
+                <button type="button" onclick="toggleComplaintsHistory()" class="text-amber-700 hover:text-amber-900">
+                    <i class="fas fa-chevron-down" id="complaintsToggleIcon"></i>
+                </button>
+            </div>
+            <div id="complaintsHistory" class="space-y-2">
+                <?php foreach ($previous_complaints as $index => $complaint): ?>
+                <div class="bg-white border border-amber-200 rounded p-3 <?php echo $index >= 2 ? 'hidden complaints-extra' : ''; ?>">
+                    <div class="flex justify-between items-start mb-1">
+                        <div class="text-xs text-gray-500">
+                            <i class="fas fa-calendar-alt mr-1"></i><?php echo date('d/m/Y', strtotime($complaint['created_at'])); ?>
+                            <?php if (!empty($complaint['doctor_name'])): ?>
+                            | <i class="fas fa-user-md mr-1"></i><?php echo htmlspecialchars($complaint['doctor_name']); ?>
+                            <?php endif; ?>
+                        </div>
+                    </div>
+                    <div class="text-sm">
+                        <strong class="text-gray-700">Chief Complaint:</strong>
+                        <span class="text-gray-900"><?php echo htmlspecialchars($complaint['main_complaint']); ?></span>
+                    </div>
+                    <?php if (!empty($complaint['preliminary_diagnosis']) || !empty($complaint['final_diagnosis'])): ?>
+                    <div class="text-xs text-gray-600 mt-1">
+                        <i class="fas fa-stethoscope mr-1"></i>
+                        <strong>Diagnosis:</strong> 
+                        <?php echo htmlspecialchars($complaint['final_diagnosis'] ?? $complaint['preliminary_diagnosis']); ?>
+                    </div>
+                    <?php endif; ?>
+                </div>
+                <?php endforeach; ?>
+                <?php if (count($previous_complaints) > 2): ?>
+                <button type="button" onclick="showAllComplaints()" id="showMoreBtn" class="text-xs text-amber-700 hover:text-amber-900 mt-2">
+                    <i class="fas fa-chevron-down mr-1"></i>Show <?php echo count($previous_complaints) - 2; ?> more
+                </button>
+                <?php endif; ?>
+            </div>
+        </div>
+        <?php endif; ?>
+
         <!-- Main Consultation Form -->
         <div class="bg-white rounded-lg shadow">
         <form id="attendForm" method="POST" action="/KJ/doctor/start_consultation" 
@@ -71,6 +119,8 @@
                 <input type="hidden" id="selectedTests" name="selected_tests" value="">
                 <input type="hidden" id="selectedMedicines" name="selected_medicines" value="">
                 <input type="hidden" id="selectedAllocations" name="selected_allocations" value="">
+                <input type="hidden" id="preliminaryDiagnosisId" name="preliminary_diagnosis_id" value="">
+                <input type="hidden" id="finalDiagnosisId" name="final_diagnosis_id" value="">
 
                 <!-- Examination Section -->
                 <div class="bg-blue-50 p-4 rounded-lg">
@@ -94,18 +144,52 @@
 
                         <!-- Preliminary Diagnosis -->
                         <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-2">Preliminary Diagnosis</label>
-                            <textarea id="preliminaryDiagnosis" name="preliminary_diagnosis" rows="2"
-                                class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                                placeholder="Initial working diagnosis..."><?php echo htmlspecialchars($consultation['preliminary_diagnosis'] ?? ''); ?></textarea>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Preliminary Diagnosis (ICD Code) *</label>
+                            <div class="relative">
+                                <div class="flex">
+                                    <input type="text" id="preliminaryDiagnosisSearch" placeholder="Type to search diagnosis codes (e.g., Malaria, B50)..."
+                                        class="flex-1 px-3 py-2 border border-gray-300 rounded-l-md focus:outline-none focus:ring-2 focus:ring-blue-500" autocomplete="off">
+                                    <button type="button" onclick="clearPreliminaryDiagnosisSearch()" id="clearPreliminaryDiagnosisSearch"
+                                        class="px-3 py-2 bg-gray-100 border border-l-0 border-gray-300 rounded-r-md hover:bg-gray-200 hidden">
+                                        <i class="fas fa-times"></i>
+                                    </button>
+                                </div>
+                                <div id="preliminaryDiagnosisResults" class="absolute z-10 w-full bg-white border border-gray-300 rounded-md mt-1 hidden max-h-60 overflow-y-auto shadow-lg"></div>
+                            </div>
+                            <div id="selectedPreliminaryDiagnosis" class="mt-2">
+                                <?php if (!empty($consultation['preliminary_diagnosis'])): ?>
+                                <div class="p-2 bg-blue-50 border border-blue-200 rounded-md text-sm">
+                                    <strong>Current:</strong> <?php echo htmlspecialchars($consultation['preliminary_diagnosis']); ?>
+                                </div>
+                                <?php else: ?>
+                                <div class="text-gray-500 text-sm">No diagnosis selected</div>
+                                <?php endif; ?>
+                            </div>
                         </div>
 
                         <!-- Final Diagnosis -->
                         <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-2">Final Diagnosis</label>
-                            <textarea id="finalDiagnosis" name="final_diagnosis" rows="2"
-                                class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                                placeholder="Final confirmed diagnosis..."><?php echo htmlspecialchars($consultation['diagnosis'] ?? ''); ?></textarea>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Final Diagnosis (ICD Code) *</label>
+                            <div class="relative">
+                                <div class="flex">
+                                    <input type="text" id="finalDiagnosisSearch" placeholder="Type to search diagnosis codes (e.g., Pneumonia, J18)..."
+                                        class="flex-1 px-3 py-2 border border-gray-300 rounded-l-md focus:outline-none focus:ring-2 focus:ring-blue-500" autocomplete="off">
+                                    <button type="button" onclick="clearFinalDiagnosisSearch()" id="clearFinalDiagnosisSearch"
+                                        class="px-3 py-2 bg-gray-100 border border-l-0 border-gray-300 rounded-r-md hover:bg-gray-200 hidden">
+                                        <i class="fas fa-times"></i>
+                                    </button>
+                                </div>
+                                <div id="finalDiagnosisResults" class="absolute z-10 w-full bg-white border border-gray-300 rounded-md mt-1 hidden max-h-60 overflow-y-auto shadow-lg"></div>
+                            </div>
+                            <div id="selectedFinalDiagnosis" class="mt-2">
+                                <?php if (!empty($consultation['diagnosis']) || !empty($consultation['final_diagnosis'])): ?>
+                                <div class="p-2 bg-blue-50 border border-blue-200 rounded-md text-sm">
+                                    <strong>Current:</strong> <?php echo htmlspecialchars($consultation['final_diagnosis'] ?? $consultation['diagnosis'] ?? ''); ?>
+                                </div>
+                                <?php else: ?>
+                                <div class="text-gray-500 text-sm">No diagnosis selected</div>
+                                <?php endif; ?>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -946,6 +1030,190 @@
             currentMedicineFocus = -1;
         }
 
+        // Diagnosis Search Functions
+        let preliminaryDiagnosisSearchTimeout;
+        let finalDiagnosisSearchTimeout;
+        let selectedPreliminaryDiagnosis = null;
+        let selectedFinalDiagnosis = null;
+
+        // Preliminary Diagnosis Search
+        const preliminaryDiagnosisSearchElement = document.getElementById('preliminaryDiagnosisSearch');
+        if (preliminaryDiagnosisSearchElement) {
+            preliminaryDiagnosisSearchElement.addEventListener('input', function() {
+                clearTimeout(preliminaryDiagnosisSearchTimeout);
+                const query = this.value.trim();
+
+                const clearBtn = document.getElementById('clearPreliminaryDiagnosisSearch');
+                if (query.length > 0) {
+                    clearBtn.classList.remove('hidden');
+                } else {
+                    clearBtn.classList.add('hidden');
+                    document.getElementById('preliminaryDiagnosisResults').classList.add('hidden');
+                    return;
+                }
+
+                if (query.length < 2) {
+                    document.getElementById('preliminaryDiagnosisResults').classList.add('hidden');
+                    return;
+                }
+
+                preliminaryDiagnosisSearchTimeout = setTimeout(() => {
+                    fetch(`${BASE_PATH}/doctor/search_diagnoses?q=${encodeURIComponent(query)}`)
+                        .then(response => response.json())
+                        .then(diagnoses => displayPreliminaryDiagnosisResults(diagnoses))
+                        .catch(error => {
+                            console.error('Error searching diagnoses:', error);
+                        });
+                }, 300);
+            });
+        }
+
+        function displayPreliminaryDiagnosisResults(diagnoses) {
+            const resultsDiv = document.getElementById('preliminaryDiagnosisResults');
+            resultsDiv.innerHTML = '';
+
+            if (diagnoses.length === 0) {
+                resultsDiv.innerHTML = '<div class="p-3 text-gray-500">No diagnosis codes found</div>';
+            } else {
+                diagnoses.forEach(diagnosis => {
+                    const div = document.createElement('div');
+                    div.className = 'p-3 hover:bg-blue-100 cursor-pointer border-b';
+                    div.innerHTML = `
+                        <div class="font-medium">${diagnosis.code} - ${diagnosis.name}</div>
+                        <div class="text-sm text-gray-600">${diagnosis.category || ''}</div>
+                        <div class="text-xs text-gray-500">${diagnosis.description || ''}</div>
+                    `;
+                    div.addEventListener('click', () => selectPreliminaryDiagnosis(diagnosis));
+                    resultsDiv.appendChild(div);
+                });
+            }
+
+            resultsDiv.classList.remove('hidden');
+        }
+
+        function selectPreliminaryDiagnosis(diagnosis) {
+            selectedPreliminaryDiagnosis = diagnosis;
+            document.getElementById('preliminaryDiagnosisId').value = diagnosis.id;
+            
+            const displayDiv = document.getElementById('selectedPreliminaryDiagnosis');
+            displayDiv.innerHTML = `
+                <div class="p-2 bg-blue-50 border border-blue-200 rounded-md text-sm flex justify-between items-start">
+                    <div>
+                        <strong>${diagnosis.code}</strong> - ${diagnosis.name}
+                        <div class="text-xs text-gray-600">${diagnosis.category || ''}</div>
+                    </div>
+                    <button type="button" onclick="clearSelectedPreliminaryDiagnosis()" class="text-red-600 hover:text-red-800">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+            `;
+            
+            document.getElementById('preliminaryDiagnosisResults').classList.add('hidden');
+            document.getElementById('preliminaryDiagnosisSearch').value = '';
+            document.getElementById('clearPreliminaryDiagnosisSearch').classList.add('hidden');
+        }
+
+        function clearSelectedPreliminaryDiagnosis() {
+            selectedPreliminaryDiagnosis = null;
+            document.getElementById('preliminaryDiagnosisId').value = '';
+            document.getElementById('selectedPreliminaryDiagnosis').innerHTML = '<div class="text-gray-500 text-sm">No diagnosis selected</div>';
+        }
+
+        function clearPreliminaryDiagnosisSearch() {
+            document.getElementById('preliminaryDiagnosisSearch').value = '';
+            document.getElementById('clearPreliminaryDiagnosisSearch').classList.add('hidden');
+            document.getElementById('preliminaryDiagnosisResults').classList.add('hidden');
+        }
+
+        // Final Diagnosis Search
+        const finalDiagnosisSearchElement = document.getElementById('finalDiagnosisSearch');
+        if (finalDiagnosisSearchElement) {
+            finalDiagnosisSearchElement.addEventListener('input', function() {
+                clearTimeout(finalDiagnosisSearchTimeout);
+                const query = this.value.trim();
+
+                const clearBtn = document.getElementById('clearFinalDiagnosisSearch');
+                if (query.length > 0) {
+                    clearBtn.classList.remove('hidden');
+                } else {
+                    clearBtn.classList.add('hidden');
+                    document.getElementById('finalDiagnosisResults').classList.add('hidden');
+                    return;
+                }
+
+                if (query.length < 2) {
+                    document.getElementById('finalDiagnosisResults').classList.add('hidden');
+                    return;
+                }
+
+                finalDiagnosisSearchTimeout = setTimeout(() => {
+                    fetch(`${BASE_PATH}/doctor/search_diagnoses?q=${encodeURIComponent(query)}`)
+                        .then(response => response.json())
+                        .then(diagnoses => displayFinalDiagnosisResults(diagnoses))
+                        .catch(error => {
+                            console.error('Error searching diagnoses:', error);
+                        });
+                }, 300);
+            });
+        }
+
+        function displayFinalDiagnosisResults(diagnoses) {
+            const resultsDiv = document.getElementById('finalDiagnosisResults');
+            resultsDiv.innerHTML = '';
+
+            if (diagnoses.length === 0) {
+                resultsDiv.innerHTML = '<div class="p-3 text-gray-500">No diagnosis codes found</div>';
+            } else {
+                diagnoses.forEach(diagnosis => {
+                    const div = document.createElement('div');
+                    div.className = 'p-3 hover:bg-blue-100 cursor-pointer border-b';
+                    div.innerHTML = `
+                        <div class="font-medium">${diagnosis.code} - ${diagnosis.name}</div>
+                        <div class="text-sm text-gray-600">${diagnosis.category || ''}</div>
+                        <div class="text-xs text-gray-500">${diagnosis.description || ''}</div>
+                    `;
+                    div.addEventListener('click', () => selectFinalDiagnosis(diagnosis));
+                    resultsDiv.appendChild(div);
+                });
+            }
+
+            resultsDiv.classList.remove('hidden');
+        }
+
+        function selectFinalDiagnosis(diagnosis) {
+            selectedFinalDiagnosis = diagnosis;
+            document.getElementById('finalDiagnosisId').value = diagnosis.id;
+            
+            const displayDiv = document.getElementById('selectedFinalDiagnosis');
+            displayDiv.innerHTML = `
+                <div class="p-2 bg-blue-50 border border-blue-200 rounded-md text-sm flex justify-between items-start">
+                    <div>
+                        <strong>${diagnosis.code}</strong> - ${diagnosis.name}
+                        <div class="text-xs text-gray-600">${diagnosis.category || ''}</div>
+                    </div>
+                    <button type="button" onclick="clearSelectedFinalDiagnosis()" class="text-red-600 hover:text-red-800">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+            `;
+            
+            document.getElementById('finalDiagnosisResults').classList.add('hidden');
+            document.getElementById('finalDiagnosisSearch').value = '';
+            document.getElementById('clearFinalDiagnosisSearch').classList.add('hidden');
+        }
+
+        function clearSelectedFinalDiagnosis() {
+            selectedFinalDiagnosis = null;
+            document.getElementById('finalDiagnosisId').value = '';
+            document.getElementById('selectedFinalDiagnosis').innerHTML = '<div class="text-gray-500 text-sm">No diagnosis selected</div>';
+        }
+
+        function clearFinalDiagnosisSearch() {
+            document.getElementById('finalDiagnosisSearch').value = '';
+            document.getElementById('clearFinalDiagnosisSearch').classList.add('hidden');
+            document.getElementById('finalDiagnosisResults').classList.add('hidden');
+        }
+
         // Hide search results when clicking outside
         document.addEventListener('click', function(e) {
             if (!e.target.closest('#testSearch') && !e.target.closest('#testResults') && !e.target.closest('#clearTestSearch')) {
@@ -955,6 +1223,14 @@
             if (!e.target.closest('#medicineSearch') && !e.target.closest('#medicineResults') && !e.target.closest('#clearMedicineSearch')) {
                 document.getElementById('medicineResults').classList.add('hidden');
                 currentMedicineFocus = -1;
+            }
+            if (!e.target.closest('#preliminaryDiagnosisSearch') && !e.target.closest('#preliminaryDiagnosisResults') && !e.target.closest('#clearPreliminaryDiagnosisSearch')) {
+                const resultsDiv = document.getElementById('preliminaryDiagnosisResults');
+                if (resultsDiv) resultsDiv.classList.add('hidden');
+            }
+            if (!e.target.closest('#finalDiagnosisSearch') && !e.target.closest('#finalDiagnosisResults') && !e.target.closest('#clearFinalDiagnosisSearch')) {
+                const resultsDiv = document.getElementById('finalDiagnosisResults');
+                if (resultsDiv) resultsDiv.classList.add('hidden');
             }
         });
 
@@ -979,6 +1255,29 @@
 
             // Show no-print elements again
             noPrintElements.forEach(el => el.style.display = '');
+        }
+
+        // Toggle complaints history visibility
+        function toggleComplaintsHistory() {
+            const history = document.getElementById('complaintsHistory');
+            const icon = document.getElementById('complaintsToggleIcon');
+            if (history.classList.contains('hidden')) {
+                history.classList.remove('hidden');
+                icon.classList.remove('fa-chevron-down');
+                icon.classList.add('fa-chevron-up');
+            } else {
+                history.classList.add('hidden');
+                icon.classList.remove('fa-chevron-up');
+                icon.classList.add('fa-chevron-down');
+            }
+        }
+
+        // Show all previous complaints
+        function showAllComplaints() {
+            const extras = document.querySelectorAll('.complaints-extra');
+            const btn = document.getElementById('showMoreBtn');
+            extras.forEach(el => el.classList.remove('hidden'));
+            if (btn) btn.style.display = 'none';
         }
     </script>
 

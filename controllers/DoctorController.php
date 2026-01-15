@@ -575,16 +575,47 @@ class DoctorController extends BaseController {
             $params[] = $_POST['on_examination'] ?? '';
         }
 
-        // preliminary_diagnosis may not exist on some databases; fall back to 'diagnosis' if needed
-        if (in_array('preliminary_diagnosis', $cols)) {
+        // Handle preliminary diagnosis (both ID and text for backward compatibility)
+        if (in_array('preliminary_diagnosis_id', $cols) && !empty($_POST['preliminary_diagnosis_id'])) {
+            $updateParts[] = 'preliminary_diagnosis_id = ?';
+            $params[] = $_POST['preliminary_diagnosis_id'];
+            
+            // Also store the diagnosis name in the text field for backward compatibility
+            if (in_array('preliminary_diagnosis', $cols)) {
+                $diagStmt = $this->pdo->prepare("SELECT name FROM icd_codes WHERE id = ?");
+                $diagStmt->execute([$_POST['preliminary_diagnosis_id']]);
+                $diagName = $diagStmt->fetchColumn();
+                if ($diagName) {
+                    $updateParts[] = 'preliminary_diagnosis = ?';
+                    $params[] = $diagName;
+                }
+            }
+        } elseif (in_array('preliminary_diagnosis', $cols) && !empty($_POST['preliminary_diagnosis'])) {
+            // Fallback to text-only if no ID provided
             $updateParts[] = 'preliminary_diagnosis = ?';
-            $params[] = $_POST['preliminary_diagnosis'] ?? '';
+            $params[] = $_POST['preliminary_diagnosis'];
         } elseif (in_array('diagnosis', $cols) && !empty($_POST['preliminary_diagnosis'])) {
             $updateParts[] = 'diagnosis = ?';
             $params[] = $_POST['preliminary_diagnosis'];
         }
 
-        if (in_array('final_diagnosis', $cols)) {
+        // Handle final diagnosis (both ID and text for backward compatibility)
+        if (in_array('final_diagnosis_id', $cols) && !empty($_POST['final_diagnosis_id'])) {
+            $updateParts[] = 'final_diagnosis_id = ?';
+            $params[] = $_POST['final_diagnosis_id'];
+            
+            // Also store the diagnosis name in the text field for backward compatibility
+            if (in_array('final_diagnosis', $cols)) {
+                $diagStmt = $this->pdo->prepare("SELECT name FROM icd_codes WHERE id = ?");
+                $diagStmt->execute([$_POST['final_diagnosis_id']]);
+                $diagName = $diagStmt->fetchColumn();
+                if ($diagName) {
+                    $updateParts[] = 'final_diagnosis = ?';
+                    $params[] = $diagName;
+                }
+            }
+        } elseif (in_array('final_diagnosis', $cols) && !empty($_POST['final_diagnosis'])) {
+            // Fallback to text-only if no ID provided
             $updateParts[] = 'final_diagnosis = ?';
             $params[] = $_POST['final_diagnosis'] ?? ($_POST['diagnosis'] ?? '');
         } elseif (in_array('diagnosis', $cols) && empty($_POST['preliminary_diagnosis']) && !empty($_POST['final_diagnosis'])) {
@@ -937,6 +968,71 @@ class DoctorController extends BaseController {
             error_log('search_medicines error: ' . $e->getMessage());
             exit;
         }
+    }
+
+    /**
+     * Search ICD diagnosis codes (AJAX JSON)
+     * Returns standardized diagnosis codes for NMCP compliance
+     */
+    public function search_diagnoses() {
+        // Check authentication
+        if (!isset($_SESSION['user_id']) || !isset($_SESSION['user_role']) || $_SESSION['user_role'] !== 'doctor') {
+            http_response_code(401);
+            echo json_encode(['error' => 'Unauthorized']);
+            exit;
+        }
+
+        $query = $_GET['q'] ?? '';
+
+        if (strlen($query) < 2) {
+            // Return common diagnoses if no search query
+            try {
+                $stmt = $this->pdo->prepare("
+                    SELECT id, code, name, category, description
+                    FROM icd_codes
+                    WHERE is_active = 1
+                    ORDER BY name
+                    LIMIT 20
+                ");
+                $stmt->execute();
+                $diagnoses = $stmt->fetchAll(PDO::FETCH_ASSOC);
+                header('Content-Type: application/json');
+                echo json_encode($diagnoses);
+            } catch (Exception $e) {
+                http_response_code(500);
+                echo json_encode(['error' => 'Database error']);
+            }
+            exit;
+        }
+
+        try {
+            $stmt = $this->pdo->prepare("
+                SELECT id, code, name, category, description
+                FROM icd_codes
+                WHERE is_active = 1 
+                  AND (name LIKE ? OR code LIKE ? OR description LIKE ? OR category LIKE ?)
+                ORDER BY 
+                  CASE 
+                    WHEN name LIKE ? THEN 1
+                    WHEN code LIKE ? THEN 2
+                    ELSE 3
+                  END,
+                  name
+                LIMIT 50
+            ");
+            $search = "%{$query}%";
+            $searchStart = "{$query}%";
+            $stmt->execute([$search, $search, $search, $search, $searchStart, $searchStart]);
+            $diagnoses = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+            header('Content-Type: application/json');
+            echo json_encode($diagnoses);
+        } catch (Exception $e) {
+            http_response_code(500);
+            echo json_encode(['error' => 'Database error: ' . $e->getMessage()]);
+            error_log('search_diagnoses error: ' . $e->getMessage());
+        }
+        exit;
     }
 
     /**
@@ -1509,13 +1605,29 @@ class DoctorController extends BaseController {
             }
         }
 
+        // Fetch previous chief complaints for patient history reference
+        $stmt = $this->pdo->prepare("
+            SELECT c.main_complaint, c.created_at, c.preliminary_diagnosis, c.final_diagnosis,
+                   CONCAT(u.first_name, ' ', u.last_name) as doctor_name
+            FROM consultations c
+            LEFT JOIN users u ON c.doctor_id = u.id
+            WHERE c.patient_id = ? 
+              AND c.main_complaint IS NOT NULL 
+              AND c.main_complaint != ''
+            ORDER BY c.created_at DESC
+            LIMIT 5
+        ");
+        $stmt->execute([$patient_id]);
+        $previous_complaints = $stmt->fetchAll();
+
         $this->render('doctor/attend_patient', [
             'patient' => $patient,
             'csrf_token' => $this->generateCSRF(),
             'visit_id' => $latest_visit_id,
             'payment_override' => $_SESSION['payment_override'] ?? null,
             'consultation' => $consultation,
-            'is_reopening' => $is_reopening
+            'is_reopening' => $is_reopening,
+            'previous_complaints' => $previous_complaints
         ]);
         
         // Clear the override session after use
