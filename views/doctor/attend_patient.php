@@ -156,8 +156,8 @@
 
                         <!-- Preliminary Diagnosis -->
                         <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-2">Preliminary Diagnosis (ICD Code) *</label>
-                            <div class="relative">
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Preliminary Diagnosis (Search ICD Code or enter manually)</label>
+                            <div class="relative mb-2">
                                 <div class="flex">
                                     <input type="text" id="preliminaryDiagnosisSearch" placeholder="Type to search diagnosis codes (e.g., Malaria, B50)..."
                                         class="flex-1 px-3 py-2 border border-gray-300 rounded-l-md focus:outline-none focus:ring-2 focus:ring-blue-500" autocomplete="off">
@@ -168,21 +168,23 @@
                                 </div>
                                 <div id="preliminaryDiagnosisResults" class="absolute z-10 w-full bg-white border border-gray-300 rounded-md mt-1 hidden max-h-60 overflow-y-auto shadow-lg"></div>
                             </div>
-                            <div id="selectedPreliminaryDiagnosis" class="mt-2">
+                            <div id="selectedPreliminaryDiagnosis" class="mb-2">
                                 <?php if (!empty($consultation['preliminary_diagnosis'])): ?>
                                 <div class="p-2 bg-blue-50 border border-blue-200 rounded-md text-sm">
-                                    <strong>Current:</strong> <?php echo htmlspecialchars($consultation['preliminary_diagnosis']); ?>
+                                    <strong>ICD Selected:</strong> <?php echo htmlspecialchars($consultation['preliminary_diagnosis']); ?>
                                 </div>
-                                <?php else: ?>
-                                <div class="text-gray-500 text-sm">No diagnosis selected</div>
                                 <?php endif; ?>
                             </div>
+                            <div class="text-xs text-gray-600 mb-1">Or enter diagnosis manually:</div>
+                            <textarea id="preliminaryDiagnosis" name="preliminary_diagnosis" rows="1"
+                                class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                                placeholder="Type diagnosis if not found in ICD codes..."><?php echo htmlspecialchars($consultation['preliminary_diagnosis'] ?? ''); ?></textarea>
                         </div>
 
                         <!-- Final Diagnosis -->
                         <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-2">Final Diagnosis (ICD Code) *</label>
-                            <div class="relative">
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Final Diagnosis (Search ICD Code or enter manually)</label>
+                            <div class="relative mb-2">
                                 <div class="flex">
                                     <input type="text" id="finalDiagnosisSearch" placeholder="Type to search diagnosis codes (e.g., Pneumonia, J18)..."
                                         class="flex-1 px-3 py-2 border border-gray-300 rounded-l-md focus:outline-none focus:ring-2 focus:ring-blue-500" autocomplete="off">
@@ -193,15 +195,17 @@
                                 </div>
                                 <div id="finalDiagnosisResults" class="absolute z-10 w-full bg-white border border-gray-300 rounded-md mt-1 hidden max-h-60 overflow-y-auto shadow-lg"></div>
                             </div>
-                            <div id="selectedFinalDiagnosis" class="mt-2">
+                            <div id="selectedFinalDiagnosis" class="mb-2">
                                 <?php if (!empty($consultation['diagnosis']) || !empty($consultation['final_diagnosis'])): ?>
                                 <div class="p-2 bg-blue-50 border border-blue-200 rounded-md text-sm">
-                                    <strong>Current:</strong> <?php echo htmlspecialchars($consultation['final_diagnosis'] ?? $consultation['diagnosis'] ?? ''); ?>
+                                    <strong>ICD Selected:</strong> <?php echo htmlspecialchars($consultation['final_diagnosis'] ?? $consultation['diagnosis'] ?? ''); ?>
                                 </div>
-                                <?php else: ?>
-                                <div class="text-gray-500 text-sm">No diagnosis selected</div>
                                 <?php endif; ?>
                             </div>
+                            <div class="text-xs text-gray-600 mb-1">Or enter diagnosis manually:</div>
+                            <textarea id="finalDiagnosis" name="final_diagnosis" rows="1"
+                                class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                                placeholder="Type diagnosis if not found in ICD codes..."><?php echo htmlspecialchars($consultation['final_diagnosis'] ?? $consultation['diagnosis'] ?? ''); ?></textarea>
                         </div>
                     </div>
                 </div>
@@ -1127,6 +1131,10 @@
             selectedPreliminaryDiagnosis = diagnosis;
             document.getElementById('preliminaryDiagnosisId').value = diagnosis.id;
             
+            // Also populate the manual textarea with the diagnosis name
+            const diagnosisText = diagnosis.code + ' - ' + diagnosis.name;
+            document.getElementById('preliminaryDiagnosis').value = diagnosisText;
+            
             const displayDiv = document.getElementById('selectedPreliminaryDiagnosis');
             displayDiv.innerHTML = ''; // Clear first
             
@@ -1163,7 +1171,9 @@
         function clearSelectedPreliminaryDiagnosis() {
             selectedPreliminaryDiagnosis = null;
             document.getElementById('preliminaryDiagnosisId').value = '';
-            document.getElementById('selectedPreliminaryDiagnosis').innerHTML = '<div class="text-gray-500 text-sm">No diagnosis selected</div>';
+            // Clear the manual textarea too
+            document.getElementById('preliminaryDiagnosis').value = '';
+            document.getElementById('selectedPreliminaryDiagnosis').innerHTML = '';
         }
 
         function clearPreliminaryDiagnosisSearch() {
@@ -1251,6 +1261,10 @@
             selectedFinalDiagnosis = diagnosis;
             document.getElementById('finalDiagnosisId').value = diagnosis.id;
             
+            // Also populate the manual textarea with the diagnosis name
+            const diagnosisText = diagnosis.code + ' - ' + diagnosis.name;
+            document.getElementById('finalDiagnosis').value = diagnosisText;
+            
             const displayDiv = document.getElementById('selectedFinalDiagnosis');
             displayDiv.innerHTML = ''; // Clear first
             
@@ -1287,7 +1301,9 @@
         function clearSelectedFinalDiagnosis() {
             selectedFinalDiagnosis = null;
             document.getElementById('finalDiagnosisId').value = '';
-            document.getElementById('selectedFinalDiagnosis').innerHTML = '<div class="text-gray-500 text-sm">No diagnosis selected</div>';
+            // Clear the manual textarea too
+            document.getElementById('finalDiagnosis').value = '';
+            document.getElementById('selectedFinalDiagnosis').innerHTML = '';
         }
 
         function clearFinalDiagnosisSearch() {
