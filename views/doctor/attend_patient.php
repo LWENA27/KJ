@@ -1098,11 +1098,23 @@
                 diagnoses.forEach(diagnosis => {
                     const div = document.createElement('div');
                     div.className = 'p-3 hover:bg-blue-100 cursor-pointer border-b';
-                    div.innerHTML = `
-                        <div class="font-medium">${diagnosis.code} - ${diagnosis.name}</div>
-                        <div class="text-sm text-gray-600">${diagnosis.category || ''}</div>
-                        <div class="text-xs text-gray-500">${diagnosis.description || ''}</div>
-                    `;
+                    
+                    // Create elements safely to prevent XSS
+                    const titleDiv = document.createElement('div');
+                    titleDiv.className = 'font-medium';
+                    titleDiv.textContent = `${diagnosis.code} - ${diagnosis.name}`;
+                    
+                    const categoryDiv = document.createElement('div');
+                    categoryDiv.className = 'text-sm text-gray-600';
+                    categoryDiv.textContent = diagnosis.category || '';
+                    
+                    const descDiv = document.createElement('div');
+                    descDiv.className = 'text-xs text-gray-500';
+                    descDiv.textContent = diagnosis.description || '';
+                    
+                    div.appendChild(titleDiv);
+                    div.appendChild(categoryDiv);
+                    div.appendChild(descDiv);
                     div.addEventListener('click', () => selectPreliminaryDiagnosis(diagnosis));
                     resultsDiv.appendChild(div);
                 });
@@ -1116,17 +1128,32 @@
             document.getElementById('preliminaryDiagnosisId').value = diagnosis.id;
             
             const displayDiv = document.getElementById('selectedPreliminaryDiagnosis');
-            displayDiv.innerHTML = `
-                <div class="p-2 bg-blue-50 border border-blue-200 rounded-md text-sm flex justify-between items-start">
-                    <div>
-                        <strong>${diagnosis.code}</strong> - ${diagnosis.name}
-                        <div class="text-xs text-gray-600">${diagnosis.category || ''}</div>
-                    </div>
-                    <button type="button" onclick="clearSelectedPreliminaryDiagnosis()" class="text-red-600 hover:text-red-800">
-                        <i class="fas fa-times"></i>
-                    </button>
-                </div>
-            `;
+            displayDiv.innerHTML = ''; // Clear first
+            
+            const container = document.createElement('div');
+            container.className = 'p-2 bg-blue-50 border border-blue-200 rounded-md text-sm flex justify-between items-start';
+            
+            const infoDiv = document.createElement('div');
+            const codeText = document.createElement('strong');
+            codeText.textContent = diagnosis.code;
+            const nameText = document.createTextNode(' - ' + diagnosis.name);
+            infoDiv.appendChild(codeText);
+            infoDiv.appendChild(nameText);
+            
+            const categoryDiv = document.createElement('div');
+            categoryDiv.className = 'text-xs text-gray-600';
+            categoryDiv.textContent = diagnosis.category || '';
+            infoDiv.appendChild(categoryDiv);
+            
+            const closeBtn = document.createElement('button');
+            closeBtn.type = 'button';
+            closeBtn.className = 'text-red-600 hover:text-red-800';
+            closeBtn.onclick = clearSelectedPreliminaryDiagnosis;
+            closeBtn.innerHTML = '<i class="fas fa-times"></i>';
+            
+            container.appendChild(infoDiv);
+            container.appendChild(closeBtn);
+            displayDiv.appendChild(container);
             
             document.getElementById('preliminaryDiagnosisResults').classList.add('hidden');
             document.getElementById('preliminaryDiagnosisSearch').value = '';
@@ -1195,11 +1222,23 @@
                 diagnoses.forEach(diagnosis => {
                     const div = document.createElement('div');
                     div.className = 'p-3 hover:bg-blue-100 cursor-pointer border-b';
-                    div.innerHTML = `
-                        <div class="font-medium">${diagnosis.code} - ${diagnosis.name}</div>
-                        <div class="text-sm text-gray-600">${diagnosis.category || ''}</div>
-                        <div class="text-xs text-gray-500">${diagnosis.description || ''}</div>
-                    `;
+                    
+                    // Create elements safely to prevent XSS
+                    const titleDiv = document.createElement('div');
+                    titleDiv.className = 'font-medium';
+                    titleDiv.textContent = `${diagnosis.code} - ${diagnosis.name}`;
+                    
+                    const categoryDiv = document.createElement('div');
+                    categoryDiv.className = 'text-sm text-gray-600';
+                    categoryDiv.textContent = diagnosis.category || '';
+                    
+                    const descDiv = document.createElement('div');
+                    descDiv.className = 'text-xs text-gray-500';
+                    descDiv.textContent = diagnosis.description || '';
+                    
+                    div.appendChild(titleDiv);
+                    div.appendChild(categoryDiv);
+                    div.appendChild(descDiv);
                     div.addEventListener('click', () => selectFinalDiagnosis(diagnosis));
                     resultsDiv.appendChild(div);
                 });
@@ -1213,17 +1252,32 @@
             document.getElementById('finalDiagnosisId').value = diagnosis.id;
             
             const displayDiv = document.getElementById('selectedFinalDiagnosis');
-            displayDiv.innerHTML = `
-                <div class="p-2 bg-blue-50 border border-blue-200 rounded-md text-sm flex justify-between items-start">
-                    <div>
-                        <strong>${diagnosis.code}</strong> - ${diagnosis.name}
-                        <div class="text-xs text-gray-600">${diagnosis.category || ''}</div>
-                    </div>
-                    <button type="button" onclick="clearSelectedFinalDiagnosis()" class="text-red-600 hover:text-red-800">
-                        <i class="fas fa-times"></i>
-                    </button>
-                </div>
-            `;
+            displayDiv.innerHTML = ''; // Clear first
+            
+            const container = document.createElement('div');
+            container.className = 'p-2 bg-blue-50 border border-blue-200 rounded-md text-sm flex justify-between items-start';
+            
+            const infoDiv = document.createElement('div');
+            const codeText = document.createElement('strong');
+            codeText.textContent = diagnosis.code;
+            const nameText = document.createTextNode(' - ' + diagnosis.name);
+            infoDiv.appendChild(codeText);
+            infoDiv.appendChild(nameText);
+            
+            const categoryDiv = document.createElement('div');
+            categoryDiv.className = 'text-xs text-gray-600';
+            categoryDiv.textContent = diagnosis.category || '';
+            infoDiv.appendChild(categoryDiv);
+            
+            const closeBtn = document.createElement('button');
+            closeBtn.type = 'button';
+            closeBtn.className = 'text-red-600 hover:text-red-800';
+            closeBtn.onclick = clearSelectedFinalDiagnosis;
+            closeBtn.innerHTML = '<i class="fas fa-times"></i>';
+            
+            container.appendChild(infoDiv);
+            container.appendChild(closeBtn);
+            displayDiv.appendChild(container);
             
             document.getElementById('finalDiagnosisResults').classList.add('hidden');
             document.getElementById('finalDiagnosisSearch').value = '';
