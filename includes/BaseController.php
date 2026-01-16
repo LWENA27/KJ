@@ -251,7 +251,8 @@ class BaseController {
             'consultation' => ['consultation', 'registration'],  // Check for either 'consultation' or 'registration' payment type
             'lab_tests' => 'lab_test',
             'results_review' => 'lab_test',
-            'medicine' => 'medicine'
+            'medicine' => 'medicine',
+            'ipd' => 'service'
         ];
 
         if (isset($step_requirements[$required_step])) {
@@ -311,10 +312,23 @@ class BaseController {
         $stmt->execute([$visit_id]);
         $lab_tests_required = (int)$stmt->fetchColumn() > 0 ? 1 : 0;
 
+        // (Service checks computed above) -- avoid duplicate queries
+
+        // Service orders (e.g., nursing, wound dressing, IPD procedures)
+        $stmt = $this->pdo->prepare("SELECT COUNT(*) FROM service_orders WHERE visit_id = ? AND status IN ('pending','in_progress')");
+        $stmt->execute([$visit_id]);
+        $service_orders_required = (int)$stmt->fetchColumn() > 0 ? 1 : 0;
+
+        // Check if any service payments have been made for this visit
+        $stmt = $this->pdo->prepare("SELECT COUNT(*) FROM payments WHERE visit_id = ? AND payment_type = 'service' AND payment_status = 'paid'");
+        $stmt->execute([$visit_id]);
+        $service_paid = (int)$stmt->fetchColumn() > 0 ? 1 : 0;
+
         // Determine current_step
         if ($visit['status'] === 'active') {
             if (!$consultation_registration_paid) $current_step = 'consultation_registration';
             elseif ($lab_tests_required && !$lab_tests_paid) $current_step = 'lab_tests';
+            elseif ($service_orders_required && !$service_paid) $current_step = 'ipd';
             elseif ($medicine_prescribed && !$medicine_dispensed) $current_step = 'medicine_dispensing';
             else $current_step = 'in_progress';
         } else {
@@ -327,6 +341,8 @@ class BaseController {
             'consultation_registration_paid' => $consultation_registration_paid ? 1 : 0,
             'lab_tests_paid' => $lab_tests_paid ? 1 : 0,
             'results_review_paid' => $lab_tests_paid ? 1 : 0,
+            'service_orders_required' => $service_orders_required,
+            'service_paid' => $service_paid,
             'medicine_prescribed' => $medicine_prescribed,
             'medicine_dispensed' => $medicine_dispensed,
             'final_payment_collected' => 0,
@@ -366,10 +382,21 @@ class BaseController {
         $stmt->execute([$visit_id]);
         $lab_tests_required = (int)$stmt->fetchColumn() > 0 ? 1 : 0;
 
+        // Service orders (e.g., nursing, wound dressing, IPD procedures)
+        $stmt = $this->pdo->prepare("SELECT COUNT(*) FROM service_orders WHERE visit_id = ? AND status IN ('pending','in_progress')");
+        $stmt->execute([$visit_id]);
+        $service_orders_required = (int)$stmt->fetchColumn() > 0 ? 1 : 0;
+
+        // Check if any service payments have been made for this visit
+        $stmt = $this->pdo->prepare("SELECT COUNT(*) FROM payments WHERE visit_id = ? AND payment_type = 'service' AND payment_status = 'paid'");
+        $stmt->execute([$visit_id]);
+        $service_paid = (int)$stmt->fetchColumn() > 0 ? 1 : 0;
+
         // Determine current_step
         if ($visit['status'] === 'active') {
             if (!$consultation_registration_paid) $current_step = 'consultation_registration';
             elseif ($lab_tests_required && !$lab_tests_paid) $current_step = 'lab_tests';
+            elseif ($service_orders_required && !$service_paid) $current_step = 'ipd';
             elseif ($medicine_prescribed && !$medicine_dispensed) $current_step = 'medicine_dispensing';
             else $current_step = 'in_progress';
         } else {
@@ -383,6 +410,8 @@ class BaseController {
             'consultation_registration_paid' => $consultation_registration_paid ? 1 : 0,
             'lab_tests_paid' => $lab_tests_paid ? 1 : 0,
             'results_review_paid' => $lab_tests_paid ? 1 : 0,
+            'service_orders_required' => $service_orders_required,
+            'service_paid' => $service_paid,
             'medicine_prescribed' => $medicine_prescribed,
             'medicine_dispensed' => $medicine_dispensed,
             'final_payment_collected' => 0,
@@ -416,6 +445,17 @@ class BaseController {
 
     // Start or resume a consultation for a visit. Returns ['ok'=>bool,'consultation_id'=>int] or error.
     protected function startConsultation($visit_id, $doctor_id, $data = []) {
+        // debugging: log POST data coming from attend_patient form
+        error_log('=== POST DATA ===');
+        error_log('next_step: ' . ($_POST['next_step'] ?? 'MISSING'));
+        error_log('selected_tests: ' . ($_POST['selected_tests'] ?? 'EMPTY'));
+        error_log('selected_medicines: ' . ($_POST['selected_medicines'] ?? 'EMPTY'));
+        error_log('selected_allocations: ' . ($_POST['selected_allocations'] ?? 'EMPTY'));
+
+        // ensure service-related flags exist to avoid undefined variable notices
+        $service_orders_required = false;
+        $service_paid = false;
+
         $this->pdo->beginTransaction();
         try {
             // fetch visit and patient
@@ -509,7 +549,8 @@ class BaseController {
             'consultation_registration' => 'registration',
             'lab_tests' => 'lab_test',
             'results_review' => 'lab_test',
-            'medicine' => 'medicine'
+            'medicine' => 'medicine',
+            'ipd' => 'service'
         ];
         $payment_type = $step_to_payment[$step] ?? 'registration';
 

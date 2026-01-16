@@ -123,9 +123,9 @@
 
         <!-- Main Consultation Form -->
         <div class="bg-white rounded-lg shadow">
-        <form id="attendForm" method="POST" action="/KJ/doctor/start_consultation" 
-            onsubmit="syncSelectedMedicinesFromDOM(); syncSelectedAllocationsFromDOM(); console.log('🚀 FORM SUBMITTING NOW...'); return validateConsultationForm();" class="p-6 space-y-6">
-                
+        <!-- AFTER (fixed) -->
+<form id="attendForm" method="POST" action="/KJ/doctor/start_consultation" 
+    onsubmit="return handleFormSubmit(event);">        
                 <input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars($csrf_token); ?>">
                 <input type="hidden" name="patient_id" value="<?php echo $patient['id']; ?>">
                 <input type="hidden" id="selectedTests" name="selected_tests" value="">
@@ -378,58 +378,55 @@
 
         // Form validation before submission
         function validateConsultationForm() {
-            console.log('=== FORM VALIDATION STARTED ===');
-            // sync any UI-edited medicine inputs into the selectedMedicines array
-            syncSelectedMedicinesFromDOM();
-            const nextStep = document.querySelector('input[name="next_step"]:checked');
-            console.log('Next step value:', nextStep ? nextStep.value : 'NONE');
-            console.log('Selected tests:', selectedTests);
-            console.log('Selected medicines:', selectedMedicines);
+    console.log('=== FORM VALIDATION STARTED ===');
+    
+    const nextStep = document.querySelector('input[name="next_step"]:checked');
+    console.log('Next step value:', nextStep ? nextStep.value : 'NONE');
+    
+    if (!nextStep) {
+        alert('Please select a next step decision (Lab Tests, Medicine, Allocate Services, or Discharge)');
+        return false;
+    }
 
-            if (!nextStep) {
-                alert('Please select a next step decision (Lab Tests, Medicine, Both, or Discharge)');
-                return false;
-            }
+    const nextStepValue = nextStep.value;
+    
+    // Check lab tests requirement
+    if ((nextStepValue === 'lab_tests' || nextStepValue === 'lab_medicine' || nextStepValue === 'all') 
+        && selectedTests.length === 0) {
+        alert('Please select at least one lab test');
+        return false;
+    }
 
-            // Check if tests are selected when lab option is chosen (includes new combined options)
-            if ((nextStep.value === 'lab_tests' || nextStep.value === 'lab_medicine' || nextStep.value === 'all') && selectedTests.length === 0) {
-                alert('Please select at least one lab test');
-                return false;
-            }
+    // Check medicine requirement
+    if ((nextStepValue === 'medicine' || nextStepValue === 'lab_medicine' || nextStepValue === 'all') 
+        && selectedMedicines.length === 0) {
+        alert('Please select at least one medicine');
+        return false;
+    }
 
-            // Check if medicines are selected when medicine option is chosen (includes combined options)
-            if ((nextStep.value === 'medicine' || nextStep.value === 'lab_medicine' || nextStep.value === 'all') && selectedMedicines.length === 0) {
-                alert('Please select at least one medicine');
-                return false;
-            }
-
-            // Check if allocations are selected when allocation option is chosen
-            if ((nextStep.value === 'allocation' || nextStep.value === 'all') && selectedAllocations.length === 0) {
-                alert('Please select at least one service to allocate');
-                return false;
-            }
-            
-            console.log('✅✅✅ Validation passed! Form will submit. ✅✅✅');
-            console.log('=== FORM VALIDATION ENDED ===');
-
-            // Validate medicine quantities and details (we collect Dosage/Instructions as one field)
-            for (const medicine of selectedMedicines) {
-                if (!medicine.dosage || !medicine.dosage.toString().trim()) {
-                    alert(`Please specify dosage/instructions for ${medicine.name}`);
-                    return false;
-                }
-                // Ensure numeric comparison (quantities may be strings after being edited)
-                const qty = Number(medicine.quantity);
-                if (isNaN(qty) || qty < 1) {
-                    alert(`Please enter a valid quantity for ${medicine.name}`);
-                    return false;
-                }
-                // Allow prescription even if stock is 0 - patient can get medicine elsewhere
-            }
-
-            console.log('🚀🚀🚀 RETURNING TRUE - FORM WILL NOW SUBMIT TO SERVER 🚀🚀🚀');
-            return true;
+    // Check allocations requirement
+    if ((nextStepValue === 'allocation' || nextStepValue === 'all') 
+        && selectedAllocations.length === 0) {
+        alert('Please select at least one service to allocate');
+        return false;
+    }
+    
+    // Validate medicine details
+    for (const medicine of selectedMedicines) {
+        if (!medicine.dosage || !medicine.dosage.toString().trim()) {
+            alert(`Please specify dosage/instructions for ${medicine.name}`);
+            return false;
         }
+        const qty = Number(medicine.quantity);
+        if (isNaN(qty) || qty < 1) {
+            alert(`Please enter a valid quantity for ${medicine.name}`);
+            return false;
+        }
+    }
+
+    console.log('✅ Validation passed!');
+    return true;
+}
 
     // Ensure selectedMedicines contains the latest values from the DOM inputs
         function syncSelectedMedicinesFromDOM() {
@@ -887,6 +884,50 @@
             });
         } // End medicineSearchElement check
 
+
+        function handleFormSubmit(event) {
+    console.log('=== FORM SUBMIT HANDLER STARTED ===');
+    
+    // Prevent default submission first
+    event.preventDefault();
+    
+    // Step 1: Sync all hidden fields
+    syncSelectedTestsFromDOM();
+    syncSelectedMedicinesFromDOM();
+    syncSelectedAllocationsFromDOM();
+    
+    // Step 2: Log what we're about to send
+    console.log('Selected Tests:', document.getElementById('selectedTests').value);
+    console.log('Selected Medicines:', document.getElementById('selectedMedicines').value);
+    console.log('Selected Allocations:', document.getElementById('selectedAllocations').value);
+    console.log('Next Step:', document.querySelector('input[name="next_step"]:checked')?.value);
+    
+    // Step 3: Validate
+    if (!validateConsultationForm()) {
+        console.log('❌ Validation failed');
+        return false;
+    }
+    
+    console.log('✅ Validation passed, submitting form...');
+    
+    // Step 4: Submit the form programmatically
+    document.getElementById('attendForm').submit();
+    
+    return false; // Prevent default just in case
+}
+
+
+        function syncSelectedTestsFromDOM() {
+    try {
+        // Tests are simpler - just update the hidden field
+        const testIds = selectedTests.map(test => test.id);
+        document.getElementById('selectedTests').value = JSON.stringify(testIds);
+        console.log('Synced tests:', JSON.stringify(testIds));
+    } catch (e) {
+        console.warn('syncSelectedTestsFromDOM failed', e);
+    }
+}
+        
         function showMedicineLoading() {
             const resultsDiv = document.getElementById('medicineResults');
             resultsDiv.innerHTML = '<div class="p-3 text-gray-500"><i class="fas fa-spinner fa-spin mr-2"></i>Searching...</div>';
@@ -939,6 +980,8 @@
 
             resultsDiv.classList.remove('hidden');
         }
+
+
 
         function addMedicine(medicine) {
             if (!selectedMedicines.some(selected => selected.id === medicine.id)) {

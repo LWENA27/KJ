@@ -499,8 +499,14 @@ class DoctorController extends BaseController {
     }
 
     public function start_consultation() {
-    error_log('[start_consultation] METHOD CALLED - REQUEST_METHOD: ' . $_SERVER['REQUEST_METHOD']);
-    
+    error_log('=== START_CONSULTATION DEBUG ===');
+    error_log('REQUEST_METHOD: ' . $_SERVER['REQUEST_METHOD']);
+    error_log('POST Data: ' . print_r($_POST, true));
+    error_log('selected_tests raw: ' . ($_POST['selected_tests'] ?? 'NOT SET'));
+    error_log('selected_medicines raw: ' . ($_POST['selected_medicines'] ?? 'NOT SET'));
+    error_log('selected_allocations raw: ' . ($_POST['selected_allocations'] ?? 'NOT SET'));
+    error_log('next_step: ' . ($_POST['next_step'] ?? 'NOT SET'));
+
     if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
         error_log('[start_consultation] Not POST request, redirecting to dashboard');
         $this->redirect('doctor/dashboard');
@@ -543,103 +549,62 @@ class DoctorController extends BaseController {
 
     $consultation_id = $start['consultation_id'];
 
-    // Debug logging: record ALL incoming POST data for troubleshooting
-    error_log('[start_consultation] ========== FORM SUBMISSION ==========');
-    error_log('[start_consultation] patient_id: ' . $patient_id);
-    error_log('[start_consultation] next_step: ' . $next_step);
-    error_log('[start_consultation] selected_tests: ' . ($_POST['selected_tests'] ?? '<empty>'));
-    error_log('[start_consultation] selected_medicines: ' . ($_POST['selected_medicines'] ?? '<empty>'));
-    error_log('[start_consultation] selected_allocations: ' . ($_POST['selected_allocations'] ?? '<empty>'));
-    error_log('[start_consultation] main_complaint: ' . ($_POST['main_complaint'] ?? '<empty>'));
-    error_log('[start_consultation] on_examination: ' . ($_POST['on_examination'] ?? '<empty>'));
-
     // Now proceed to handle submitted consultation details
     try {
         $this->pdo->beginTransaction();
 
         // Update the consultation record with submitted data
-        // Use information_schema to avoid unknown-column errors on different schemas
-        $stmtCols = $this->pdo->prepare("SELECT COLUMN_NAME FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'consultations'");
-        $stmtCols->execute();
-        $cols = array_column($stmtCols->fetchAll(PDO::FETCH_ASSOC), 'COLUMN_NAME');
-
         $updateParts = [];
         $params = [];
 
-        if (in_array('main_complaint', $cols)) {
+        if (isset($_POST['main_complaint'])) {
             $updateParts[] = 'main_complaint = ?';
-            $params[] = $_POST['main_complaint'] ?? '';
+            $params[] = $_POST['main_complaint'];
         }
-        if (in_array('on_examination', $cols)) {
+        
+        if (isset($_POST['on_examination'])) {
             $updateParts[] = 'on_examination = ?';
-            $params[] = $_POST['on_examination'] ?? '';
+            $params[] = $_POST['on_examination'];
         }
-
-        // Handle preliminary diagnosis (both ID and text for backward compatibility)
-        if (in_array('preliminary_diagnosis_id', $cols) && !empty($_POST['preliminary_diagnosis_id'])) {
+        
+        if (isset($_POST['preliminary_diagnosis_id']) && !empty($_POST['preliminary_diagnosis_id'])) {
             $updateParts[] = 'preliminary_diagnosis_id = ?';
             $params[] = $_POST['preliminary_diagnosis_id'];
-            
-            // Also store the diagnosis name in the text field for backward compatibility
-            if (in_array('preliminary_diagnosis', $cols)) {
-                $diagStmt = $this->pdo->prepare("SELECT name FROM icd_codes WHERE id = ?");
-                $diagStmt->execute([$_POST['preliminary_diagnosis_id']]);
-                $diagName = $diagStmt->fetchColumn();
-                if ($diagName) {
-                    $updateParts[] = 'preliminary_diagnosis = ?';
-                    $params[] = $diagName;
-                }
-            }
-        } elseif (in_array('preliminary_diagnosis', $cols) && !empty($_POST['preliminary_diagnosis'])) {
-            // Fallback to text-only if no ID provided
+        }
+        
+        if (isset($_POST['preliminary_diagnosis']) && !empty($_POST['preliminary_diagnosis'])) {
             $updateParts[] = 'preliminary_diagnosis = ?';
             $params[] = $_POST['preliminary_diagnosis'];
-        } elseif (in_array('diagnosis', $cols) && !empty($_POST['preliminary_diagnosis'])) {
-            $updateParts[] = 'diagnosis = ?';
-            $params[] = $_POST['preliminary_diagnosis'];
         }
-
-        // Handle final diagnosis (both ID and text for backward compatibility)
-        if (in_array('final_diagnosis_id', $cols) && !empty($_POST['final_diagnosis_id'])) {
+        
+        if (isset($_POST['final_diagnosis_id']) && !empty($_POST['final_diagnosis_id'])) {
             $updateParts[] = 'final_diagnosis_id = ?';
             $params[] = $_POST['final_diagnosis_id'];
-            
-            // Also store the diagnosis name in the text field for backward compatibility
-            if (in_array('final_diagnosis', $cols)) {
-                $diagStmt = $this->pdo->prepare("SELECT name FROM icd_codes WHERE id = ?");
-                $diagStmt->execute([$_POST['final_diagnosis_id']]);
-                $diagName = $diagStmt->fetchColumn();
-                if ($diagName) {
-                    $updateParts[] = 'final_diagnosis = ?';
-                    $params[] = $diagName;
-                }
-            }
-        } elseif (in_array('final_diagnosis', $cols) && !empty($_POST['final_diagnosis'])) {
-            // Fallback to text-only if no ID provided
+        }
+        
+        if (isset($_POST['final_diagnosis']) && !empty($_POST['final_diagnosis'])) {
             $updateParts[] = 'final_diagnosis = ?';
-            $params[] = $_POST['final_diagnosis'] ?? ($_POST['diagnosis'] ?? '');
-        } elseif (in_array('diagnosis', $cols) && empty($_POST['preliminary_diagnosis']) && !empty($_POST['final_diagnosis'])) {
-            // if preliminary wasn't provided but final is, and only 'diagnosis' exists, use it
-            $updateParts[] = 'diagnosis = ?';
             $params[] = $_POST['final_diagnosis'];
         }
-
-        if (in_array('treatment_plan', $cols)) {
+        
+        if (isset($_POST['treatment_plan'])) {
             $updateParts[] = 'treatment_plan = ?';
-            $params[] = $_POST['treatment_plan'] ?? '';
+            $params[] = $_POST['treatment_plan'];
         }
-
-        // Don't mark as completed yet - consultation will be marked complete only when there are no pending payments/tests/medicines
-        // Only update the updated_at timestamp
-        if (in_array('updated_at', $cols)) {
-            $updateParts[] = 'updated_at = NOW()';
-        }
+        
+        $updateParts[] = 'updated_at = NOW()';
 
         if (!empty($updateParts)) {
             $sql = 'UPDATE consultations SET ' . implode(', ', $updateParts) . ' WHERE id = ?';
             $params[] = $consultation_id;
+            
+            error_log('[start_consultation] UPDATE SQL: ' . $sql);
+            error_log('[start_consultation] UPDATE PARAMS: ' . print_r($params, true));
+            
             $stmt = $this->pdo->prepare($sql);
             $stmt->execute($params);
+            
+            error_log('[start_consultation] Consultation updated, rows affected: ' . $stmt->rowCount());
         }
 
         // Handle selected lab tests
@@ -647,18 +612,14 @@ class DoctorController extends BaseController {
             ($next_step === 'lab_tests' || $next_step === 'lab_medicine' || $next_step === 'all')) {
             
             $selected_tests = json_decode($_POST['selected_tests'], true);
-            if (is_array($selected_tests)) {
-                // Find a lab technician for assignment
-                $stmtTech = $this->pdo->prepare("
-                    SELECT id FROM users 
-                    WHERE role = 'lab_technician' AND is_active = 1 
-                    LIMIT 1
-                ");
+            error_log('[start_consultation] Decoded selected_tests: ' . print_r($selected_tests, true));
+            
+            if (is_array($selected_tests) && count($selected_tests) > 0) {
+                $stmtTech = $this->pdo->prepare("SELECT id FROM users WHERE role = 'lab_technician' AND is_active = 1 LIMIT 1");
                 $stmtTech->execute();
                 $technician = $stmtTech->fetch();
                 $technician_id = $technician['id'] ?? null;
 
-                // Create lab test orders
                 $stmtOrder = $this->pdo->prepare("
                     INSERT INTO lab_test_orders 
                     (visit_id, patient_id, consultation_id, test_id, ordered_by, assigned_to, priority, status, created_at) 
@@ -666,28 +627,21 @@ class DoctorController extends BaseController {
                 ");
                 
                 foreach ($selected_tests as $test_id) {
-                    $stmtOrder->execute([
-                        $visit_id,
-                        $patient_id,
-                        $consultation_id,
-                        $test_id,
-                        $doctor_id,
-                        $technician_id
-                    ]);
+                    $stmtOrder->execute([$visit_id, $patient_id, $consultation_id, $test_id, $doctor_id, $technician_id]);
+                    error_log('[start_consultation] Lab test order created for test_id: ' . $test_id);
                     
-                    // Get test price to create pending payment record
                     $stmtTest = $this->pdo->prepare("SELECT price FROM lab_tests WHERE id = ?");
                     $stmtTest->execute([$test_id]);
                     $test = $stmtTest->fetch();
                     $test_price = $test['price'] ?? 0;
                     
                     if ($test_price > 0) {
-                        // Create pending payment record for this test
                         $stmtPayment = $this->pdo->prepare("
                             INSERT INTO payments (visit_id, patient_id, payment_type, item_id, item_type, amount, payment_status, created_at, updated_at)
-                            VALUES (?, ?, 'lab_test', ?, 'lab_test', ?, 'pending', NOW(), NOW())
+                            VALUES (?, ?, 'lab_test', ?, 'lab_order', ?, 'pending', NOW(), NOW())
                         ");
                         $stmtPayment->execute([$visit_id, $patient_id, $test_id, $test_price]);
+                        error_log('[start_consultation] Payment record created for test_id: ' . $test_id . ', amount: ' . $test_price);
                     }
                 }
                 
@@ -700,7 +654,9 @@ class DoctorController extends BaseController {
             ($next_step === 'medicine' || $next_step === 'lab_medicine' || $next_step === 'all')) {
             
             $selected_medicines = json_decode($_POST['selected_medicines'], true);
-            if (is_array($selected_medicines)) {
+            error_log('[start_consultation] Decoded selected_medicines: ' . print_r($selected_medicines, true));
+            
+            if (is_array($selected_medicines) && count($selected_medicines) > 0) {
                 $stmtPrescription = $this->pdo->prepare("
                     INSERT INTO prescriptions 
                     (visit_id, patient_id, consultation_id, doctor_id, medicine_id, 
@@ -710,19 +666,12 @@ class DoctorController extends BaseController {
                 
                 foreach ($selected_medicines as $medicine_data) {
                     $stmtPrescription->execute([
-                        $visit_id,
-                        $patient_id,
-                        $consultation_id,
-                        $doctor_id,
-                        $medicine_data['id'],
-                        $medicine_data['quantity'] ?? 1,
-                        $medicine_data['dosage'] ?? '',
-                        $medicine_data['frequency'] ?? 'Once daily',
-                        $medicine_data['duration'] ?? 1,
-                        $medicine_data['instructions'] ?? '',
+                        $visit_id, $patient_id, $consultation_id, $doctor_id,
+                        $medicine_data['id'], $medicine_data['quantity'] ?? 1,
+                        $medicine_data['dosage'] ?? '', $medicine_data['frequency'] ?? 'Once daily',
+                        $medicine_data['duration'] ?? 1, $medicine_data['instructions'] ?? ''
                     ]);
                     
-                    // Get medicine price to create pending payment record
                     $stmtMed = $this->pdo->prepare("SELECT unit_price FROM medicines WHERE id = ?");
                     $stmtMed->execute([$medicine_data['id']]);
                     $medicine = $stmtMed->fetch();
@@ -730,10 +679,9 @@ class DoctorController extends BaseController {
                     $medicine_total_price = $medicine_unit_price * ($medicine_data['quantity'] ?? 1);
                     
                     if ($medicine_total_price > 0) {
-                        // Create pending payment record for this medicine
                         $stmtPayment = $this->pdo->prepare("
                             INSERT INTO payments (visit_id, patient_id, payment_type, item_id, item_type, amount, payment_status, created_at, updated_at)
-                            VALUES (?, ?, 'medicine', ?, 'medicine', ?, 'pending', NOW(), NOW())
+                            VALUES (?, ?, 'medicine', ?, 'prescription', ?, 'pending', NOW(), NOW())
                         ");
                         $stmtPayment->execute([$visit_id, $patient_id, $medicine_data['id'], $medicine_total_price]);
                     }
@@ -743,13 +691,14 @@ class DoctorController extends BaseController {
             }
         }
 
-        // Handle service allocations (NEW FUNCTIONALITY)
+        // Handle service allocations
         if (!empty($_POST['selected_allocations']) && 
             ($next_step === 'allocation' || $next_step === 'all')) {
             
             $selected_allocations = json_decode($_POST['selected_allocations'], true);
-            if (is_array($selected_allocations)) {
-                
+            error_log('[start_consultation] Decoded selected_allocations: ' . print_r($selected_allocations, true));
+            
+            if (is_array($selected_allocations) && count($selected_allocations) > 0) {
                 foreach ($selected_allocations as $allocation) {
                     $service_id = $allocation['service_id'] ?? null;
                     $performed_by = $allocation['assigned_to'] ?? null;
@@ -757,57 +706,29 @@ class DoctorController extends BaseController {
 
                     if (!$service_id) continue;
 
-                    // Get service details for payment
-                    $stmt = $this->pdo->prepare("
-                        SELECT id, service_name, price 
-                        FROM services 
-                        WHERE id = ? AND is_active = 1
-                    ");
+                    $stmt = $this->pdo->prepare("SELECT id, service_name, price FROM services WHERE id = ? AND is_active = 1");
                     $stmt->execute([$service_id]);
                     $service = $stmt->fetch(PDO::FETCH_ASSOC);
                     
                     if (!$service) continue;
 
-                    // Create service order
                     $stmt = $this->pdo->prepare("
-                        INSERT INTO service_orders (
-                            visit_id, patient_id, service_id, 
-                            ordered_by, performed_by, 
-                            status, notes, created_at, updated_at
-                        ) VALUES (
-                            ?, ?, ?, 
-                            ?, ?, 
-                            'pending', ?, NOW(), NOW()
-                        )
+                        INSERT INTO service_orders (visit_id, patient_id, service_id, ordered_by, performed_by, status, notes, created_at, updated_at) 
+                        VALUES (?, ?, ?, ?, ?, 'pending', ?, NOW(), NOW())
                     ");
-                    $stmt->execute([
-                        $visit_id, 
-                        $patient_id, 
-                        $service_id,
-                        $doctor_id, 
-                        $performed_by,
-                        $notes
-                    ]);
-
+                    $stmt->execute([$visit_id, $patient_id, $service_id, $doctor_id, $performed_by, $notes]);
                     $order_id = $this->pdo->lastInsertId();
                     
-                    // Create pending payment record for this service
                     if ($service['price'] > 0) {
                         $stmtPayment = $this->pdo->prepare("
                             INSERT INTO payments (visit_id, patient_id, payment_type, item_id, item_type, amount, payment_status, created_at, updated_at)
-                            VALUES (?, ?, 'service', ?, 'service', ?, 'pending', NOW(), NOW())
+                            VALUES (?, ?, 'service', ?, 'service_order', ?, 'pending', NOW(), NOW())
                         ");
                         $stmtPayment->execute([$visit_id, $patient_id, $service_id, $service['price']]);
                     }
                     
-                    // Send notification if staff assigned
                     if ($performed_by) {
-                        $this->sendAllocationNotification([
-                            'id' => $order_id,
-                            'service_id' => $service_id,
-                            'service_name' => $service['service_name'],
-                            'performed_by' => $performed_by
-                        ], $patient_id);
+                        $this->sendAllocationNotification(['id' => $order_id, 'service_id' => $service_id, 'service_name' => $service['service_name'], 'performed_by' => $performed_by], $patient_id);
                     }
                 }
                 
@@ -816,29 +737,19 @@ class DoctorController extends BaseController {
         }
 
         // Final workflow update
-        $has_lab_tests = !empty($_POST['selected_tests']) && 
-                        ($next_step === 'lab_tests' || $next_step === 'lab_medicine' || $next_step === 'all');
-        $has_medicines = !empty($_POST['selected_medicines']) && 
-                        ($next_step === 'medicine' || $next_step === 'lab_medicine' || $next_step === 'all');
-        $has_allocations = !empty($_POST['selected_allocations']) && 
-                          ($next_step === 'allocation' || $next_step === 'all');
+        $has_lab_tests = !empty($_POST['selected_tests']) && ($next_step === 'lab_tests' || $next_step === 'lab_medicine' || $next_step === 'all');
+        $has_medicines = !empty($_POST['selected_medicines']) && ($next_step === 'medicine' || $next_step === 'lab_medicine' || $next_step === 'all');
+        $has_allocations = !empty($_POST['selected_allocations']) && ($next_step === 'allocation' || $next_step === 'all');
         
         if (!$has_lab_tests && !$has_medicines && !$has_allocations) {
-            // Only mark consultation as 'completed' when there's nothing else to do (discharge case)
-            $stmt = $this->pdo->prepare("
-                UPDATE consultations 
-                SET status = 'completed', completed_at = NOW()
-                WHERE id = ?
-            ");
+            $stmt = $this->pdo->prepare("UPDATE consultations SET status = 'completed', completed_at = NOW() WHERE id = ?");
             $stmt->execute([$consultation_id]);
-            
             $this->updateWorkflowStatus($patient_id, 'completed');
-            // Note: patient_visits.status remains 'active' until patient is discharged (entire journey complete)
         }
 
         $this->pdo->commit();
+        error_log('[start_consultation] Transaction committed successfully');
         
-        // Redirect based on what was ordered
         if ($has_lab_tests || $has_medicines || $has_allocations) {
             $_SESSION['success'] = 'Consultation completed successfully. Patient needs to make payment.';
             $this->redirect('receptionist/payments');

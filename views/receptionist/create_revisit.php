@@ -169,6 +169,20 @@ $BASE_PATH = '/KJ';
                         </div>
                         <div class="visit-type-indicator"></div>
                     </label>
+
+                    <label class="flex items-center p-4 border border-gray-300 rounded-lg cursor-pointer hover:bg-gray-50 transition-colors">
+                        <input type="radio" name="visit_type" value="ipd" class="sr-only">
+                        <div class="flex-1">
+                            <div class="flex items-center">
+                                <i class="fas fa-procedures text-indigo-600 mr-3 text-xl"></i>
+                                <div>
+                                    <div class="text-lg font-medium text-gray-900">IPD / Ward</div>
+                                    <div class="text-sm text-gray-600">Admission / nursing services (wound dressing, observation)</div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="visit-type-indicator"></div>
+                    </label>
                 </div>
             </div>
 

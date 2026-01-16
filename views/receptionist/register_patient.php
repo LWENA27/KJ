@@ -161,6 +161,7 @@
                             <option value="lab_test" <?php echo (isset($_POST['visit_type']) && $_POST['visit_type']==='lab_test') ? 'selected' : ''; ?>>Laboratory Test Only</option>
                             <option value="medicine_pickup" <?php echo (isset($_POST['visit_type']) && $_POST['visit_type']==='medicine_pickup') ? 'selected' : ''; ?>>Medicine Collection</option>
                             <option value="minor_service" <?php echo (isset($_POST['visit_type']) && $_POST['visit_type']==='minor_service') ? 'selected' : ''; ?>>Minor Service (Injection, etc.)</option>
+                            <option value="ipd" <?php echo (isset($_POST['visit_type']) && $_POST['visit_type']==='ipd') ? 'selected' : ''; ?>>IPD / Ward (Admission / Nursing)</option>
                         </select>
                         <span class="error-message text-red-500 text-xs mt-1 hidden"></span>
                     </div>
@@ -398,6 +399,17 @@
                     elements.visitBadge.classList.remove('hidden');
                     elements.visitBadgeText.textContent = 'Minor service fees may apply';
                 }
+                break;
+                case 'ipd':
+                // Show vital signs and IPD info for ward admissions
+                if (elements.vitalSignsSection) {
+                    elements.vitalSignsSection.classList.remove('hidden');
+                }
+                if (elements.visitBadge && elements.visitBadgeText) {
+                    elements.visitBadge.classList.remove('hidden');
+                    elements.visitBadgeText.textContent = 'IPD/Ward admission — nursing services (e.g. wound dressing) will be handled by reception/ward';
+                }
+                // Make vital signs recommended but not strictly required
                 break;
                 
             default:

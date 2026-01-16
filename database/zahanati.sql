@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: localhost:3306
--- Generation Time: Jan 14, 2026 at 07:28 PM
+-- Generation Time: Jan 15, 2026 at 11:50 PM
 -- Server version: 8.0.43-0ubuntu0.24.04.2
 -- PHP Version: 8.3.6
 
@@ -28,28 +28,28 @@ SET time_zone = "+00:00";
 -- (See below for the actual view)
 --
 CREATE TABLE `active_patient_queue` (
-`age` bigint
-,`blood_pressure_diastolic` int
+`visit_id` int
+,`visit_type` enum('consultation','lab_only','minor_service')
+,`visit_date` date
+,`patient_id` int
+,`registration_number` varchar(20)
+,`patient_name` varchar(101)
+,`phone` varchar(20)
+,`gender` enum('male','female','other')
+,`age` bigint
+,`temperature` decimal(4,1)
+,`pulse_rate` int
 ,`blood_pressure_systolic` int
-,`completed_lab_tests` bigint
+,`blood_pressure_diastolic` int
 ,`consultation_id` int
 ,`consultation_status` enum('pending','in_progress','completed','cancelled')
 ,`doctor_name` varchar(101)
-,`gender` enum('male','female','other')
-,`partial_prescriptions` bigint
-,`patient_id` int
-,`patient_name` varchar(101)
-,`pending_lab_tests` bigint
-,`pending_prescriptions` bigint
-,`phone` varchar(20)
-,`pulse_rate` int
-,`registration_number` varchar(20)
 ,`registration_paid` decimal(32,2)
+,`pending_lab_tests` bigint
+,`completed_lab_tests` bigint
+,`pending_prescriptions` bigint
+,`partial_prescriptions` bigint
 ,`registration_time` timestamp
-,`temperature` decimal(4,1)
-,`visit_date` date
-,`visit_id` int
-,`visit_type` enum('consultation','lab_only','minor_service')
 );
 
 -- --------------------------------------------------------
@@ -81,8 +81,10 @@ CREATE TABLE `consultations` (
   `history_of_present_illness` text COLLATE utf8mb4_general_ci,
   `on_examination` text COLLATE utf8mb4_general_ci,
   `diagnosis` text COLLATE utf8mb4_general_ci,
+  `preliminary_diagnosis_id` int DEFAULT NULL COMMENT 'FK to icd_codes for preliminary diagnosis',
   `preliminary_diagnosis` text CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci,
   `final_diagnosis` text CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci,
+  `final_diagnosis_id` int DEFAULT NULL COMMENT 'FK to icd_codes for final diagnosis',
   `treatment_plan` text COLLATE utf8mb4_general_ci,
   `notes` text COLLATE utf8mb4_general_ci,
   `follow_up_required` tinyint(1) DEFAULT '0',
@@ -102,12 +104,23 @@ CREATE TABLE `consultations` (
 -- Dumping data for table `consultations`
 --
 
-INSERT INTO `consultations` (`id`, `visit_id`, `patient_id`, `doctor_id`, `consultation_number`, `consultation_type`, `main_complaint`, `history_of_present_illness`, `on_examination`, `diagnosis`, `preliminary_diagnosis`, `final_diagnosis`, `treatment_plan`, `notes`, `follow_up_required`, `follow_up_date`, `follow_up_instructions`, `referred_to`, `referral_reason`, `status`, `cancellation_reason`, `started_at`, `completed_at`, `created_at`, `updated_at`) VALUES
-(39, 51, 33, 9, 1, 'new', 'sawaa', NULL, 'sawa', NULL, 'sawa', 'sawa', 'sawa', NULL, 0, NULL, NULL, NULL, NULL, 'completed', NULL, '2026-01-08 16:04:53', '2026-01-08 16:04:53', '2026-01-08 16:02:17', '2026-01-08 16:04:53'),
-(43, 59, 42, 9, 1, 'new', 'good', NULL, 'good', NULL, 'good', 'good', 'sawa', NULL, 0, NULL, NULL, NULL, NULL, 'completed', NULL, '2026-01-09 10:19:52', '2026-01-09 10:19:52', '2026-01-09 10:18:10', '2026-01-09 10:19:52'),
-(44, 61, 44, 9, 1, 'new', 'fbajfuhjadf', NULL, 'ehjsvhbdfnd', NULL, 'fvhkdfbvfjkd', 'vhfvvsdjfdsnk', 'dgvjyusdjvcbhfuyjhdcyuvxjjk', NULL, 0, NULL, NULL, NULL, NULL, 'completed', NULL, '2026-01-11 19:44:42', '2026-01-11 19:44:42', '2026-01-11 19:40:50', '2026-01-11 19:44:42'),
-(45, 62, 45, 1, 1, 'new', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 0, NULL, NULL, NULL, NULL, 'pending', NULL, NULL, NULL, '2026-01-12 13:26:16', '2026-01-12 13:26:16'),
-(46, 63, 46, 1, 1, 'new', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 0, NULL, NULL, NULL, NULL, 'pending', NULL, NULL, NULL, '2026-01-14 19:19:05', '2026-01-14 19:19:05');
+INSERT INTO `consultations` (`id`, `visit_id`, `patient_id`, `doctor_id`, `consultation_number`, `consultation_type`, `main_complaint`, `history_of_present_illness`, `on_examination`, `diagnosis`, `preliminary_diagnosis_id`, `preliminary_diagnosis`, `final_diagnosis`, `final_diagnosis_id`, `treatment_plan`, `notes`, `follow_up_required`, `follow_up_date`, `follow_up_instructions`, `referred_to`, `referral_reason`, `status`, `cancellation_reason`, `started_at`, `completed_at`, `created_at`, `updated_at`) VALUES
+(39, 51, 33, 9, 1, 'new', 'sawaa', NULL, 'sawa', NULL, NULL, 'sawa', 'sawa', NULL, 'sawa', NULL, 0, NULL, NULL, NULL, NULL, 'completed', NULL, '2026-01-08 16:04:53', '2026-01-08 16:04:53', '2026-01-08 16:02:17', '2026-01-08 16:04:53'),
+(43, 59, 42, 9, 1, 'new', 'good', NULL, 'good', NULL, NULL, 'good', 'good', NULL, 'sawa', NULL, 0, NULL, NULL, NULL, NULL, 'completed', NULL, '2026-01-09 10:19:52', '2026-01-09 10:19:52', '2026-01-09 10:18:10', '2026-01-09 10:19:52'),
+(44, 61, 44, 9, 1, 'new', 'fbajfuhjadf', NULL, 'ehjsvhbdfnd', NULL, NULL, 'fvhkdfbvfjkd', 'vhfvvsdjfdsnk', NULL, 'dgvjyusdjvcbhfuyjhdcyuvxjjk', NULL, 0, NULL, NULL, NULL, NULL, 'completed', NULL, '2026-01-11 19:44:42', '2026-01-11 19:44:42', '2026-01-11 19:40:50', '2026-01-11 19:44:42'),
+(45, 62, 45, 1, 1, 'new', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 0, NULL, NULL, NULL, NULL, 'in_progress', NULL, '2026-01-14 20:56:01', NULL, '2026-01-12 13:26:16', '2026-01-14 20:56:17'),
+(46, 63, 46, 9, 1, 'new', 'djhkfsd', NULL, 'sgdfsdjh', NULL, NULL, 'sd fndn', 'fdhjsdf', NULL, 'dvajhfdn', NULL, 0, NULL, NULL, NULL, NULL, 'completed', NULL, '2026-01-14 20:15:02', '2026-01-14 20:15:02', '2026-01-14 19:19:05', '2026-01-14 20:15:02'),
+(47, 64, 47, 1, 1, 'new', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 0, NULL, NULL, NULL, NULL, 'in_progress', NULL, '2026-01-14 20:47:19', NULL, '2026-01-14 19:35:30', '2026-01-14 20:49:57'),
+(48, 65, 48, 1, 1, 'new', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 0, NULL, NULL, NULL, NULL, 'in_progress', NULL, '2026-01-14 20:58:46', NULL, '2026-01-14 19:38:13', '2026-01-14 20:58:46'),
+(49, 66, 49, 1, 1, 'new', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 0, NULL, NULL, NULL, NULL, 'in_progress', NULL, '2026-01-14 20:47:11', NULL, '2026-01-14 20:06:00', '2026-01-14 20:47:11'),
+(50, 67, 50, 1, 1, 'new', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 0, NULL, NULL, NULL, NULL, 'in_progress', NULL, '2026-01-14 21:14:21', NULL, '2026-01-14 21:13:57', '2026-01-14 21:23:21'),
+(51, 68, 51, 1, 1, 'new', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 0, NULL, NULL, NULL, NULL, 'in_progress', NULL, '2026-01-14 21:33:31', NULL, '2026-01-14 21:33:10', '2026-01-14 21:33:31'),
+(52, 69, 52, 1, 1, 'new', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 0, NULL, NULL, NULL, NULL, 'in_progress', NULL, '2026-01-14 21:37:46', NULL, '2026-01-14 21:37:15', '2026-01-14 21:40:12'),
+(53, 70, 53, 1, 1, 'new', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 0, NULL, NULL, NULL, NULL, 'in_progress', NULL, '2026-01-14 21:56:57', NULL, '2026-01-14 21:56:23', '2026-01-14 21:56:57'),
+(54, 71, 54, 1, 1, 'new', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 0, NULL, NULL, NULL, NULL, 'in_progress', NULL, '2026-01-14 22:05:38', NULL, '2026-01-14 22:05:11', '2026-01-14 22:05:38'),
+(55, 72, 55, 1, 1, 'new', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 0, NULL, NULL, NULL, NULL, 'in_progress', NULL, '2026-01-14 22:17:31', NULL, '2026-01-14 22:17:00', '2026-01-14 22:17:31'),
+(56, 73, 56, 1, 1, 'new', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 0, NULL, NULL, NULL, NULL, 'in_progress', NULL, '2026-01-15 13:47:26', NULL, '2026-01-15 13:46:33', '2026-01-15 14:26:10'),
+(57, 74, 57, 1, 1, 'new', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 0, NULL, NULL, NULL, NULL, 'in_progress', NULL, '2026-01-15 23:17:58', NULL, '2026-01-15 23:17:16', '2026-01-15 23:44:46');
 
 -- --------------------------------------------------------
 
@@ -116,13 +129,99 @@ INSERT INTO `consultations` (`id`, `visit_id`, `patient_id`, `doctor_id`, `consu
 -- (See below for the actual view)
 --
 CREATE TABLE `daily_revenue_summary` (
-`collected_by_name` varchar(101)
+`revenue_date` date
+,`payment_type` enum('registration','consultation','lab_test','medicine','minor_service','service')
 ,`payment_method` enum('cash','card','mobile_money','insurance')
-,`payment_type` enum('registration','lab_test','medicine','minor_service','service')
-,`revenue_date` date
-,`total_amount` decimal(32,2)
 ,`transaction_count` bigint
+,`total_amount` decimal(32,2)
+,`collected_by_name` varchar(101)
 );
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `icd_codes`
+--
+
+CREATE TABLE `icd_codes` (
+  `id` int NOT NULL,
+  `code` varchar(20) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL COMMENT 'ICD-10 code (e.g., B50, A09)',
+  `name` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL COMMENT 'Diagnosis name',
+  `description` text CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci COMMENT 'Detailed description',
+  `category` varchar(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci DEFAULT NULL COMMENT 'Disease category',
+  `is_active` tinyint(1) DEFAULT '1',
+  `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `updated_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+--
+-- Dumping data for table `icd_codes`
+--
+
+INSERT INTO `icd_codes` (`id`, `code`, `name`, `description`, `category`, `is_active`, `created_at`, `updated_at`) VALUES
+(1, 'B50', 'Plasmodium falciparum malaria', 'Malaria due to Plasmodium falciparum', 'Parasitic Diseases', 1, '2026-01-15 14:21:07', '2026-01-15 14:21:07'),
+(2, 'B51', 'Plasmodium vivax malaria', 'Malaria due to Plasmodium vivax', 'Parasitic Diseases', 1, '2026-01-15 14:21:07', '2026-01-15 14:21:07'),
+(3, 'B52', 'Plasmodium malariae malaria', 'Malaria due to Plasmodium malariae', 'Parasitic Diseases', 1, '2026-01-15 14:21:07', '2026-01-15 14:21:07'),
+(4, 'B53', 'Other parasitologically confirmed malaria', 'Other specified malaria with parasitological confirmation', 'Parasitic Diseases', 1, '2026-01-15 14:21:07', '2026-01-15 14:21:07'),
+(5, 'B54', 'Unspecified malaria', 'Malaria, unspecified', 'Parasitic Diseases', 1, '2026-01-15 14:21:07', '2026-01-15 14:21:07'),
+(6, 'J00', 'Acute nasopharyngitis (common cold)', 'Common cold', 'Respiratory Diseases', 1, '2026-01-15 14:21:07', '2026-01-15 14:21:07'),
+(7, 'J01', 'Acute sinusitis', 'Acute sinusitis', 'Respiratory Diseases', 1, '2026-01-15 14:21:07', '2026-01-15 14:21:07'),
+(8, 'J02', 'Acute pharyngitis', 'Acute sore throat', 'Respiratory Diseases', 1, '2026-01-15 14:21:07', '2026-01-15 14:21:07'),
+(9, 'J03', 'Acute tonsillitis', 'Acute tonsillitis', 'Respiratory Diseases', 1, '2026-01-15 14:21:07', '2026-01-15 14:21:07'),
+(10, 'J06', 'Acute upper respiratory infection', 'Upper respiratory tract infection (URTI)', 'Respiratory Diseases', 1, '2026-01-15 14:21:07', '2026-01-15 14:21:07'),
+(11, 'J18', 'Pneumonia, unspecified organism', 'Pneumonia', 'Respiratory Diseases', 1, '2026-01-15 14:21:07', '2026-01-15 14:21:07'),
+(12, 'J20', 'Acute bronchitis', 'Acute bronchitis', 'Respiratory Diseases', 1, '2026-01-15 14:21:07', '2026-01-15 14:21:07'),
+(13, 'J21', 'Acute bronchiolitis', 'Acute bronchiolitis', 'Respiratory Diseases', 1, '2026-01-15 14:21:07', '2026-01-15 14:21:07'),
+(14, 'J45', 'Asthma', 'Asthma', 'Respiratory Diseases', 1, '2026-01-15 14:21:07', '2026-01-15 14:21:07'),
+(15, 'A00', 'Cholera', 'Cholera', 'Infectious Diseases', 1, '2026-01-15 14:21:07', '2026-01-15 14:21:07'),
+(16, 'A01', 'Typhoid and paratyphoid fevers', 'Typhoid fever', 'Infectious Diseases', 1, '2026-01-15 14:21:07', '2026-01-15 14:21:07'),
+(17, 'A02', 'Other salmonella infections', 'Salmonellosis', 'Infectious Diseases', 1, '2026-01-15 14:21:07', '2026-01-15 14:21:07'),
+(18, 'A03', 'Shigellosis', 'Dysentery', 'Infectious Diseases', 1, '2026-01-15 14:21:07', '2026-01-15 14:21:07'),
+(19, 'A04', 'Other bacterial intestinal infections', 'Bacterial diarrhea', 'Infectious Diseases', 1, '2026-01-15 14:21:07', '2026-01-15 14:21:07'),
+(20, 'A06', 'Amoebiasis', 'Amoebic dysentery', 'Parasitic Diseases', 1, '2026-01-15 14:21:07', '2026-01-15 14:21:07'),
+(21, 'A07', 'Other protozoal intestinal diseases', 'Giardiasis and other protozoal diarrhea', 'Parasitic Diseases', 1, '2026-01-15 14:21:07', '2026-01-15 14:21:07'),
+(22, 'A08', 'Viral and other specified intestinal infections', 'Viral gastroenteritis', 'Infectious Diseases', 1, '2026-01-15 14:21:07', '2026-01-15 14:21:07'),
+(23, 'A09', 'Diarrhea and gastroenteritis', 'Diarrhea, unspecified', 'Infectious Diseases', 1, '2026-01-15 14:21:07', '2026-01-15 14:21:07'),
+(24, 'K29', 'Gastritis and duodenitis', 'Gastritis', 'Digestive Diseases', 1, '2026-01-15 14:21:07', '2026-01-15 14:21:07'),
+(25, 'K30', 'Functional dyspepsia', 'Indigestion', 'Digestive Diseases', 1, '2026-01-15 14:21:07', '2026-01-15 14:21:07'),
+(26, 'K59.1', 'Functional diarrhea', 'Functional diarrhea', 'Digestive Diseases', 1, '2026-01-15 14:21:07', '2026-01-15 14:21:07'),
+(27, 'B20', 'HIV disease', 'HIV disease resulting in infectious and parasitic diseases', 'Infectious Diseases', 1, '2026-01-15 14:21:07', '2026-01-15 14:21:07'),
+(28, 'B24', 'Unspecified HIV disease', 'HIV disease without specification', 'Infectious Diseases', 1, '2026-01-15 14:21:07', '2026-01-15 14:21:07'),
+(29, 'A15', 'Respiratory tuberculosis', 'Pulmonary tuberculosis', 'Infectious Diseases', 1, '2026-01-15 14:21:07', '2026-01-15 14:21:07'),
+(30, 'A16', 'Respiratory tuberculosis, not confirmed', 'Pulmonary tuberculosis, not bacteriologically or histologically confirmed', 'Infectious Diseases', 1, '2026-01-15 14:21:07', '2026-01-15 14:21:07'),
+(31, 'A17', 'Tuberculosis of nervous system', 'TB meningitis', 'Infectious Diseases', 1, '2026-01-15 14:21:07', '2026-01-15 14:21:07'),
+(32, 'A18', 'Tuberculosis of other organs', 'Extrapulmonary tuberculosis', 'Infectious Diseases', 1, '2026-01-15 14:21:07', '2026-01-15 14:21:07'),
+(33, 'A19', 'Miliary tuberculosis', 'Disseminated TB', 'Infectious Diseases', 1, '2026-01-15 14:21:07', '2026-01-15 14:21:07'),
+(34, 'B35', 'Dermatophytosis', 'Fungal skin infection (Ringworm)', 'Skin Diseases', 1, '2026-01-15 14:21:07', '2026-01-15 14:21:07'),
+(35, 'L20', 'Atopic dermatitis', 'Eczema', 'Skin Diseases', 1, '2026-01-15 14:21:07', '2026-01-15 14:21:07'),
+(36, 'L30', 'Other dermatitis', 'Dermatitis, unspecified', 'Skin Diseases', 1, '2026-01-15 14:21:07', '2026-01-15 14:21:07'),
+(37, 'L08', 'Other local infections of skin', 'Skin infection (Pyoderma)', 'Skin Diseases', 1, '2026-01-15 14:21:07', '2026-01-15 14:21:07'),
+(38, 'B86', 'Scabies', 'Scabies', 'Parasitic Diseases', 1, '2026-01-15 14:21:07', '2026-01-15 14:21:07'),
+(39, 'N30', 'Cystitis', 'Bladder infection (Cystitis)', 'Genitourinary Diseases', 1, '2026-01-15 14:21:07', '2026-01-15 14:21:07'),
+(40, 'N39.0', 'Urinary tract infection', 'UTI, site not specified', 'Genitourinary Diseases', 1, '2026-01-15 14:21:07', '2026-01-15 14:21:07'),
+(41, 'N10', 'Acute pyelonephritis', 'Kidney infection', 'Genitourinary Diseases', 1, '2026-01-15 14:21:07', '2026-01-15 14:21:07'),
+(42, 'I10', 'Essential (primary) hypertension', 'High blood pressure', 'Cardiovascular Diseases', 1, '2026-01-15 14:21:07', '2026-01-15 14:21:07'),
+(43, 'I11', 'Hypertensive heart disease', 'Hypertensive heart disease', 'Cardiovascular Diseases', 1, '2026-01-15 14:21:07', '2026-01-15 14:21:07'),
+(44, 'I25', 'Chronic ischaemic heart disease', 'Ischemic heart disease', 'Cardiovascular Diseases', 1, '2026-01-15 14:21:07', '2026-01-15 14:21:07'),
+(45, 'E11', 'Type 2 diabetes mellitus', 'Type 2 diabetes', 'Endocrine Diseases', 1, '2026-01-15 14:21:07', '2026-01-15 14:21:07'),
+(46, 'E10', 'Type 1 diabetes mellitus', 'Type 1 diabetes', 'Endocrine Diseases', 1, '2026-01-15 14:21:07', '2026-01-15 14:21:07'),
+(47, 'R50', 'Fever of unknown origin', 'Fever, unspecified', 'Symptoms and Signs', 1, '2026-01-15 14:21:07', '2026-01-15 14:21:07'),
+(48, 'R51', 'Headache', 'Headache', 'Symptoms and Signs', 1, '2026-01-15 14:21:07', '2026-01-15 14:21:07'),
+(49, 'R10', 'Abdominal and pelvic pain', 'Abdominal pain', 'Symptoms and Signs', 1, '2026-01-15 14:21:07', '2026-01-15 14:21:07'),
+(50, 'M25.5', 'Pain in joint', 'Joint pain (Arthralgia)', 'Musculoskeletal Diseases', 1, '2026-01-15 14:21:07', '2026-01-15 14:21:07'),
+(51, 'M79.1', 'Myalgia', 'Muscle pain', 'Musculoskeletal Diseases', 1, '2026-01-15 14:21:07', '2026-01-15 14:21:07'),
+(52, 'B76', 'Hookworm disease', 'Hookworm infection', 'Parasitic Diseases', 1, '2026-01-15 14:21:07', '2026-01-15 14:21:07'),
+(53, 'B77', 'Ascariasis', 'Roundworm infection', 'Parasitic Diseases', 1, '2026-01-15 14:21:07', '2026-01-15 14:21:07'),
+(54, 'B65', 'Schistosomiasis', 'Bilharzia', 'Parasitic Diseases', 1, '2026-01-15 14:21:07', '2026-01-15 14:21:07'),
+(55, 'H10', 'Conjunctivitis', 'Pink eye (Conjunctivitis)', 'Eye Diseases', 1, '2026-01-15 14:21:07', '2026-01-15 14:21:07'),
+(56, 'H66', 'Suppurative and unspecified otitis media', 'Ear infection (Otitis media)', 'Ear Diseases', 1, '2026-01-15 14:21:07', '2026-01-15 14:21:07'),
+(57, 'D50', 'Iron deficiency anaemia', 'Iron deficiency anemia', 'Blood Diseases', 1, '2026-01-15 14:21:07', '2026-01-15 14:21:07'),
+(58, 'D64.9', 'Anaemia, unspecified', 'Anemia, unspecified', 'Blood Diseases', 1, '2026-01-15 14:21:07', '2026-01-15 14:21:07'),
+(59, 'O26', 'Maternal care for other conditions', 'Pregnancy complications', 'Pregnancy Conditions', 1, '2026-01-15 14:21:07', '2026-01-15 14:21:07'),
+(60, 'Z34', 'Supervision of normal pregnancy', 'Antenatal care (Normal pregnancy)', 'Pregnancy Conditions', 1, '2026-01-15 14:21:07', '2026-01-15 14:21:07'),
+(61, 'A54', 'Gonococcal infection', 'Gonorrhea', 'Infectious Diseases', 1, '2026-01-15 14:21:07', '2026-01-15 14:21:07'),
+(62, 'A56', 'Other sexually transmitted chlamydial diseases', 'Chlamydia', 'Infectious Diseases', 1, '2026-01-15 14:21:07', '2026-01-15 14:21:07'),
+(63, 'A60', 'Anogenital herpesviral infection', 'Genital herpes', 'Infectious Diseases', 1, '2026-01-15 14:21:07', '2026-01-15 14:21:07');
 
 -- --------------------------------------------------------
 
@@ -234,7 +333,8 @@ INSERT INTO `lab_results` (`id`, `order_id`, `patient_id`, `test_id`, `result_va
 (14, 19, 37, 4, '30%', 'dgajhfjadhajf', '30%', 1, 0, NULL, 10, NULL, '2026-01-09 05:36:00', NULL, NULL, NULL),
 (15, 20, 42, 20, '1.0', 'Test completed successfully.', 'mg/dL', 1, 0, NULL, 10, NULL, '2026-01-09 07:38:00', NULL, NULL, NULL),
 (16, 21, 43, 20, '1.0', 'Test completed successfully.', 'mg/dL', 1, 0, NULL, 10, NULL, '2026-01-09 07:53:00', NULL, NULL, NULL),
-(17, 22, 44, 4, '1', 'dgshyrbhcusyfhj', 'mg/dL', 0, 0, NULL, 10, NULL, '2026-01-11 16:52:00', NULL, NULL, NULL);
+(17, 22, 44, 4, '1', 'dgshyrbhcusyfhj', 'mg/dL', 0, 0, NULL, 10, NULL, '2026-01-11 16:52:00', NULL, NULL, NULL),
+(18, 23, 46, 20, '1.5', 'dbsmsn', 'IU/mL', 1, 0, NULL, 10, NULL, '2026-01-14 17:19:00', NULL, NULL, NULL);
 
 -- --------------------------------------------------------
 
@@ -372,7 +472,8 @@ INSERT INTO `lab_test_orders` (`id`, `visit_id`, `patient_id`, `consultation_id`
 (19, 54, 37, NULL, 4, 8, NULL, 'normal', 'completed', NULL, NULL, NULL, NULL, '2026-01-09 08:33:12', '2026-01-09 08:37:11'),
 (20, 59, 42, 43, 20, 9, 10, 'normal', 'completed', NULL, NULL, NULL, NULL, '2026-01-09 10:19:52', '2026-01-09 10:41:46'),
 (21, 60, 43, NULL, 20, 8, NULL, 'normal', 'completed', NULL, NULL, NULL, NULL, '2026-01-09 10:50:59', '2026-01-09 10:53:40'),
-(22, 61, 44, 44, 4, 9, 10, 'normal', 'completed', NULL, NULL, NULL, NULL, '2026-01-11 19:44:42', '2026-01-11 19:53:37');
+(22, 61, 44, 44, 4, 9, 10, 'normal', 'completed', NULL, NULL, NULL, NULL, '2026-01-11 19:44:42', '2026-01-11 19:53:37'),
+(23, 63, 46, 46, 20, 9, 10, 'normal', 'completed', NULL, NULL, NULL, NULL, '2026-01-14 20:15:02', '2026-01-14 20:19:22');
 
 -- --------------------------------------------------------
 
@@ -699,9 +800,9 @@ CREATE TABLE `medicine_dispensing` (
 -- (See below for the actual view)
 --
 CREATE TABLE `medicine_prescription_stats` (
-`generic_name` varchar(100)
-,`id` int
+`id` int
 ,`name` varchar(100)
+,`generic_name` varchar(100)
 ,`times_prescribed` bigint
 ,`total_quantity_dispensed` decimal(32,0)
 ,`total_revenue` decimal(42,2)
@@ -714,17 +815,17 @@ CREATE TABLE `medicine_prescription_stats` (
 -- (See below for the actual view)
 --
 CREATE TABLE `medicine_stock_status` (
-`active_batches` bigint
-,`generic_name` varchar(100)
-,`id` int
+`id` int
 ,`name` varchar(100)
-,`nearest_expiry` date
-,`reorder_level` int
-,`stock_alert` varchar(13)
+,`generic_name` varchar(100)
 ,`strength` varchar(50)
-,`total_stock` decimal(32,0)
 ,`unit` varchar(20)
 ,`unit_price` decimal(10,2)
+,`reorder_level` int
+,`total_stock` decimal(32,0)
+,`active_batches` bigint
+,`nearest_expiry` date
+,`stock_alert` varchar(13)
 );
 
 -- --------------------------------------------------------
@@ -769,7 +870,18 @@ INSERT INTO `patients` (`id`, `registration_number`, `first_name`, `last_name`, 
 (43, 'KJ20260007', 'patient', 'six', '2026-01-05', 'female', '23435645434', '', '', '', '', '', NULL, NULL, NULL, NULL, NULL, '2026-01-09 10:50:59', '2026-01-09 10:50:59'),
 (44, 'KJ20260008', 'patient', 'seven', '2026-01-15', 'male', '21345674', 'four@gmai.com', 'sdhk', 'dhfdjf', 'hdbdafn', '345678765', NULL, NULL, NULL, NULL, NULL, '2026-01-11 19:40:50', '2026-01-11 19:40:50'),
 (45, 'KJ20260009', 'patient', 'eight', '2026-01-15', 'male', '21345674', 'four@gmai.com', 'sdhk', 'dhfdjf', 'hdbdafn', '347865643', NULL, NULL, NULL, NULL, NULL, '2026-01-12 13:26:16', '2026-01-12 13:26:16'),
-(46, 'KJ20260010', 'patient', 'ten', '2022-11-10', 'male', '356543343', 'ten@gmail.com', 'majengo', 'mkulima', 'juma', '34546352', NULL, NULL, NULL, NULL, NULL, '2026-01-14 19:19:05', '2026-01-14 19:19:05');
+(46, 'KJ20260010', 'patient', 'ten', '2022-11-10', 'male', '356543343', 'ten@gmail.com', 'majengo', 'mkulima', 'juma', '34546352', NULL, NULL, NULL, NULL, NULL, '2026-01-14 19:19:05', '2026-01-14 19:19:05'),
+(47, 'KJ20260011', 'patient', 'eleven', '2000-07-04', 'female', '2654333423', 'eleven@gmail.com', 'eleven', 'mkulima', 'dgahfhbm,', '84567', NULL, NULL, NULL, NULL, NULL, '2026-01-14 19:35:30', '2026-01-14 19:35:30'),
+(48, 'KJ20260012', 'patient', 'twelve', '1976-08-05', 'female', '346576453', 'twelve@gmail.com', 'dsfhsf', 'hdfgjsdh', 'shjsd', '345574352', NULL, NULL, NULL, NULL, NULL, '2026-01-14 19:38:13', '2026-01-14 19:38:13'),
+(49, 'KJ20260013', 'patient', 'thirteen', '1894-07-03', 'male', '2345654354', 'thirteen@gmail.com', 'thirteen', 'thrirteen', 'dhjjkd', '34556432', NULL, NULL, NULL, NULL, NULL, '2026-01-14 20:06:00', '2026-01-14 20:06:00'),
+(50, 'KJ20260014', 'patient', 'fourteen', '2004-08-04', 'male', '345675432', 'fourteen@gmail.com', 'four', 'four', 'asfdss', '23464532', NULL, NULL, NULL, NULL, NULL, '2026-01-14 21:13:57', '2026-01-14 21:13:57'),
+(51, 'KJ20260015', 'patient', 'fifteen', '2004-07-04', 'male', '3254677654', 'fifteen@gmail.com', 'fifthteen', 'sdfsdf', 'sdgfsf', '234565453', NULL, NULL, NULL, NULL, NULL, '2026-01-14 21:33:10', '2026-01-14 21:33:10'),
+(52, 'KJ20260016', 'patient', 'sixteen', '1916-12-16', 'male', '123454635213', 'kuminaita@gmail.com', 'dsfvjnds', 'sdjbvksdn', 'sdjfds', '76545678', NULL, NULL, NULL, NULL, NULL, '2026-01-14 21:37:15', '2026-01-14 21:37:15'),
+(53, 'KJ20260017', 'patient', 'seventeen', '1999-04-03', 'male', '345465342', 'seven@gmail.com', 'sdshj', 'afjdh', 'safhs', '34634523', NULL, NULL, NULL, NULL, NULL, '2026-01-14 21:56:23', '2026-01-14 21:56:23'),
+(54, 'KJ20260018', 'patient', 'eightteen', '1978-10-18', 'female', '23475323', 'ghs@gmail.com', 'ashfsd', 'shfsd', 'djgfsd', '34546533', NULL, NULL, NULL, NULL, NULL, '2026-01-14 22:05:11', '2026-01-14 22:05:11'),
+(55, 'KJ20260019', 'patient', 'nineteen', '2009-01-09', 'female', '234565784', '', '', '', 'asdfgfbj', '12347453', NULL, NULL, NULL, NULL, NULL, '2026-01-14 22:17:00', '2026-01-14 22:17:00'),
+(56, 'KJ20260020', 'patient', 'twenty', '2005-09-04', 'female', '2346564534', '', '', '', '', '', NULL, NULL, NULL, NULL, NULL, '2026-01-15 13:46:33', '2026-01-15 13:46:33'),
+(57, 'KJ20260021', 'twenty', 'one', '2021-02-20', 'female', '21345764', '', '', '', '', '', NULL, NULL, NULL, NULL, NULL, '2026-01-15 23:17:16', '2026-01-15 23:17:16');
 
 -- --------------------------------------------------------
 
@@ -778,14 +890,14 @@ INSERT INTO `patients` (`id`, `registration_number`, `first_name`, `last_name`, 
 -- (See below for the actual view)
 --
 CREATE TABLE `patient_latest_visit` (
-`created_at` timestamp
-,`patient_id` int
-,`status` enum('active','completed','cancelled')
-,`updated_at` timestamp
-,`visit_date` date
+`patient_id` int
 ,`visit_id` int
 ,`visit_number` int
+,`status` enum('active','completed','cancelled')
 ,`visit_type` enum('consultation','lab_only','minor_service')
+,`visit_date` date
+,`created_at` timestamp
+,`updated_at` timestamp
 );
 
 -- --------------------------------------------------------
@@ -822,7 +934,18 @@ INSERT INTO `patient_visits` (`id`, `patient_id`, `visit_number`, `visit_date`, 
 (60, 43, 1, '2026-01-09', 'lab_only', NULL, 8, 'active', NULL, '2026-01-09 10:50:59', '2026-01-09 10:53:40'),
 (61, 44, 1, '2026-01-11', 'consultation', NULL, 8, 'completed', NULL, '2026-01-11 19:40:50', '2026-01-14 19:14:47'),
 (62, 45, 1, '2026-01-12', 'consultation', NULL, 8, 'active', NULL, '2026-01-12 13:26:16', '2026-01-12 13:26:16'),
-(63, 46, 1, '2026-01-14', 'consultation', NULL, 8, 'active', NULL, '2026-01-14 19:19:05', '2026-01-14 19:19:05');
+(63, 46, 1, '2026-01-14', 'consultation', NULL, 8, 'active', NULL, '2026-01-14 19:19:05', '2026-01-14 20:19:22'),
+(64, 47, 1, '2026-01-14', 'consultation', NULL, 8, 'active', NULL, '2026-01-14 19:35:30', '2026-01-14 19:35:30'),
+(65, 48, 1, '2026-01-14', 'consultation', NULL, 8, 'active', NULL, '2026-01-14 19:38:13', '2026-01-14 19:38:13'),
+(66, 49, 1, '2026-01-14', 'consultation', NULL, 8, 'active', NULL, '2026-01-14 20:06:00', '2026-01-14 20:06:00'),
+(67, 50, 1, '2026-01-15', 'consultation', NULL, 8, 'active', NULL, '2026-01-14 21:13:57', '2026-01-14 21:13:57'),
+(68, 51, 1, '2026-01-15', 'consultation', NULL, 8, 'active', NULL, '2026-01-14 21:33:10', '2026-01-14 21:33:10'),
+(69, 52, 1, '2026-01-15', 'consultation', NULL, 8, 'active', NULL, '2026-01-14 21:37:15', '2026-01-14 21:37:15'),
+(70, 53, 1, '2026-01-15', 'consultation', NULL, 8, 'active', NULL, '2026-01-14 21:56:23', '2026-01-14 21:56:23'),
+(71, 54, 1, '2026-01-15', 'consultation', NULL, 8, 'active', NULL, '2026-01-14 22:05:11', '2026-01-14 22:05:11'),
+(72, 55, 1, '2026-01-15', 'consultation', NULL, 8, 'active', NULL, '2026-01-14 22:17:00', '2026-01-14 22:17:00'),
+(73, 56, 1, '2026-01-15', 'consultation', NULL, 8, 'active', NULL, '2026-01-15 13:46:33', '2026-01-15 13:46:33'),
+(74, 57, 1, '2026-01-16', 'consultation', NULL, 8, 'active', NULL, '2026-01-15 23:17:16', '2026-01-15 23:17:16');
 
 -- --------------------------------------------------------
 
@@ -834,7 +957,7 @@ CREATE TABLE `payments` (
   `id` int NOT NULL,
   `visit_id` int NOT NULL,
   `patient_id` int NOT NULL,
-  `payment_type` enum('registration','lab_test','medicine','minor_service','service') COLLATE utf8mb4_general_ci NOT NULL,
+  `payment_type` enum('registration','consultation','lab_test','medicine','minor_service','service') COLLATE utf8mb4_general_ci NOT NULL,
   `item_id` int DEFAULT NULL COMMENT 'Reference to lab_order, prescription, or service',
   `item_type` enum('lab_order','prescription','service','service_order') COLLATE utf8mb4_general_ci DEFAULT NULL,
   `amount` decimal(10,2) NOT NULL,
@@ -862,7 +985,28 @@ INSERT INTO `payments` (`id`, `visit_id`, `patient_id`, `payment_type`, `item_id
 (98, 61, 44, 'medicine', 22, 'prescription', 300.00, 'cash', 'paid', '', 8, '2026-01-11 19:49:16', NULL),
 (99, 61, 44, 'service', 8, 'service_order', 5000.00, 'cash', 'paid', '', 8, '2026-01-11 19:49:37', NULL),
 (100, 62, 45, 'registration', NULL, NULL, 3000.00, 'cash', 'paid', NULL, 8, '2026-01-12 13:26:16', 'Initial consultation payment'),
-(101, 63, 46, 'registration', NULL, NULL, 3000.00, 'cash', 'paid', NULL, 8, '2026-01-14 19:19:05', 'Initial consultation payment');
+(101, 63, 46, 'registration', NULL, NULL, 3000.00, 'cash', 'paid', NULL, 8, '2026-01-14 19:19:05', 'Initial consultation payment'),
+(104, 65, 48, 'consultation', NULL, NULL, 5000.00, 'cash', 'paid', '', 12, '2026-01-14 19:57:18', NULL),
+(105, 65, 48, 'consultation', NULL, NULL, 5000.00, 'cash', 'paid', '', 12, '2026-01-14 19:59:12', NULL),
+(106, 65, 48, 'consultation', NULL, NULL, 5000.00, 'cash', 'paid', '', 12, '2026-01-14 19:59:17', NULL),
+(107, 65, 48, 'consultation', NULL, NULL, 5000.00, 'cash', 'paid', '', 12, '2026-01-14 19:59:23', NULL),
+(108, 65, 48, 'consultation', NULL, NULL, 3000.00, 'cash', 'paid', '', 12, '2026-01-14 19:59:41', NULL),
+(109, 65, 48, 'consultation', NULL, NULL, 5000.00, 'cash', 'paid', '', 12, '2026-01-14 20:01:27', NULL),
+(110, 65, 48, 'consultation', NULL, NULL, 5000.00, 'cash', 'paid', '', 12, '2026-01-14 20:02:31', NULL),
+(111, 64, 47, 'consultation', NULL, NULL, 5000.00, 'cash', 'paid', '', 12, '2026-01-14 20:03:21', NULL),
+(112, 65, 48, 'consultation', NULL, NULL, 5000.00, 'cash', 'paid', '', 12, '2026-01-14 20:03:24', NULL),
+(113, 66, 49, 'consultation', NULL, NULL, 3000.00, 'cash', 'paid', '', 12, '2026-01-14 20:06:21', NULL),
+(114, 63, 46, 'lab_test', NULL, NULL, 8000.00, 'cash', 'paid', '', 12, '2026-01-14 20:18:21', NULL),
+(115, 63, 46, 'medicine', 24, 'prescription', 300000.00, 'cash', 'paid', '', 12, '2026-01-14 20:18:30', NULL),
+(116, 63, 46, 'service', 9, 'service_order', 5000.00, 'cash', 'paid', '', 12, '2026-01-14 20:18:36', NULL),
+(117, 67, 50, 'consultation', NULL, NULL, 3000.00, 'cash', 'paid', '', 12, '2026-01-14 21:14:14', NULL),
+(118, 68, 51, 'consultation', NULL, NULL, 3000.00, 'cash', 'paid', '', 12, '2026-01-14 21:33:24', NULL),
+(119, 69, 52, 'consultation', NULL, NULL, 3000.00, 'cash', 'paid', '', 12, '2026-01-14 21:37:35', NULL),
+(120, 70, 53, 'consultation', NULL, NULL, 3000.00, 'cash', 'paid', '', 12, '2026-01-14 21:56:49', NULL),
+(121, 71, 54, 'consultation', NULL, NULL, 3000.00, 'cash', 'paid', '', 12, '2026-01-14 22:05:24', NULL),
+(122, 72, 55, 'consultation', NULL, NULL, 3000.00, 'cash', 'paid', '', 12, '2026-01-14 22:17:25', NULL),
+(123, 73, 56, 'consultation', NULL, NULL, 5000.00, 'cash', 'paid', '', 12, '2026-01-15 13:47:06', NULL),
+(124, 74, 57, 'consultation', NULL, NULL, 3000.00, 'cash', 'paid', '', 12, '2026-01-15 23:17:37', NULL);
 
 -- --------------------------------------------------------
 
@@ -900,7 +1044,8 @@ INSERT INTO `prescriptions` (`id`, `consultation_id`, `visit_id`, `patient_id`, 
 (20, 39, 51, 33, 9, 1, 18, 18, '200gm per 234', 'Once daily', '1', '', 'dispensed', NULL, 11, '2026-01-14 19:14:51', NULL, '2026-01-08 16:09:15', '2026-01-14 19:14:51'),
 (21, 43, 59, 42, 9, 1, 18, 18, 'jhfjgdxch', 'Once daily', '1', '', 'dispensed', NULL, 11, '2026-01-14 19:14:53', NULL, '2026-01-09 10:48:42', '2026-01-14 19:14:53'),
 (22, 44, 61, 44, 9, 1, 10, 10, 'hghsdjsbcxj', 'Once daily', '1', '', 'dispensed', NULL, 11, '2026-01-14 19:14:47', NULL, '2026-01-11 19:44:42', '2026-01-14 19:14:47'),
-(23, 44, 61, 44, 9, 1, 10, 10, '3 daily', 'Once daily', '1', '', 'dispensed', NULL, 11, '2026-01-14 19:14:47', NULL, '2026-01-11 20:08:36', '2026-01-14 19:14:47');
+(23, 44, 61, 44, 9, 1, 10, 10, '3 daily', 'Once daily', '1', '', 'dispensed', NULL, 11, '2026-01-14 19:14:47', NULL, '2026-01-11 20:08:36', '2026-01-14 19:14:47'),
+(24, 46, 63, 46, 9, 121, 100, 0, 'dfhsd', 'Once daily', '1', '', 'pending', NULL, NULL, NULL, NULL, '2026-01-14 20:15:02', '2026-01-14 20:15:02');
 
 -- --------------------------------------------------------
 
@@ -1042,7 +1187,8 @@ CREATE TABLE `service_orders` (
 --
 
 INSERT INTO `service_orders` (`id`, `visit_id`, `patient_id`, `service_id`, `ordered_by`, `performed_by`, `status`, `cancellation_reason`, `notes`, `performed_at`, `created_at`, `updated_at`) VALUES
-(8, 61, 44, 3, 9, 8, 'completed', NULL, 'mshjfberihsfkejk[2026-01-11 19:55:42] ghsjfbjhsd\n', '2026-01-11 19:55:42', '2026-01-11 19:44:42', '2026-01-11 19:55:42');
+(8, 61, 44, 3, 9, 8, 'completed', NULL, 'mshjfberihsfkejk[2026-01-11 19:55:42] ghsjfbjhsd\n', '2026-01-11 19:55:42', '2026-01-11 19:44:42', '2026-01-11 19:55:42'),
+(9, 63, 46, 3, 9, 8, 'pending', NULL, 'dgsdjkkjf', NULL, '2026-01-14 20:15:02', '2026-01-14 20:15:02');
 
 -- --------------------------------------------------------
 
@@ -1051,15 +1197,15 @@ INSERT INTO `service_orders` (`id`, `visit_id`, `patient_id`, `service_id`, `ord
 -- (See below for the actual view)
 --
 CREATE TABLE `staff_performance` (
-`consultations_completed` bigint
-,`id` int
+`id` int
+,`staff_name` varchar(101)
+,`role` enum('admin','receptionist','doctor','lab_technician','accountant','pharmacist')
 ,`patients_registered` bigint
 ,`payments_collected` bigint
-,`prescriptions_written` bigint
-,`role` enum('admin','receptionist','doctor','lab_technician','accountant','pharmacist')
-,`staff_name` varchar(101)
-,`tests_completed` bigint
 ,`total_collected` decimal(32,2)
+,`consultations_completed` bigint
+,`prescriptions_written` bigint
+,`tests_completed` bigint
 );
 
 -- --------------------------------------------------------
@@ -1153,7 +1299,18 @@ INSERT INTO `vital_signs` (`id`, `visit_id`, `patient_id`, `temperature`, `blood
 (35, 59, 42, 36.0, 120, 80, 70, NULL, 32.0, 123.0, 8, '2026-01-09 10:18:10'),
 (36, 61, 44, 36.0, 120, 80, 132, NULL, 23.0, 23.0, 8, '2026-01-11 19:40:50'),
 (37, 62, 45, 36.0, 120, 80, 132, NULL, 23.0, 23.0, 8, '2026-01-12 13:26:16'),
-(38, 63, 46, 36.0, 120, 80, 72, NULL, 56.0, 90.0, 8, '2026-01-14 19:19:05');
+(38, 63, 46, 36.0, 120, 80, 72, NULL, 56.0, 90.0, 8, '2026-01-14 19:19:05'),
+(39, 64, 47, 36.0, 120, 80, 80, NULL, 78.0, 56.0, 8, '2026-01-14 19:35:30'),
+(40, 65, 48, 36.0, 120, 80, 80, NULL, 67.0, 123.0, 8, '2026-01-14 19:38:13'),
+(41, 66, 49, 36.0, 120, 80, 70, NULL, 89.0, 123.0, 8, '2026-01-14 20:06:00'),
+(42, 67, 50, 36.0, 120, 80, 78, NULL, 56.0, 59.0, 8, '2026-01-14 21:13:57'),
+(43, 68, 51, 36.0, 120, 80, 80, NULL, 69.0, 67.0, 8, '2026-01-14 21:33:10'),
+(44, 69, 52, 36.0, 120, 80, 70, NULL, 89.0, 123.0, 8, '2026-01-14 21:37:15'),
+(45, 70, 53, 36.0, 120, 80, 78, NULL, 67.0, 89.0, 8, '2026-01-14 21:56:23'),
+(46, 71, 54, 36.0, 120, 80, 80, NULL, 80.0, 100.0, 8, '2026-01-14 22:05:11'),
+(47, 72, 55, 36.0, 120, 60, 80, NULL, 57.0, 90.0, 8, '2026-01-14 22:17:00'),
+(48, 73, 56, 36.0, 120, 80, 70, NULL, 70.0, 123.0, 8, '2026-01-15 13:46:33'),
+(49, 74, 57, 36.0, 120, 60, 78, NULL, 68.0, 90.0, 8, '2026-01-15 23:17:16');
 
 -- --------------------------------------------------------
 
@@ -1230,7 +1387,19 @@ ALTER TABLE `consultations`
   ADD KEY `idx_consultation_visit` (`visit_id`),
   ADD KEY `idx_consultation_patient` (`patient_id`),
   ADD KEY `idx_consultation_doctor` (`doctor_id`),
-  ADD KEY `idx_consultation_status` (`status`);
+  ADD KEY `idx_consultation_status` (`status`),
+  ADD KEY `fk_preliminary_diagnosis` (`preliminary_diagnosis_id`),
+  ADD KEY `fk_final_diagnosis` (`final_diagnosis_id`);
+
+--
+-- Indexes for table `icd_codes`
+--
+ALTER TABLE `icd_codes`
+  ADD PRIMARY KEY (`id`),
+  ADD UNIQUE KEY `code` (`code`),
+  ADD KEY `idx_name` (`name`),
+  ADD KEY `idx_category` (`category`),
+  ADD KEY `idx_active` (`is_active`);
 
 --
 -- Indexes for table `lab_equipment`
@@ -1451,7 +1620,13 @@ ALTER TABLE `vital_signs`
 -- AUTO_INCREMENT for table `consultations`
 --
 ALTER TABLE `consultations`
-  MODIFY `id` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=47;
+  MODIFY `id` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=58;
+
+--
+-- AUTO_INCREMENT for table `icd_codes`
+--
+ALTER TABLE `icd_codes`
+  MODIFY `id` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=64;
 
 --
 -- AUTO_INCREMENT for table `lab_equipment`
@@ -1469,7 +1644,7 @@ ALTER TABLE `lab_inventory`
 -- AUTO_INCREMENT for table `lab_results`
 --
 ALTER TABLE `lab_results`
-  MODIFY `id` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=18;
+  MODIFY `id` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=19;
 
 --
 -- AUTO_INCREMENT for table `lab_tests`
@@ -1493,7 +1668,7 @@ ALTER TABLE `lab_test_items`
 -- AUTO_INCREMENT for table `lab_test_orders`
 --
 ALTER TABLE `lab_test_orders`
-  MODIFY `id` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=23;
+  MODIFY `id` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=24;
 
 --
 -- AUTO_INCREMENT for table `medicines`
@@ -1517,25 +1692,25 @@ ALTER TABLE `medicine_dispensing`
 -- AUTO_INCREMENT for table `patients`
 --
 ALTER TABLE `patients`
-  MODIFY `id` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=47;
+  MODIFY `id` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=58;
 
 --
 -- AUTO_INCREMENT for table `patient_visits`
 --
 ALTER TABLE `patient_visits`
-  MODIFY `id` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=64;
+  MODIFY `id` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=75;
 
 --
 -- AUTO_INCREMENT for table `payments`
 --
 ALTER TABLE `payments`
-  MODIFY `id` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=102;
+  MODIFY `id` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=125;
 
 --
 -- AUTO_INCREMENT for table `prescriptions`
 --
 ALTER TABLE `prescriptions`
-  MODIFY `id` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=24;
+  MODIFY `id` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=25;
 
 --
 -- AUTO_INCREMENT for table `role_audit_log`
@@ -1559,7 +1734,7 @@ ALTER TABLE `services`
 -- AUTO_INCREMENT for table `service_orders`
 --
 ALTER TABLE `service_orders`
-  MODIFY `id` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=9;
+  MODIFY `id` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=10;
 
 --
 -- AUTO_INCREMENT for table `users`
@@ -1571,13 +1746,13 @@ ALTER TABLE `users`
 -- AUTO_INCREMENT for table `user_roles`
 --
 ALTER TABLE `user_roles`
-  MODIFY `id` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=8;
+  MODIFY `id` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=5;
 
 --
 -- AUTO_INCREMENT for table `vital_signs`
 --
 ALTER TABLE `vital_signs`
-  MODIFY `id` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=39;
+  MODIFY `id` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=50;
 
 --
 -- Constraints for dumped tables
@@ -1589,7 +1764,9 @@ ALTER TABLE `vital_signs`
 ALTER TABLE `consultations`
   ADD CONSTRAINT `consultations_ibfk_1` FOREIGN KEY (`visit_id`) REFERENCES `patient_visits` (`id`) ON DELETE CASCADE,
   ADD CONSTRAINT `consultations_ibfk_2` FOREIGN KEY (`patient_id`) REFERENCES `patients` (`id`) ON DELETE CASCADE,
-  ADD CONSTRAINT `consultations_ibfk_3` FOREIGN KEY (`doctor_id`) REFERENCES `users` (`id`);
+  ADD CONSTRAINT `consultations_ibfk_3` FOREIGN KEY (`doctor_id`) REFERENCES `users` (`id`),
+  ADD CONSTRAINT `consultations_ibfk_final_diagnosis` FOREIGN KEY (`final_diagnosis_id`) REFERENCES `icd_codes` (`id`) ON DELETE SET NULL,
+  ADD CONSTRAINT `consultations_ibfk_preliminary_diagnosis` FOREIGN KEY (`preliminary_diagnosis_id`) REFERENCES `icd_codes` (`id`) ON DELETE SET NULL;
 
 --
 -- Constraints for table `lab_equipment`
