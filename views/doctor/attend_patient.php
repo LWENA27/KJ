@@ -123,10 +123,8 @@
 
         <!-- Main Consultation Form -->
         <div class="bg-white rounded-lg shadow">
-        <!-- AFTER (fixed) -->
-<form id="attendForm" method="POST" action="/KJ/doctor/start_consultation" 
-    onsubmit="return handleFormSubmit(event);">        
-                <input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars($csrf_token); ?>">
+<form id="attendForm" method="POST" action="<?php echo htmlspecialchars($BASE_PATH ?? '/KJ'); ?>/doctor/start_consultation">        
+                <input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars($csrf_token ?? '', ENT_QUOTES, 'UTF-8'); ?>">
                 <input type="hidden" name="patient_id" value="<?php echo $patient['id']; ?>">
                 <input type="hidden" id="selectedTests" name="selected_tests" value="">
                 <input type="hidden" id="selectedMedicines" name="selected_medicines" value="">
@@ -356,7 +354,7 @@
                             class="px-6 py-2 bg-gray-300 text-gray-700 rounded-md hover:bg-gray-400 transition duration-150">
                             <i class="fas fa-times mr-2"></i>Cancel
                         </button>
-                        <button type="submit"
+                        <button type="button" onclick="submitConsultationForm()"
                             class="px-8 py-2 bg-green-500 text-white rounded-md hover:bg-green-600 transition duration-150">
                             <i class="fas fa-save mr-2"></i>Complete Consultation
                         </button>
@@ -885,36 +883,39 @@
         } // End medicineSearchElement check
 
 
+        // Submit consultation form with validation
+        function submitConsultationForm() {
+            console.log('=== SUBMIT CONSULTATION FORM ===');
+            
+            // Step 1: Sync all hidden fields
+            syncSelectedTestsFromDOM();
+            syncSelectedMedicinesFromDOM();
+            syncSelectedAllocationsFromDOM();
+            
+            // Step 2: Log what we're about to send
+            console.log('Selected Tests:', document.getElementById('selectedTests').value);
+            console.log('Selected Medicines:', document.getElementById('selectedMedicines').value);
+            console.log('Selected Allocations:', document.getElementById('selectedAllocations').value);
+            console.log('Next Step:', document.querySelector('input[name="next_step"]:checked')?.value);
+            
+            // Step 3: Validate
+            if (!validateConsultationForm()) {
+                console.log('❌ Validation failed');
+                return false;
+            }
+            
+            console.log('✅ Validation passed, submitting form...');
+            
+            // Step 4: Submit the form
+            document.getElementById('attendForm').submit();
+            return true;
+        }
+
+        // Legacy handler (kept for compatibility)
         function handleFormSubmit(event) {
-    console.log('=== FORM SUBMIT HANDLER STARTED ===');
-    
-    // Prevent default submission first
-    event.preventDefault();
-    
-    // Step 1: Sync all hidden fields
-    syncSelectedTestsFromDOM();
-    syncSelectedMedicinesFromDOM();
-    syncSelectedAllocationsFromDOM();
-    
-    // Step 2: Log what we're about to send
-    console.log('Selected Tests:', document.getElementById('selectedTests').value);
-    console.log('Selected Medicines:', document.getElementById('selectedMedicines').value);
-    console.log('Selected Allocations:', document.getElementById('selectedAllocations').value);
-    console.log('Next Step:', document.querySelector('input[name="next_step"]:checked')?.value);
-    
-    // Step 3: Validate
-    if (!validateConsultationForm()) {
-        console.log('❌ Validation failed');
-        return false;
-    }
-    
-    console.log('✅ Validation passed, submitting form...');
-    
-    // Step 4: Submit the form programmatically
-    document.getElementById('attendForm').submit();
-    
-    return false; // Prevent default just in case
-}
+            if (event) event.preventDefault();
+            return submitConsultationForm();
+        }
 
 
         function syncSelectedTestsFromDOM() {

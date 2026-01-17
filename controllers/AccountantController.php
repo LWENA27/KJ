@@ -116,46 +116,26 @@ class AccountantController extends BaseController
         $payments = $stmt->fetchAll();
 
         // Get pending consultation payments (patients who registered but haven't paid)
+        // Now we check the payments table directly for pending consultation payments
         $stmt = $this->pdo->prepare("
             SELECT 
-                c.id as consultation_id,
-                c.visit_id,
-                c.patient_id,
+                pay.id as payment_id,
+                pay.visit_id,
+                pay.patient_id,
                 p.first_name,
                 p.last_name,
                 p.registration_number,
                 pv.visit_date,
                 pv.visit_type,
-                CASE 
-                    WHEN EXISTS (
-                        SELECT 1 FROM payments 
-                        WHERE visit_id = c.visit_id 
-                        AND payment_type IN ('consultation', 'registration')
-                        AND payment_status = 'paid'
-                    ) THEN 'paid'
-                    ELSE 'pending'
-                END as payment_status,
-                CASE 
-                    WHEN EXISTS (
-                        SELECT 1 FROM payments 
-                        WHERE visit_id = c.visit_id 
-                        AND payment_type IN ('consultation', 'registration')
-                        AND payment_status = 'paid'
-                    ) THEN (SELECT amount FROM payments WHERE visit_id = c.visit_id AND payment_type IN ('consultation', 'registration') AND payment_status = 'paid' LIMIT 1)
-                    ELSE 0
-                END as paid_amount,
-                5000 as consultation_fee
-            FROM consultations c
-            JOIN patients p ON c.patient_id = p.id
-            JOIN patient_visits pv ON c.visit_id = pv.id
-            WHERE c.status = 'pending' 
-                AND NOT EXISTS (
-                    SELECT 1 FROM payments 
-                    WHERE visit_id = c.visit_id 
-                    AND payment_type IN ('consultation', 'registration')
-                    AND payment_status = 'paid'
-                )
-            ORDER BY pv.visit_date DESC, c.created_at DESC
+                pay.payment_status,
+                pay.amount as consultation_fee,
+                pay.reference_number
+            FROM payments pay
+            JOIN patients p ON pay.patient_id = p.id
+            JOIN patient_visits pv ON pay.visit_id = pv.id
+            WHERE pay.payment_type = 'consultation'
+                AND pay.payment_status = 'pending'
+            ORDER BY pv.visit_date DESC, pay.payment_date DESC
         ");
         $stmt->execute();
         $pending_consultation_payments = $stmt->fetchAll();
@@ -359,27 +339,103 @@ class AccountantController extends BaseController
             return;
         }
 
+        // Generate idempotency key if not provided
+        if (empty($reference_number)) {
+            $reference_number = 'PAY-' . bin2hex(random_bytes(16));
+        }
+
         try {
             $this->pdo->beginTransaction();
 
-            // Insert payment record
-            $stmt = $this->pdo->prepare("
-                INSERT INTO payments 
-                (visit_id, patient_id, payment_type, item_id, item_type, amount, payment_method, payment_status, 
-                 reference_number, collected_by, payment_date)
-                VALUES (?, ?, ?, ?, ?, ?, ?, 'paid', ?, ?, NOW())
+            // Idempotency check: detect duplicate payments within the window
+            // If same reference_number exists, payment was already recorded
+            $dupStmt = $this->pdo->prepare("
+                SELECT id FROM payments
+                WHERE visit_id = ? AND payment_type = ? AND COALESCE(item_id, '') = COALESCE(?, '')
+                  AND amount = ? AND collected_by = ? AND payment_status = 'paid'
+                  AND payment_date >= DATE_SUB(NOW(), INTERVAL ? SECOND)
+                LIMIT 1
             ");
-            $stmt->execute([
+            $dupStmt->execute([
                 $visit_id,
-                $patient_id,
                 $payment_type,
                 $item_id,
-                $item_type,
                 $amount,
-                $payment_method,
-                $reference_number,
-                $_SESSION['user_id']
+                $_SESSION['user_id'],
+                PAYMENT_DUPLICATE_WINDOW_SECONDS
             ]);
+
+            if ($dupStmt->fetch()) {
+                // Duplicate detected within the prevention window
+                $this->pdo->commit();
+                $_SESSION['info'] = 'Duplicate payment detected and prevented';
+                $this->redirect('accountant/payments');
+                return;
+            }
+
+            // For consultation payments, check if there's an existing pending payment to update
+            if ($payment_type === 'consultation') {
+                // Try to update existing pending payment first
+                $updateStmt = $this->pdo->prepare("
+                    UPDATE payments 
+                    SET payment_status = 'paid', 
+                        amount = ?, 
+                        payment_method = ?, 
+                        reference_number = ?,
+                        collected_by = ?, 
+                        payment_date = NOW()
+                    WHERE visit_id = ? AND payment_type = 'consultation' AND payment_status = 'pending'
+                    LIMIT 1
+                ");
+                $updateStmt->execute([
+                    $amount,
+                    $payment_method,
+                    $reference_number,
+                    $_SESSION['user_id'],
+                    $visit_id
+                ]);
+
+                // If no pending payment was updated, insert a new paid payment
+                if ($updateStmt->rowCount() === 0) {
+                    $stmt = $this->pdo->prepare("
+                        INSERT INTO payments 
+                        (visit_id, patient_id, payment_type, item_id, item_type, amount, payment_method, payment_status, 
+                         reference_number, collected_by, payment_date)
+                        VALUES (?, ?, ?, ?, ?, ?, ?, 'paid', ?, ?, NOW())
+                    ");
+                    $stmt->execute([
+                        $visit_id,
+                        $patient_id,
+                        $payment_type,
+                        $item_id,
+                        $item_type,
+                        $amount,
+                        $payment_method,
+                        $reference_number,
+                        $_SESSION['user_id']
+                    ]);
+                }
+            } else {
+                // For other payment types (lab_test, medicine), insert new payment record
+                $stmt = $this->pdo->prepare("
+                    INSERT INTO payments 
+                    (visit_id, patient_id, payment_type, item_id, item_type, amount, payment_method, payment_status, 
+                     reference_number, collected_by, payment_date)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, 'paid', ?, ?, NOW())
+                    ON DUPLICATE KEY UPDATE id=LAST_INSERT_ID(id)
+                ");
+                $stmt->execute([
+                    $visit_id,
+                    $patient_id,
+                    $payment_type,
+                    $item_id,
+                    $item_type,
+                    $amount,
+                    $payment_method,
+                    $reference_number,
+                    $_SESSION['user_id']
+                ]);
+            }
 
             // Update workflow status based on payment type
             if ($payment_type === 'consultation') {
@@ -394,6 +450,15 @@ class AccountantController extends BaseController
             $this->pdo->commit();
             $_SESSION['success'] = 'Payment recorded successfully';
             
+        } catch (PDOException $e) {
+            $this->pdo->rollBack();
+            // Handle duplicate key error (if reference_number already exists)
+            if ($e->getCode() == '23000') {
+                $_SESSION['info'] = 'Payment already recorded (duplicate prevented)';
+            } else {
+                $_SESSION['error'] = 'Failed to record payment: ' . $e->getMessage();
+                error_log('Payment recording error: ' . $e->getMessage());
+            }
         } catch (Exception $e) {
             $this->pdo->rollBack();
             $_SESSION['error'] = 'Failed to record payment: ' . $e->getMessage();

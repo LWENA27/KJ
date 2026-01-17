@@ -248,7 +248,7 @@ class BaseController {
         $visit_id = $visit['id'];
 
         $step_requirements = [
-            'consultation' => ['consultation', 'registration'],  // Check for either 'consultation' or 'registration' payment type
+            'consultation' => 'consultation',  // Only check for 'consultation' payment type (not 'registration')
             'lab_tests' => 'lab_test',
             'results_review' => 'lab_test',
             'medicine' => 'medicine',
@@ -289,8 +289,8 @@ class BaseController {
 
         $visit_id = $visit['id'];
 
-        // Payments - Check for either 'consultation' or 'registration' payment type
-        $stmt = $this->pdo->prepare("SELECT COUNT(*) FROM payments WHERE visit_id = ? AND payment_type IN ('consultation', 'registration') AND payment_status = 'paid'");
+        // Payments - Check for 'consultation' payment type only (not 'registration')
+        $stmt = $this->pdo->prepare("SELECT COUNT(*) FROM payments WHERE visit_id = ? AND payment_type = 'consultation' AND payment_status = 'paid'");
         $stmt->execute([$visit_id]);
         $consultation_registration_paid = (bool)$stmt->fetchColumn();
 
@@ -359,8 +359,8 @@ class BaseController {
 
         $patient_id = $visit['patient_id'];
 
-        // Payments
-        $stmt = $this->pdo->prepare("SELECT COUNT(*) FROM payments WHERE visit_id = ? AND payment_type = 'registration' AND payment_status = 'paid'");
+        // Payments - check for 'consultation' payment type (changed from 'registration')
+        $stmt = $this->pdo->prepare("SELECT COUNT(*) FROM payments WHERE visit_id = ? AND payment_type = 'consultation' AND payment_status = 'paid'");
         $stmt->execute([$visit_id]);
         $consultation_registration_paid = (bool)$stmt->fetchColumn();
 
