@@ -160,7 +160,28 @@ class ReceptionistController extends BaseController
 
             // Normalize POST inputs to avoid undefined array key notices
             $post = array_map(function($v){ return $v; }, $_POST);
-            $visit_type = $post['visit_type'] ?? 'consultation';
+            // Normalize and validate visit_type to avoid inserting invalid values into an ENUM column
+            // DB ENUM: 'consultation', 'lab_only', 'minor_service'
+            $raw_visit_type = isset($post['visit_type']) ? strtolower(trim($post['visit_type'])) : 'consultation';
+            // Map common variants to canonical DB enum values
+            $visit_type_map = [
+                'labtest'    => 'lab_only',
+                'lab_test'   => 'lab_only',
+                'lab-test'   => 'lab_only',
+                'lab'        => 'lab_only',
+                'consult'    => 'consultation',
+                'service'    => 'minor_service',
+            ];
+            $allowed_visit_types = ['consultation', 'lab_only', 'minor_service'];
+
+            if (isset($visit_type_map[$raw_visit_type])) {
+                $visit_type = $visit_type_map[$raw_visit_type];
+            } elseif (in_array($raw_visit_type, $allowed_visit_types, true)) {
+                $visit_type = $raw_visit_type;
+            } else {
+                // Reject unknown visit types early with a clear error message
+                throw new Exception('Invalid visit_type provided: ' . htmlspecialchars($post['visit_type'] ?? '') . '. Allowed: consultation, lab_only, minor_service');
+            }
             $consultation_fee = $post['consultation_fee'] ?? null;
             $payment_method = $post['payment_method'] ?? null;
             $payment_method_lab = $post['payment_method_lab'] ?? null;
@@ -182,12 +203,12 @@ class ReceptionistController extends BaseController
 
             try {
                 // Validate gender against ENUM values
-                $valid_genders = ['male', 'female', 'other'];
+                $valid_genders = ['male', 'female'];
                 if (!empty($gender) && !in_array(strtolower($gender), $valid_genders)) {
-                    throw new Exception('Invalid gender value. Must be male, female, or other.');
+                    throw new Exception('Invalid gender value. Must be male or female.');
                 }
 
-                // For consultation visits, only require vital signs (no payment - that's handled by Accountant)
+                // For consultation visits, require vital signs and payment - that's handled by Accountant)
                 if ($visit_type === 'consultation') {
                     // Require basic vital signs for consultation registrations
                     // Expect blood_pressure in the form "systolic/diastolic"
@@ -283,7 +304,7 @@ class ReceptionistController extends BaseController
                 }
 
                 // Handle lab-only visit: create lab_test_orders (payment handled by Accountant)
-                if ($visit_type === 'lab_test') {
+                if ($visit_type === 'lab_only') {
                     // Selected tests are expected as an array of test IDs
                     $selected_tests = $_POST['selected_tests'] ?? [];
                     if (!is_array($selected_tests)) {
@@ -299,7 +320,7 @@ class ReceptionistController extends BaseController
                         $stmtCreatePay = $this->pdo->prepare("
                             INSERT INTO payments 
                             (visit_id, patient_id, payment_type, item_id, item_type, amount, payment_method, payment_status, reference_number, collected_by, payment_date, notes)
-                            VALUES (?, ?, 'lab_test', ?, 'lab_order', ?, 'cash', 'pending', ?, NULL, NOW(), ?)
+                            VALUES (?, ?, 'lab_test', ?, 'lab_order', ?, 'cash', 'pending', ?, ?, NOW(), ?)
                         ");
 
                         foreach ($selected_tests as $test_id) {
@@ -324,6 +345,7 @@ class ReceptionistController extends BaseController
                                     $tid,
                                     $price,
                                     $reference_number,
+                                    SYSTEM_USER_ID,
                                     'Pending lab test payment'
                                 ]);
                             }
@@ -338,7 +360,7 @@ class ReceptionistController extends BaseController
                 }
                 // Record vital signs if provided — insert into vital_signs linked to the visit
                 // Skip recording vital signs for lab-only visits
-                if ($visit_type !== 'lab_test') {
+                if ($visit_type !== 'lab_only') {
                     if (!empty($temperature) || !empty($bp_systolic) || !empty($bp_diastolic) || !empty($pulse_rate) || !empty($body_weight) || !empty($height)) {
                         $stmt = $this->pdo->prepare("INSERT INTO vital_signs (visit_id, patient_id, temperature, blood_pressure_systolic, blood_pressure_diastolic, pulse_rate, weight, height, recorded_by, recorded_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())");
                         $stmt->execute([
@@ -361,7 +383,7 @@ class ReceptionistController extends BaseController
                 $success_message = "Patient registered successfully! Registration Number: $registration_number";
                 if ($visit_type === 'consultation') {
                     $success_message .= " - Please direct patient to Accountant for consultation fee payment.";
-                } else if ($visit_type === 'lab_test') {
+                } else if ($visit_type === 'lab_only') {
                     $success_message .= " - Please direct patient to Accountant for lab test payment.";
                 }
                 
@@ -1641,7 +1663,26 @@ class ReceptionistController extends BaseController
 
                 // Get and validate input
                 $patient_id = filter_input(INPUT_POST, 'patient_id', FILTER_VALIDATE_INT);
-                $visit_type = $this->sanitize($_POST['visit_type'] ?? 'consultation');
+                
+                // Normalize and validate visit_type (DB ENUM: consultation, lab_only, minor_service)
+                $raw_visit_type = isset($_POST['visit_type']) ? strtolower(trim($_POST['visit_type'])) : 'consultation';
+                $visit_type_map = [
+                    'labtest'    => 'lab_only',
+                    'lab_test'   => 'lab_only',
+                    'lab-test'   => 'lab_only',
+                    'lab'        => 'lab_only',
+                    'consult'    => 'consultation',
+                    'service'    => 'minor_service',
+                ];
+                $allowed_visit_types = ['consultation', 'lab_only', 'minor_service'];
+                if (isset($visit_type_map[$raw_visit_type])) {
+                    $visit_type = $visit_type_map[$raw_visit_type];
+                } elseif (in_array($raw_visit_type, $allowed_visit_types, true)) {
+                    $visit_type = $raw_visit_type;
+                } else {
+                    throw new Exception('Invalid visit_type: ' . htmlspecialchars($_POST['visit_type'] ?? '') . '. Allowed: consultation, lab_only, minor_service');
+                }
+                
                 $consultation_fee = filter_input(INPUT_POST, 'consultation_fee', FILTER_VALIDATE_FLOAT);
                 $payment_method = $this->sanitize($_POST['payment_method'] ?? '');
 

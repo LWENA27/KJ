@@ -190,7 +190,26 @@ class LabController extends BaseController {
     }
 
     public function tests() {
-        // Modify query to join with payments table to check payment status
+        // Ensure lab_payment_overrides table exists
+        try {
+            $this->pdo->exec("
+                CREATE TABLE IF NOT EXISTS lab_payment_overrides (
+                    id INT AUTO_INCREMENT PRIMARY KEY,
+                    test_order_id INT NOT NULL,
+                    patient_id INT NOT NULL,
+                    technician_id INT NOT NULL,
+                    override_reason TEXT NOT NULL,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    INDEX idx_test_order (test_order_id),
+                    INDEX idx_patient (patient_id),
+                    INDEX idx_technician (technician_id)
+                ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
+            ");
+        } catch (Exception $e) {
+            error_log("Could not ensure lab_payment_overrides table: " . $e->getMessage());
+        }
+        
+        // Show ALL pending tests (paid and unpaid) - technicians can see unpaid but must override
         $stmt = $this->pdo->prepare("
         SELECT 
             lto.id,
@@ -210,7 +229,8 @@ class LabController extends BaseController {
             u.last_name as doctor_last_name,
             ltc.category_name,
             COALESCE(pay.payment_status, 'pending') as payment_status,
-            pay.amount as paid_amount
+            pay.amount as paid_amount,
+            (SELECT COUNT(*) FROM lab_payment_overrides lpo WHERE lpo.test_order_id = lto.id) as has_override
         FROM lab_test_orders lto
         JOIN patients p ON lto.patient_id = p.id
         JOIN lab_tests lt ON lto.test_id = lt.id
@@ -220,14 +240,14 @@ class LabController extends BaseController {
             AND pay.payment_type = 'lab_test'
             AND pay.item_type = 'lab_order'
             AND pay.item_id = lto.id
-        WHERE pay.payment_status = 'paid' 
-            AND lto.status != 'completed'
+        WHERE lto.status != 'completed'
         ORDER BY 
             CASE 
                 WHEN lto.priority = 'urgent' THEN 1
                 WHEN lto.priority = 'high' THEN 2
                 ELSE 3
             END,
+            pay.payment_status = 'paid' DESC,
             lto.created_at DESC
     ");
     
@@ -264,6 +284,8 @@ class LabController extends BaseController {
              lt.unit,
              p.first_name,
              p.last_name,
+             p.registration_number,
+             pv.visit_type,
              lr.id as result_id,
              lr.result_value,
              lr.result_text,
@@ -277,6 +299,7 @@ class LabController extends BaseController {
          FROM lab_test_orders lto
          JOIN lab_tests lt ON lto.test_id = lt.id
          JOIN patients p ON lto.patient_id = p.id
+         LEFT JOIN patient_visits pv ON lto.visit_id = pv.id
          LEFT JOIN lab_results lr ON lto.id = lr.order_id
          WHERE lto.id = ?
      ");
@@ -287,10 +310,191 @@ class LabController extends BaseController {
             $this->redirect('lab/tests');
         }
 
+        // Check if there's an existing override for this test order
+        $has_override = $this->hasLabPaymentOverride($test_id);
+
+        // Check payment status - if not paid and no override, show payment_required
+        if (!$test['lab_tests_paid'] && !$has_override) {
+            // Get patient info for the payment_required view
+            $patient_stmt = $this->pdo->prepare("SELECT * FROM patients WHERE id = ?");
+            $patient_stmt->execute([$test['patient_id']]);
+            $patient = $patient_stmt->fetch();
+
+            // Get test price
+            $price_stmt = $this->pdo->prepare("SELECT price FROM lab_tests WHERE id = ?");
+            $price_stmt->execute([$test['test_id']]);
+            $test['price'] = $price_stmt->fetchColumn() ?: 0;
+
+            $this->render('lab/payment_required', [
+                'test' => $test,
+                'patient' => $patient,
+                'csrf_token' => $this->generateCSRF()
+            ]);
+            return;
+        }
+
         $this->render('lab/view_test', [
             'test' => $test,
             'csrf_token' => $this->generateCSRF()
         ]);
+    }
+
+    /**
+     * Check if there's an override for a lab test order
+     */
+    private function hasLabPaymentOverride($test_order_id) {
+        try {
+            $stmt = $this->pdo->prepare("
+                SELECT id FROM lab_payment_overrides 
+                WHERE test_order_id = ? 
+                LIMIT 1
+            ");
+            $stmt->execute([$test_order_id]);
+            return $stmt->fetch() !== false;
+        } catch (Exception $e) {
+            // Table might not exist yet
+            error_log("hasLabPaymentOverride check failed: " . $e->getMessage());
+            return false;
+        }
+    }
+
+    /**
+     * Check if a lab test order is paid
+     */
+    private function isLabTestPaid($test_order_id) {
+        try {
+            $stmt = $this->pdo->prepare("
+                SELECT lto.visit_id, 
+                       (SELECT COUNT(*) FROM payments pay 
+                        WHERE pay.visit_id = lto.visit_id 
+                        AND pay.payment_type = 'lab_test' 
+                        AND pay.payment_status = 'paid') as is_paid
+                FROM lab_test_orders lto
+                WHERE lto.id = ?
+            ");
+            $stmt->execute([$test_order_id]);
+            $result = $stmt->fetch();
+            return $result && $result['is_paid'] > 0;
+        } catch (Exception $e) {
+            error_log("isLabTestPaid check failed: " . $e->getMessage());
+            return false;
+        }
+    }
+
+    /**
+     * Check if a lab test can proceed (paid or has override)
+     * Returns true if paid or has override, false otherwise
+     */
+    private function canProceedWithLabTest($test_order_id) {
+        return $this->isLabTestPaid($test_order_id) || $this->hasLabPaymentOverride($test_order_id);
+    }
+
+    /**
+     * Show payment required page for a specific test
+     */
+    public function payment_required($test_order_id = null) {
+        if (!$test_order_id) {
+            $test_order_id = $_GET['test_id'] ?? null;
+        }
+
+        if (!$test_order_id) {
+            $this->redirect('lab/dashboard');
+        }
+
+        // Get test order info
+        $stmt = $this->pdo->prepare("
+            SELECT lto.*, lt.test_name, lt.test_code, lt.price,
+                   p.id as patient_id, p.first_name, p.last_name, p.registration_number
+            FROM lab_test_orders lto
+            JOIN lab_tests lt ON lto.test_id = lt.id
+            JOIN patients p ON lto.patient_id = p.id
+            WHERE lto.id = ?
+        ");
+        $stmt->execute([$test_order_id]);
+        $test = $stmt->fetch();
+
+        if (!$test) {
+            $_SESSION['error'] = 'Test order not found';
+            $this->redirect('lab/dashboard');
+        }
+
+        $patient = [
+            'id' => $test['patient_id'],
+            'first_name' => $test['first_name'],
+            'last_name' => $test['last_name'],
+            'registration_number' => $test['registration_number']
+        ];
+
+        $this->render('lab/payment_required', [
+            'test' => $test,
+            'patient' => $patient,
+            'csrf_token' => $this->generateCSRF()
+        ]);
+    }
+
+    /**
+     * Handle lab payment override submission
+     */
+    public function override_payment() {
+        if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+            $this->redirect('lab/dashboard');
+        }
+
+        $this->validateCSRF();
+
+        $test_order_id = intval($_POST['test_order_id'] ?? 0);
+        $patient_id = intval($_POST['patient_id'] ?? 0);
+        $override_reason = trim($_POST['override_reason'] ?? '');
+        $technician_id = $_SESSION['user_id'];
+
+        if (!$test_order_id || !$patient_id || strlen($override_reason) < 10) {
+            $_SESSION['error'] = 'Invalid override request. Please provide all required information.';
+            $this->redirect('lab/payment_required?test_id=' . $test_order_id);
+            return;
+        }
+
+        try {
+            // Create the lab_payment_overrides table if it doesn't exist
+            $this->pdo->exec("
+                CREATE TABLE IF NOT EXISTS lab_payment_overrides (
+                    id INT AUTO_INCREMENT PRIMARY KEY,
+                    test_order_id INT NOT NULL,
+                    patient_id INT NOT NULL,
+                    technician_id INT NOT NULL,
+                    override_reason TEXT NOT NULL,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    INDEX idx_test_order (test_order_id),
+                    INDEX idx_patient (patient_id),
+                    INDEX idx_technician (technician_id)
+                ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
+            ");
+
+            // Get visit_id for the test order
+            $stmt = $this->pdo->prepare("SELECT visit_id FROM lab_test_orders WHERE id = ?");
+            $stmt->execute([$test_order_id]);
+            $visit_id = $stmt->fetchColumn();
+
+            // Log the override
+            $stmt = $this->pdo->prepare("
+                INSERT INTO lab_payment_overrides 
+                (test_order_id, patient_id, technician_id, override_reason)
+                VALUES (?, ?, ?, ?)
+            ");
+            $stmt->execute([$test_order_id, $patient_id, $technician_id, $override_reason]);
+
+            error_log(sprintf(
+                "LAB PAYMENT OVERRIDE: Test Order #%d for Patient #%d by Technician #%d. Reason: %s",
+                $test_order_id, $patient_id, $technician_id, $override_reason
+            ));
+
+            $_SESSION['success'] = 'Override recorded. You may now proceed with the lab test.';
+            $this->redirect('lab/view_test/' . $test_order_id);
+
+        } catch (Exception $e) {
+            error_log("Lab payment override failed: " . $e->getMessage());
+            $_SESSION['error'] = 'Failed to record override: ' . $e->getMessage();
+            $this->redirect('lab/payment_required?test_id=' . $test_order_id);
+        }
     }
 
     public function process_lab_payment() {
@@ -736,6 +940,14 @@ class LabController extends BaseController {
 
         try {
             $test_order_id = $_POST['test_order_id'];
+            
+            // Check if test is paid or has override
+            if (!$this->canProceedWithLabTest($test_order_id)) {
+                $_SESSION['error'] = 'Payment required. Please complete payment or provide an override reason before collecting samples.';
+                $this->redirect('lab/payment_required/' . $test_order_id);
+                return;
+            }
+            
             $sample_notes = $_POST['sample_notes'] ?? '';
             $collection_time = $_POST['collection_time'];
             $technician_id = $_SESSION['user_id'];
@@ -798,6 +1010,14 @@ class LabController extends BaseController {
 
         try {
             $test_order_id = $_POST['test_order_id'];
+            
+            // Check if test is paid or has override
+            if (!$this->canProceedWithLabTest($test_order_id)) {
+                $_SESSION['error'] = 'Payment required. Please complete payment or provide an override reason before adding results.';
+                $this->redirect('lab/payment_required/' . $test_order_id);
+                return;
+            }
+            
             $result_value = $_POST['result_value'];
             $unit = $_POST['unit'] ?? '';
             $result_status = $_POST['result_status'] ?? 'normal';
@@ -863,12 +1083,37 @@ class LabController extends BaseController {
             $pending = $stmt->fetch();
 
             if ($pending['pending_tests'] == 0) {
-                // All tests completed, update patient workflow
-                $this->updateWorkflowStatus($order['patient_id'], 'results_ready');
+                // All tests completed - check visit type to determine next step
+                $stmt = $this->pdo->prepare("
+                    SELECT visit_type FROM patient_visits WHERE id = ?
+                ");
+                $stmt->execute([$order['visit_id']]);
+                $visit = $stmt->fetch();
+                
+                if ($visit && $visit['visit_type'] === 'lab_only') {
+                    // Lab-only visit: Complete the visit directly, no need to send to doctor
+                    $this->updateWorkflowStatus($order['patient_id'], 'completed');
+                    
+                    // Update the visit status to completed
+                    $stmt = $this->pdo->prepare("
+                        UPDATE patient_visits 
+                        SET status = 'completed', 
+                            updated_at = NOW() 
+                        WHERE id = ?
+                    ");
+                    $stmt->execute([$order['visit_id']]);
+                    
+                    $_SESSION['success'] = 'Lab test completed. Results are ready for the patient to collect.';
+                } else {
+                    // Consultation visit: Send results to doctor
+                    $this->updateWorkflowStatus($order['patient_id'], 'results_ready');
+                    $_SESSION['success'] = 'Test result saved successfully. Results will be visible to doctors in their lab results dashboard.';
+                }
+            } else {
+                $_SESSION['success'] = 'Test result saved. ' . $pending['pending_tests'] . ' more test(s) pending.';
             }
 
             $this->pdo->commit();
-            $_SESSION['success'] = 'Test result saved successfully. Results will be visible to doctors in their lab results dashboard.';
             
             // Check if this is an AJAX request
             if (!empty($_SERVER['HTTP_X_REQUESTED_WITH']) && 

@@ -1,4 +1,8 @@
-<?php $title = "Patient Consultations"; ?>
+<?php
+$pageTitle = 'Patient Consultations';
+$userRole = 'doctor';
+$title = $pageTitle;
+?>
 
 <div class="space-y-6">
     <!-- Header Section -->

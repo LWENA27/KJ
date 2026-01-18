@@ -10,11 +10,11 @@
             <div class="flex items-center mt-2 space-x-4">
                 <div class="flex items-center">
                     <div class="w-2 h-2 bg-green-500 rounded-full mr-2 animate-pulse"></div>
-                    <span class="text-xs text-green-600 font-medium"><?php echo count($tests); ?> Ready for Testing</span>
+                    <span class="text-xs text-green-600 font-medium"><?php echo count($tests); ?> Tests in Queue</span>
                 </div>
                 <div class="flex items-center">
-                    <div class="w-2 h-2 bg-blue-500 rounded-full mr-2"></div>
-                    <span class="text-xs text-blue-600 font-medium">All tests are paid and ready</span>
+                    <div class="w-2 h-2 bg-yellow-500 rounded-full mr-2"></div>
+                    <span class="text-xs text-yellow-600 font-medium">Override required for unpaid tests</span>
                 </div>
             </div>
         </div>
@@ -26,12 +26,17 @@
     </div>
 
     <!-- Statistics Cards -->
-    <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+    <?php 
+    $paidTests = array_filter($tests, function($t) { return $t['payment_status'] === 'paid'; });
+    $unpaidTests = array_filter($tests, function($t) { return $t['payment_status'] !== 'paid' && empty($t['has_override']); });
+    $overrideTests = array_filter($tests, function($t) { return $t['payment_status'] !== 'paid' && !empty($t['has_override']); });
+    ?>
+    <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
         <div class="bg-gradient-to-r from-green-500 to-green-600 rounded-lg shadow-lg p-4 text-white transform hover:scale-105 transition-all duration-300">
             <div class="flex items-center justify-between">
                 <div>
-                    <p class="text-green-100 text-sm font-medium">Ready for Testing</p>
-                    <p class="text-2xl font-bold"><?php echo count($tests); ?></p>
+                    <p class="text-green-100 text-sm font-medium">Paid & Ready</p>
+                    <p class="text-2xl font-bold"><?php echo count($paidTests); ?></p>
                 </div>
                 <div class="bg-green-400 bg-opacity-30 rounded-full p-2">
                     <i class="fas fa-check-circle text-xl"></i>
@@ -39,14 +44,14 @@
             </div>
         </div>
         
-        <div class="bg-gradient-to-r from-blue-500 to-blue-600 rounded-lg shadow-lg p-4 text-white transform hover:scale-105 transition-all duration-300">
+        <div class="bg-gradient-to-r from-yellow-500 to-yellow-600 rounded-lg shadow-lg p-4 text-white transform hover:scale-105 transition-all duration-300">
             <div class="flex items-center justify-between">
                 <div>
-                    <p class="text-blue-100 text-sm font-medium">Payment Status</p>
-                    <p class="text-xl font-bold">All Paid</p>
+                    <p class="text-yellow-100 text-sm font-medium">Awaiting Payment</p>
+                    <p class="text-2xl font-bold"><?php echo count($unpaidTests); ?></p>
                 </div>
-                <div class="bg-blue-400 bg-opacity-30 rounded-full p-2">
-                    <i class="fas fa-credit-card text-xl"></i>
+                <div class="bg-yellow-400 bg-opacity-30 rounded-full p-2">
+                    <i class="fas fa-clock text-xl"></i>
                 </div>
             </div>
         </div>
@@ -54,10 +59,22 @@
         <div class="bg-gradient-to-r from-purple-500 to-purple-600 rounded-lg shadow-lg p-4 text-white transform hover:scale-105 transition-all duration-300">
             <div class="flex items-center justify-between">
                 <div>
-                    <p class="text-purple-100 text-sm font-medium">Total Tests</p>
-                    <p class="text-2xl font-bold"><?php echo count($tests); ?></p>
+                    <p class="text-purple-100 text-sm font-medium">Override Applied</p>
+                    <p class="text-2xl font-bold"><?php echo count($overrideTests); ?></p>
                 </div>
                 <div class="bg-purple-400 bg-opacity-30 rounded-full p-2">
+                    <i class="fas fa-exclamation-triangle text-xl"></i>
+                </div>
+            </div>
+        </div>
+        
+        <div class="bg-gradient-to-r from-blue-500 to-blue-600 rounded-lg shadow-lg p-4 text-white transform hover:scale-105 transition-all duration-300">
+            <div class="flex items-center justify-between">
+                <div>
+                    <p class="text-blue-100 text-sm font-medium">Total Tests</p>
+                    <p class="text-2xl font-bold"><?php echo count($tests); ?></p>
+                </div>
+                <div class="bg-blue-400 bg-opacity-30 rounded-full p-2">
                     <i class="fas fa-vials text-xl"></i>
                 </div>
             </div>
@@ -139,37 +156,28 @@
                             <div class="text-sm text-gray-900"><?php echo htmlspecialchars($test['test_name']); ?></div>
                             <div class="text-xs text-gray-500"><?php echo htmlspecialchars($test['category_name']); ?></div>
                             <div class="text-xs text-blue-600">Tsh <?php echo number_format($test['price'], 2); ?></div>
-                            <!-- Add payment status badge -->
-                            <div class="mt-1">
-                                <?php 
-                                $stmt = $this->pdo->prepare("
-                                    SELECT payment_status 
-                                    FROM payments 
-                                    WHERE visit_id = ? 
-                                    AND payment_type = 'lab_test_fee' 
-                                    AND item_id = ?
-                                    ORDER BY payment_date DESC 
-                                    LIMIT 1
-                                ");
-                                $stmt->execute([$test['visit_id'], $test['id']]);
-                                $payment = $stmt->fetch();
-                                
-                                $badgeClass = $payment && $payment['payment_status'] === 'paid' 
-                                    ? 'bg-green-100 text-green-800' 
-                                    : 'bg-yellow-100 text-yellow-800';
-                                $paymentStatus = $payment ? ucfirst($payment['payment_status']) : 'Pending';
-                                ?>
-                                <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium <?php echo $badgeClass; ?>">
-                                    <i class="fas <?php echo $payment && $payment['payment_status'] === 'paid' ? 'fa-check-circle' : 'fa-clock'; ?> mr-1"></i>
-                                    <?php echo $paymentStatus; ?>
-                                </span>
-                            </div>
                         </td>
                         <td class="px-6 py-4">
-                            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
-                                <i class="fas fa-check-circle mr-1"></i>
-                                Paid & Ready
-                            </span>
+                            <?php 
+                            $isPaid = ($test['payment_status'] === 'paid');
+                            $hasOverride = !empty($test['has_override']);
+                            
+                            if ($isPaid): ?>
+                                <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                                    <i class="fas fa-check-circle mr-1"></i>
+                                    Paid & Ready
+                                </span>
+                            <?php elseif ($hasOverride): ?>
+                                <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-purple-100 text-purple-800">
+                                    <i class="fas fa-exclamation-triangle mr-1"></i>
+                                    Override Applied
+                                </span>
+                            <?php else: ?>
+                                <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
+                                    <i class="fas fa-clock mr-1"></i>
+                                    Awaiting Payment
+                                </span>
+                            <?php endif; ?>
                         </td>
                         <td class="px-6 py-4 text-sm text-gray-500">
                             <div>Dr. <?php echo htmlspecialchars($test['doctor_first_name'] . ' ' . $test['doctor_last_name']); ?></div>

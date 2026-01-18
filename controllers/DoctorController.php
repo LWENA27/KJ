@@ -47,6 +47,7 @@ class DoctorController extends BaseController {
 
         // Patients waiting for lab results review (join lab_results with tests to get names)
         // Scope to consultations that belong to this doctor
+        // Find patients with completed lab results from this doctor's consultations where visit is still active
         $stmt = $this->pdo->prepare("
             SELECT p.*,
                    ag.test_names,
@@ -63,7 +64,8 @@ class DoctorController extends BaseController {
                 WHERE lto.status = 'completed' AND c.doctor_id = ?
                 GROUP BY c.patient_id
             ) ag ON p.id = ag.patient_id
-            WHERE (SELECT pvx2.status FROM patient_visits pvx2 WHERE pvx2.patient_id = p.id ORDER BY pvx2.created_at DESC LIMIT 1) = 'results_review' AND ag.test_names IS NOT NULL
+            WHERE ag.test_names IS NOT NULL
+              AND (SELECT pvx2.status FROM patient_visits pvx2 WHERE pvx2.patient_id = p.id ORDER BY pvx2.created_at DESC LIMIT 1) = 'active'
             ORDER BY ag.latest_result_date DESC
         ");
         $stmt->execute([$doctor_id]);
@@ -267,10 +269,11 @@ class DoctorController extends BaseController {
             $this->redirect('doctor/patients');
         }
 
-        // Get existing consultations
+        // Get existing consultations (include doctor's name)
         $stmt = $this->pdo->prepare("
-            SELECT c.*, pv.visit_date
+            SELECT c.*, pv.visit_date, CONCAT(u.first_name, ' ', u.last_name) AS doctor_name
             FROM consultations c
+            LEFT JOIN users u ON c.doctor_id = u.id
             LEFT JOIN patient_visits pv ON c.visit_id = pv.id
             WHERE c.patient_id = ? 
             ORDER BY COALESCE(c.follow_up_date, pv.visit_date, c.created_at) DESC
@@ -378,7 +381,7 @@ class DoctorController extends BaseController {
         }
 
         // Get all consultations for this patient (so the view can pick latest if needed)
-        $stmt = $this->pdo->prepare("\n            SELECT c.*, pv.visit_date\n            FROM consultations c\n            LEFT JOIN patient_visits pv ON c.visit_id = pv.id\n            WHERE c.patient_id = ? \n            ORDER BY COALESCE(c.follow_up_date, pv.visit_date, c.created_at) DESC\n        ");
+    $stmt = $this->pdo->prepare("\n            SELECT c.*, pv.visit_date, CONCAT(u.first_name, ' ', u.last_name) AS doctor_name\n            FROM consultations c\n            LEFT JOIN users u ON c.doctor_id = u.id\n            LEFT JOIN patient_visits pv ON c.visit_id = pv.id\n            WHERE c.patient_id = ? \n            ORDER BY COALESCE(c.follow_up_date, pv.visit_date, c.created_at) DESC\n        ");
         $stmt->execute([$patient_id]);
         $consultations = $stmt->fetchAll();
 
@@ -1074,7 +1077,7 @@ class DoctorController extends BaseController {
             $this->redirect('doctor/patients');
         }
 
-        // Get lab results for this patient
+        // Get lab results for this patient (only from consultations by this doctor)
             $stmt = $this->pdo->prepare("
                 SELECT lr.*, t.test_name as test_name, t.test_code as test_code, t.category_id as category, t.normal_range, t.unit,
                        pv.visit_date, p.first_name, p.last_name, lto.status
@@ -1084,10 +1087,10 @@ class DoctorController extends BaseController {
                 JOIN consultations c ON lto.consultation_id = c.id
                 JOIN patients p ON c.patient_id = p.id
                 LEFT JOIN patient_visits pv ON c.visit_id = pv.id
-                WHERE c.patient_id = ? AND lto.status = 'completed'
+                WHERE c.patient_id = ? AND c.doctor_id = ? AND lto.status = 'completed'
                 ORDER BY lr.completed_at DESC
             ");
-        $stmt->execute([$patient_id]);
+        $stmt->execute([$patient_id, $_SESSION['user_id']]);
         $lab_results = $stmt->fetchAll();
 
         // Get patient details
@@ -1810,6 +1813,42 @@ class DoctorController extends BaseController {
 
             // Update workflow status to pending_payment (same as start_consultation)
             $this->updateWorkflowStatus($patient_id, 'pending_payment', ['medicine_prescribed' => true]);
+
+            // Ensure there is a pending consultation payment for this visit (idempotent)
+            $stmt = $this->pdo->prepare("SELECT id FROM payments WHERE visit_id = ? AND payment_type = 'consultation' LIMIT 1");
+            $stmt->execute([$visit_id]);
+            $hasConsultPay = $stmt->fetch();
+            if (!$hasConsultPay) {
+                // Create a default pending consultation payment (match Receptionist default)
+                $consultation_fee = 5000; // Default consultation fee
+                $reference_number = 'CON-' . bin2hex(random_bytes(8));
+                $stmtIns = $this->pdo->prepare("\n                    INSERT INTO payments (visit_id, patient_id, payment_type, amount, payment_method, payment_status, reference_number, collected_by, payment_date, notes)\n                    VALUES (?, ?, 'consultation', ?, 'cash', 'pending', ?, ?, NOW(), ?)\n                ");
+                $stmtIns->execute([$visit_id, $patient_id, $consultation_fee, $reference_number, SYSTEM_USER_ID, 'Pending consultation payment - created by prescription flow']);
+            }
+
+            // Create pending medicine payments for each prescribed medicine (idempotent)
+            $stmtPrice = $this->pdo->prepare("SELECT unit_price FROM medicines WHERE id = ? LIMIT 1");
+            $stmtPayDup = $this->pdo->prepare("SELECT id FROM payments WHERE visit_id = ? AND payment_type = 'medicine' AND item_id = ? AND payment_status = 'pending' LIMIT 1");
+            $stmtCreatePay = $this->pdo->prepare("\n                INSERT INTO payments (visit_id, patient_id, payment_type, item_id, item_type, amount, payment_method, payment_status, reference_number, collected_by, payment_date, notes)\n                VALUES (?, ?, 'medicine', ?, 'prescription', ?, 'cash', 'pending', ?, ?, NOW(), ?)\n            ");
+
+            foreach ($medicines as $medicine_data) {
+                $mid = intval($medicine_data['id'] ?? 0);
+                $qty = max(1, intval($medicine_data['quantity'] ?? 1));
+                if ($mid <= 0) continue;
+
+                $stmtPrice->execute([$mid]);
+                $unit = (float)$stmtPrice->fetchColumn();
+                $total = $unit * $qty;
+
+                if ($total > 0) {
+                    // avoid duplicate pending payment for same medicine on this visit
+                    $stmtPayDup->execute([$visit_id, $mid]);
+                    if (!$stmtPayDup->fetch()) {
+                        $reference_number = 'MED-' . $mid . '-' . bin2hex(random_bytes(8));
+                        $stmtCreatePay->execute([$visit_id, $patient_id, $mid, $total, $reference_number, SYSTEM_USER_ID, 'Pending medicine payment - prescribed by doctor']);
+                    }
+                }
+            }
 
             $this->pdo->commit();
             

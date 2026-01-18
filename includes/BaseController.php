@@ -437,6 +437,48 @@ class BaseController {
         }
 
         if ($requirePayment && intval($status['consultation_registration_paid']) <= 0) {
+            // If there's a logged override for this visit (doctor allowed to bypass payment), permit attend
+            try {
+                // Primary check: override for this visit id
+                $stmt = $this->pdo->prepare("SELECT COUNT(*) FROM consultation_overrides WHERE visit_id = ?");
+                $stmt->execute([$visit_id]);
+                $overrideCount = (int)$stmt->fetchColumn();
+                if ($overrideCount > 0) {
+                    error_log("canAttend: found override record(s) for visit_id={$visit_id}: {$overrideCount}");
+                    return ['ok' => true, 'reason' => 'override'];
+                }
+
+                // Secondary check: sometimes visit_id may be missing in the override record (created with null),
+                // so check overrides for the patient_id (if available) and optionally scoped to the current doctor.
+                $stmt = $this->pdo->prepare("SELECT patient_id FROM patient_visits WHERE id = ? LIMIT 1");
+                $stmt->execute([$visit_id]);
+                $pv = $stmt->fetch();
+                $patient_id = $pv['patient_id'] ?? null;
+
+                if (!empty($patient_id)) {
+                    // Check for override by the same doctor first
+                    $stmt = $this->pdo->prepare("SELECT COUNT(*) FROM consultation_overrides WHERE patient_id = ? AND doctor_id = ?");
+                    $stmt->execute([$patient_id, $_SESSION['user_id'] ?? 0]);
+                    $byDoctor = (int)$stmt->fetchColumn();
+                    if ($byDoctor > 0) {
+                        error_log("canAttend: found override for patient_id={$patient_id} by current doctor ({$_SESSION['user_id']})");
+                        return ['ok' => true, 'reason' => 'override_by_doctor'];
+                    }
+
+                    // Check for any override for this patient (global)
+                    $stmt = $this->pdo->prepare("SELECT COUNT(*) FROM consultation_overrides WHERE patient_id = ?");
+                    $stmt->execute([$patient_id]);
+                    $any = (int)$stmt->fetchColumn();
+                    if ($any > 0) {
+                        error_log("canAttend: found override(s) for patient_id={$patient_id}: {$any}");
+                        return ['ok' => true, 'reason' => 'override_by_patient'];
+                    }
+                }
+            } catch (Throwable $e) {
+                // consultation_overrides table may not exist yet or query failed; fall back to payment_required
+                error_log('canAttend override check failed: ' . $e->getMessage());
+            }
+
             return ['ok' => false, 'reason' => 'payment_required'];
         }
 
@@ -727,4 +769,6 @@ class BaseController {
                 WHERE mb.medicine_id = {$alias}.id) as expiry_date";
     }
 }
+
+const VISIT_TYPES = ['consultation', 'lab_only', 'minor_service'];
 ?>

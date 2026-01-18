@@ -309,9 +309,16 @@ function validatePrescriptionForm() {
         }
 
         if (qty > medicine.stock_quantity) {
-            alert(`Cannot prescribe ${qty} units of ${medicine.name}. Only ${medicine.stock_quantity} available in stock.`);
-            validationPassed = false;
-            return;
+            // Allow prescribing more than stock, but ask the doctor to confirm.
+            const avail = Number(medicine.stock_quantity) || 0;
+            const confirmMsg = avail === 0
+                ? `${medicine.name} has no stock available (0). Prescribe anyway?` 
+                : `${medicine.name} has only ${avail} in stock but you're prescribing ${qty}. Prescribe anyway?`;
+
+            if (!confirm(confirmMsg)) {
+                validationPassed = false;
+                return;
+            }
         }
 
         // Build controller-compatible entry (provide sensible defaults)
@@ -518,16 +525,13 @@ function updateMedicineDetails(medicineId, field, value) {
     const medicine = selectedMedicines.find(m => m.id === medicineId);
     if (!medicine) return;
 
-    if (field === 'quantity') {
+        if (field === 'quantity') {
         let quantity = parseInt(value, 10);
         const stock = Number(medicine.stock_quantity);
         if (isNaN(quantity) || quantity < 1) {
             quantity = 1;
         }
-        if (quantity > stock) {
-            alert(`Cannot prescribe more than available stock (${stock})`);
-            quantity = stock;
-        }
+        // Do not clamp quantity to stock here; allow doctor to prescribe more than available.
         medicine[field] = quantity;
     } else {
         medicine[field] = value;
@@ -563,7 +567,7 @@ function updateSelectedMedicinesList() {
                 <div>
                     <label class="block text-xs text-gray-600">Quantity</label>
                     <input type="number" name="medicines[${medicine.id}][quantity]" 
-                           min="1" max="${medicine.stock_quantity}" value="${medicine.quantity}"
+                           min="1" value="${medicine.quantity}"
                            class="w-full px-2 py-1 border border-gray-300 rounded text-sm"
                            onchange="updateMedicineDetails(${medicine.id}, 'quantity', this.value)">
                 </div>
