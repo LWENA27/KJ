@@ -749,20 +749,113 @@ function printSelected() {
 
 // Print Single Result
 function printResult(id) {
-    showNotification('Printing', `Preparing result #${id} for printing...`, 'info');
+    // Create a printable version of the lab result
+    const resultRow = document.querySelector(`tr[data-result-id="${id}"]`);
+    if (!resultRow) {
+        alert('Result not found');
+        return;
+    }
     
-    setTimeout(() => {
-        showNotification('Print Ready', `Result #${id} sent to printer`, 'success');
-    }, 1000);
+    const patientName = resultRow.querySelector('.patient-name')?.textContent || 'Unknown';
+    const testType = resultRow.querySelector('.test-type')?.textContent || 'Unknown Test';
+    const resultValue = resultRow.querySelector('.result-value')?.textContent || 'N/A';
+    const status = resultRow.querySelector('.result-status')?.textContent || 'N/A';
+    const date = resultRow.querySelector('.result-date')?.textContent || new Date().toLocaleDateString();
+    
+    const printWindow = window.open('', '_blank');
+    printWindow.document.write(`
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <title>Lab Result - ${patientName}</title>
+            <style>
+                body { font-family: Arial, sans-serif; padding: 20px; max-width: 800px; margin: 0 auto; }
+                .header { text-align: center; border-bottom: 2px solid #333; padding-bottom: 20px; margin-bottom: 20px; }
+                .logo { font-size: 24px; font-weight: bold; color: #2563eb; }
+                .section { margin-bottom: 20px; }
+                .section-title { font-weight: bold; color: #333; border-bottom: 1px solid #ddd; padding-bottom: 5px; margin-bottom: 10px; }
+                .info-row { display: flex; justify-content: space-between; margin-bottom: 8px; }
+                .label { color: #666; }
+                .value { font-weight: 500; }
+                .footer { text-align: center; color: #666; font-size: 12px; margin-top: 40px; border-top: 1px solid #ddd; padding-top: 20px; }
+                @media print { 
+                    body { padding: 0; }
+                    .no-print { display: none; }
+                }
+            </style>
+        </head>
+        <body>
+            <div class="header">
+                <div class="logo">🏥 Zahanati Health Center</div>
+                <div>Laboratory Results Report</div>
+            </div>
+            
+            <div class="section">
+                <div class="section-title">Result Details</div>
+                <div class="info-row">
+                    <span class="label">Patient:</span>
+                    <span class="value">${patientName}</span>
+                </div>
+                <div class="info-row">
+                    <span class="label">Test:</span>
+                    <span class="value">${testType}</span>
+                </div>
+                <div class="info-row">
+                    <span class="label">Result:</span>
+                    <span class="value">${resultValue}</span>
+                </div>
+                <div class="info-row">
+                    <span class="label">Status:</span>
+                    <span class="value">${status}</span>
+                </div>
+                <div class="info-row">
+                    <span class="label">Date:</span>
+                    <span class="value">${date}</span>
+                </div>
+            </div>
+            
+            <div class="footer">
+                <p>This is a computer-generated report.</p>
+                <p>Printed on: ${new Date().toLocaleString()}</p>
+            </div>
+            
+            <div class="no-print" style="text-align: center; margin-top: 20px;">
+                <button onclick="window.print()" style="background: #2563eb; color: white; padding: 10px 30px; border: none; border-radius: 5px; cursor: pointer;">🖨️ Print</button>
+                <button onclick="window.close()" style="background: #6b7280; color: white; padding: 10px 30px; border: none; border-radius: 5px; cursor: pointer; margin-left: 10px;">✕ Close</button>
+            </div>
+        </body>
+        </html>
+    `);
+    printWindow.document.close();
 }
 
 // Download Result
 function downloadResult(id) {
-    showNotification('Downloading', `Preparing result #${id} for download...`, 'info');
+    // Generate a CSV file of the result
+    const resultRow = document.querySelector(`tr[data-result-id="${id}"]`);
+    if (!resultRow) {
+        alert('Result not found');
+        return;
+    }
     
-    setTimeout(() => {
-        showNotification('Download Complete', `Result #${id} downloaded successfully`, 'success');
-    }, 1000);
+    const patientName = resultRow.querySelector('.patient-name')?.textContent || 'Unknown';
+    const testType = resultRow.querySelector('.test-type')?.textContent || 'Unknown Test';
+    const resultValue = resultRow.querySelector('.result-value')?.textContent || 'N/A';
+    const status = resultRow.querySelector('.result-status')?.textContent || 'N/A';
+    const date = resultRow.querySelector('.result-date')?.textContent || new Date().toLocaleDateString();
+    
+    let csv = 'Patient Name,Test Type,Result Value,Status,Date\n';
+    csv += `"${patientName}","${testType}","${resultValue}","${status}","${date}"`;
+    
+    const blob = new Blob([csv], { type: 'text/csv' });
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `result_${id}_${new Date().toISOString().split('T')[0]}.csv`;
+    document.body.appendChild(a);
+    a.click();
+    window.URL.revokeObjectURL(url);
+    document.body.removeChild(a);
 }
 
 // Export to CSV

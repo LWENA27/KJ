@@ -345,12 +345,29 @@ setInterval(updateTime, 60000);
 
 // Emergency modal
 function openEmergencyModal() {
-    alert('Emergency protocols activated!\n\nContact:\n- Security: Ext. 911\n- Medical Emergency: Ext. 999\n- Admin: Ext. 101');
+    const modal = document.getElementById('emergencyModal');
+    if (modal) {
+        modal.classList.remove('hidden');
+        modal.classList.add('flex');
+    } else {
+        // Fallback: show contact info
+        const contacts = `EMERGENCY CONTACTS\n\nSecurity: Ext. 911\nMedical Emergency: Ext. 999\nAdministration: Ext. 101\nHR Department: Ext. 102`;
+        console.log(contacts);
+        alert(contacts);
+    }
+}
+
+function closeEmergencyModal() {
+    const modal = document.getElementById('emergencyModal');
+    if (modal) {
+        modal.classList.add('hidden');
+        modal.classList.remove('flex');
+    }
 }
 
 // Reports modal
 function openReportsModal() {
-    alert('Reports feature coming soon!\n\nAvailable reports:\n- Daily Summary\n- Patient Statistics\n- Payment Records\n- Appointment Analytics');
+    window.location.href = '<?php echo htmlspecialchars($BASE_PATH); ?>/receptionist/reports';
 }
 
 // Add some interactive feedback

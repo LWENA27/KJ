@@ -617,28 +617,125 @@ function closeCollectionModal() {
 
 // Sample Collection Functions
 function collectSample(patientId, testType) {
-    alert('Collecting sample for patient: ' + patientId + ', Test: ' + testType);
+    // Populate the collection modal with patient details
+    document.querySelector('input[placeholder="P-001"]').value = patientId;
     openCollectionModal();
 }
 
 function viewPatientDetails(patientId) {
-    alert('View patient details for: ' + patientId);
+    window.location.href = '<?php echo $BASE_PATH; ?>/lab/view_patient/' + patientId;
 }
 
 function printLabels() {
-    alert('Print labels functionality would be implemented here');
+    // Generate printable labels for sample collection
+    const labelsWindow = window.open('', '_blank');
+    const samples = [];
+    
+    // Collect all visible sample data from the samples table
+    document.querySelectorAll('tr[data-sample-id]').forEach(row => {
+        const sampleId = row.getAttribute('data-sample-id');
+        const patientName = row.querySelector('.patient-name')?.textContent || 'Unknown';
+        const testName = row.querySelector('.test-name')?.textContent || 'Unknown Test';
+        
+        samples.push({ id: sampleId, patient: patientName, test: testName });
+    });
+    
+    // If no samples found in table, use current collection form data
+    if (samples.length === 0) {
+        const patientId = document.querySelector('input[placeholder="P-001"]')?.value || '';
+        const testType = document.querySelector('select:nth-of-type(1)')?.value || 'Unknown Test';
+        const sampleType = document.querySelector('select:nth-of-type(2)')?.value || 'Unknown';
+        
+        if(!patientId) {
+            alert('No samples available to print. Please collect a sample first.');
+            labelsWindow.close();
+            return;
+        }
+        
+        samples.push({ id: 'SMP-' + Date.now(), patient: patientId, test: testType + ' (' + sampleType + ')' });
+    }
+    
+    let html = `
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <title>Sample Labels</title>
+            <style>
+                body { font-family: Arial, sans-serif; margin: 10px; }
+                .label { 
+                    border: 2px solid #333; 
+                    padding: 15px; 
+                    margin: 10px 0; 
+                    width: 400px;
+                    page-break-inside: avoid;
+                    background: #f9fafb;
+                }
+                .barcode { 
+                    font-size: 20px; 
+                    font-weight: bold; 
+                    font-family: monospace; 
+                    margin: 10px 0;
+                    letter-spacing: 2px;
+                }
+                .info { font-size: 12px; line-height: 1.6; }
+                .timestamp { font-size: 11px; color: #666; margin-top: 5px; }
+                @media print { 
+                    .no-print { display: none; }
+                    body { margin: 0; }
+                }
+            </style>
+        </head>
+        <body>
+    `;
+    
+    samples.forEach(sample => {
+        html += `
+            <div class="label">
+                <div class="barcode">SMP-${sample.id}</div>
+                <div class="info">
+                    <p><strong>Patient:</strong> ${sample.patient}</p>
+                    <p><strong>Test:</strong> ${sample.test}</p>
+                    <p class="timestamp"><strong>Date/Time:</strong> ${new Date().toLocaleString()}</p>
+                </div>
+            </div>
+        `;
+    });
+    
+    html += `
+        <div class="no-print" style="text-align: center; margin-top: 20px; padding: 20px; background: #f3f4f6; border-radius: 5px;">
+            <p style="margin-bottom: 10px; color: #666;">Ready to print ${samples.length} label(s)</p>
+            <button onclick="window.print()" style="background: #2563eb; color: white; padding: 10px 30px; border: none; border-radius: 5px; cursor: pointer; font-weight: bold;">🖨️ Print Labels</button>
+            <button onclick="window.close()" style="background: #6b7280; color: white; padding: 10px 30px; border: none; border-radius: 5px; cursor: pointer; margin-left: 10px;">✕ Close</button>
+        </div>
+        </body>
+        </html>
+    `;
+    
+    labelsWindow.document.write(html);
+    labelsWindow.document.close();
 }
 
 function refreshQueue() {
-    alert('Refreshing collection queue...');
+    // Reload the samples page to refresh the queue
+    location.reload();
 }
 
 function openQualityModal() {
-    alert('Report quality issue functionality would be implemented here');
+    // Open modal for reporting quality issues
+    const modal = document.getElementById('qualityIssueModal');
+    if (modal) {
+        modal.classList.remove('hidden');
+        modal.classList.add('flex');
+    } else {
+        console.warn('Quality issue reporting form not found');
+    }
 }
 
 function trackSample() {
-    alert('Sample tracking functionality would be implemented here');
+    const sampleId = prompt('Enter sample ID to track:');
+    if (sampleId) {
+        window.location.href = '<?php echo $BASE_PATH; ?>/lab/track_sample/' + encodeURIComponent(sampleId);
+    }
 }
 
 // Close modals when clicking outside
@@ -655,7 +752,35 @@ document.addEventListener('click', function(e) {
 // Form submission
 document.getElementById('collectionForm').addEventListener('submit', function(e) {
     e.preventDefault();
-    alert('Sample collection recorded successfully!');
-    closeCollectionModal();
+    
+    // Collect form data
+    const formData = new FormData(this);
+    const patientId = document.querySelector('input[placeholder="P-001"]').value;
+    
+    // Submit to backend
+    fetch('<?php echo $BASE_PATH; ?>/lab/take_sample', {
+        method: 'POST',
+        body: JSON.stringify({
+            patient_id: patientId,
+            test_type: document.querySelector('select:nth-of-type(1)').value,
+            sample_type: document.querySelector('select:nth-of-type(2)').value,
+            container_type: document.querySelector('select:nth-of-type(3)').value,
+            collection_time: document.querySelector('input[type="datetime-local"]').value,
+            notes: document.querySelector('textarea').value,
+            fasting: document.getElementById('fastingStatus').checked
+        }),
+        headers: {
+            'Content-Type': 'application/json'
+        }
+    }).then(response => response.json())
+      .then(data => {
+          if(data.success) {
+              closeCollectionModal();
+              location.reload();
+          } else {
+              alert('Error: ' + data.message);
+          }
+      })
+      .catch(err => alert('Error submitting sample: ' + err.message));
 });
 </script>

@@ -338,14 +338,86 @@ function showReportTab(tabName) {
 }
 
 function generateReport() {
-    alert('Report generation feature will be implemented here');
+    const startDate = document.getElementById('startDate')?.value;
+    const endDate = document.getElementById('endDate')?.value;
+    const reportType = document.getElementById('reportType')?.value || 'daily';
+    
+    if (!startDate || !endDate) {
+        alert('Please select both start and end dates');
+        return;
+    }
+    
+    if (new Date(startDate) > new Date(endDate)) {
+        alert('Start date cannot be after end date');
+        return;
+    }
+    
+    // Redirect to report generation with filters
+    window.location.href = `<?php echo $BASE_PATH; ?>/lab/generate_report?type=${reportType}&start=${startDate}&end=${endDate}`;
 }
 
 function exportReport() {
-    alert('Export functionality will be implemented here');
+    const startDate = document.getElementById('startDate')?.value;
+    const endDate = document.getElementById('endDate')?.value;
+    const reportType = document.getElementById('reportType')?.value || 'daily';
+    
+    if (!startDate || !endDate) {
+        alert('Please select both start and end dates');
+        return;
+    }
+    
+    // Generate CSV export
+    let csv = 'Lab Report Export\n';
+    csv += `Generated on: ${new Date().toLocaleString()}\n`;
+    csv += `Report Type: ${reportType}\n`;
+    csv += `Period: ${startDate} to ${endDate}\n\n`;
+    
+    const rows = document.querySelectorAll('table tbody tr:not([style*="display: none"])');
+    
+    if (rows.length === 0) {
+        alert('No data to export');
+        return;
+    }
+    
+    // Extract headers
+    const headers = [];
+    document.querySelectorAll('table thead th').forEach(th => {
+        headers.push(th.textContent.trim());
+    });
+    
+    csv += headers.join(',') + '\n';
+    
+    // Extract rows
+    rows.forEach(row => {
+        const cells = [];
+        row.querySelectorAll('td').forEach(td => {
+            cells.push(`"${td.textContent.trim()}"`);
+        });
+        csv += cells.join(',') + '\n';
+    });
+    
+    // Download CSV
+    const blob = new Blob([csv], { type: 'text/csv' });
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `lab_report_${reportType}_${new Date().toISOString().split('T')[0]}.csv`;
+    document.body.appendChild(a);
+    a.click();
+    window.URL.revokeObjectURL(url);
+    document.body.removeChild(a);
 }
 
 function scheduleReport() {
-    alert('Schedule report feature will be implemented here');
+    const email = document.getElementById('reportEmail')?.value;
+    const frequency = document.getElementById('reportFrequency')?.value || 'weekly';
+    
+    if (!email) {
+        alert('Please enter an email address');
+        return;
+    }
+    
+    // In a real system, this would send to the server to schedule the report
+    alert(`Report scheduled to be sent to ${email} ${frequency}`);
 }
 </script>

@@ -813,21 +813,64 @@ class LabController extends BaseController {
     }
 
     public function equipment() {
+        // Consolidated equipment and inventory management
+        // Get all equipment from database
+        $stmt = $this->pdo->prepare("
+            SELECT * FROM lab_equipment 
+            WHERE is_active = 1
+            ORDER BY equipment_name
+        ");
+        $stmt->execute();
+        $equipment = $stmt->fetchAll();
+
+        // Get all inventory items from database
+        $stmt = $this->pdo->prepare("
+            SELECT * FROM lab_inventory 
+            WHERE is_active = 1
+            ORDER BY item_name
+        ");
+        $stmt->execute();
+        $inventory = $stmt->fetchAll();
+
+        // Get maintenance schedule from database
+        $stmt = $this->pdo->prepare("
+            SELECT * FROM lab_maintenance 
+            WHERE status != 'completed'
+            ORDER BY scheduled_date ASC
+        ");
+        $stmt->execute();
+        $maintenance = $stmt->fetchAll();
+
+        // Get statistics
+        $stmt = $this->pdo->prepare("
+            SELECT 
+                COUNT(CASE WHEN status = 'operational' THEN 1 END) as operational,
+                COUNT(CASE WHEN status = 'maintenance' THEN 1 END) as maintenance,
+                COUNT(CASE WHEN status = 'out_of_order' THEN 1 END) as out_of_order,
+                COUNT(CASE WHEN status = 'calibration_due' THEN 1 END) as calibration_due
+            FROM lab_equipment
+            WHERE is_active = 1
+        ");
+        $stmt->execute();
+        $stats = $stmt->fetch();
+
         $this->render('lab/equipment', [
+            'equipment' => $equipment,
+            'inventory' => $inventory,
+            'maintenance' => $maintenance,
+            'stats' => $stats,
             'csrf_token' => $this->generateCSRF()
         ]);
     }
 
     public function inventory() {
-        $this->render('lab/inventory', [
-            'csrf_token' => $this->generateCSRF()
-        ]);
+        // Redirect to unified equipment page
+        $this->redirect('lab/equipment');
     }
 
     public function equipment_inventory() {
-        $this->render('lab/equipment_inventory', [
-            'csrf_token' => $this->generateCSRF()
-        ]);
+        // Redirect to unified equipment page
+        $this->redirect('lab/equipment');
     }
 
     public function test_management() {

@@ -1123,8 +1123,7 @@
                                 ['url' => 'lab/results', 'icon' => 'fas fa-clipboard-check', 'text' => 'Record Results', 'badge' => '', 'color' => 'green'],
                                 ['url' => 'lab/samples', 'icon' => 'fas fa-test-tube', 'text' => 'Sample Collection', 'badge' => '2', 'color' => 'purple'],
                                 ['url' => 'lab/test_management', 'icon' => 'fas fa-cogs', 'text' => 'Test Management', 'badge' => '', 'color' => 'indigo'],
-                                ['url' => 'lab/equipment', 'icon' => 'fas fa-microscope', 'text' => 'Equipment', 'badge' => '1', 'color' => 'indigo'],
-                                ['url' => 'lab/inventory', 'icon' => 'fas fa-boxes', 'text' => 'Inventory', 'badge' => '!', 'color' => 'orange'],
+                                ['url' => 'lab/equipment', 'icon' => 'fas fa-microscope', 'text' => 'Equipment & Inventory', 'badge' => '1', 'color' => 'indigo'],
                                 ['url' => 'lab/quality', 'icon' => 'fas fa-check-double', 'text' => 'Quality Control', 'badge' => '', 'color' => 'emerald'],
                                 ['url' => 'lab/reports', 'icon' => 'fas fa-chart-bar', 'text' => 'Reports', 'badge' => '', 'color' => 'rose'],
                             ];

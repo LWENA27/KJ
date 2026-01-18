@@ -308,9 +308,55 @@ document.addEventListener('DOMContentLoaded', function() {
     }, 300000); // 5 minutes
 });
 
-// Export functionality (placeholder)
+// Export functionality - generates CSV of report data
 function exportReport() {
-    alert('Export functionality will be implemented soon!');
+    const reportType = document.getElementById('reportType')?.value || 'daily';
+    const startDate = document.getElementById('startDate')?.value;
+    const endDate = document.getElementById('endDate')?.value;
+    
+    let csv = 'Receptionist Report Export\n';
+    csv += `Generated on: ${new Date().toLocaleString()}\n`;
+    csv += `Report Type: ${reportType}\n`;
+    if (startDate) csv += `Start Date: ${startDate}\n`;
+    if (endDate) csv += `End Date: ${endDate}\n\n`;
+    
+    // Get visible data from tables
+    const tables = document.querySelectorAll('table');
+    
+    tables.forEach((table, tableIndex) => {
+        if (tableIndex > 0) csv += '\n\n';
+        
+        // Extract headers
+        const headers = [];
+        table.querySelectorAll('thead th').forEach(th => {
+            headers.push(th.textContent.trim());
+        });
+        csv += headers.join(',') + '\n';
+        
+        // Extract rows
+        table.querySelectorAll('tbody tr:not([style*="display: none"])').forEach(row => {
+            const cells = [];
+            row.querySelectorAll('td').forEach(td => {
+                cells.push(`"${td.textContent.trim()}"`);
+            });
+            if (cells.length > 0) csv += cells.join(',') + '\n';
+        });
+    });
+    
+    if (csv.split('\n').length <= 5) {
+        alert('No data to export');
+        return;
+    }
+    
+    const blob = new Blob([csv], { type: 'text/csv' });
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `receptionist_report_${reportType}_${new Date().toISOString().split('T')[0]}.csv`;
+    document.body.appendChild(a);
+    a.click();
+    window.URL.revokeObjectURL(url);
+    document.body.removeChild(a);
 }
 
 // Print functionality
