@@ -1734,6 +1734,17 @@ class ReceptionistController extends BaseController
                     $default_doctor_id = 1;
                     $stmt = $this->pdo->prepare("INSERT INTO consultations (visit_id, patient_id, doctor_id, consultation_type, status, created_at) VALUES (?, ?, ?, 'new', 'pending', NOW())");
                     $stmt->execute([$visit_id, $patient_id, $default_doctor_id]);
+
+                    // Ensure there is a pending consultation payment so Accountant can collect payment
+                    $payChk = $this->pdo->prepare("SELECT id FROM payments WHERE visit_id = ? AND payment_type = 'consultation' LIMIT 1");
+                    $payChk->execute([$visit_id]);
+                    $hasConsultPay = $payChk->fetch();
+                    if (!$hasConsultPay) {
+                        $consultation_fee = 5000; // Default consultation fee
+                        $reference_number = 'CON-' . bin2hex(random_bytes(8));
+                        $insPay = $this->pdo->prepare("INSERT INTO payments (visit_id, patient_id, payment_type, amount, payment_method, payment_status, reference_number, collected_by, payment_date, notes) VALUES (?, ?, 'consultation', ?, 'cash', 'pending', ?, ?, NOW(), ?)");
+                        $insPay->execute([$visit_id, $patient_id, $consultation_fee, $reference_number, SYSTEM_USER_ID, 'Pending consultation payment - created by receptionist revisit']);
+                    }
                 }
 
                 // Record vital signs if provided (optional) - tie to this visit
