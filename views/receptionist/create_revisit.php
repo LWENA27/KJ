@@ -218,36 +218,9 @@ $BASE_PATH = '/KJ';
                 </div>
             </div>
 
-            <div id="paymentSection" class="space-y-4">
-                <h3 class="text-lg font-semibold text-gray-900 flex items-center">
-                    <i class="fas fa-credit-card text-green-600 mr-2"></i>
-                    Payment Information
-                </h3>
-
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-1">
-                            Fee Amount (TSH)
-                        </label>
-                        <input type="number" name="consultation_fee" step="0.01" min="0"
-                               placeholder="Enter fee amount"
-                               class="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-green-500 focus:border-green-500">
-                    </div>
-
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-1">
-                            Payment Method
-                        </label>
-                        <select name="payment_method" 
-                                class="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-green-500 focus:border-green-500">
-                            <option value="">No Payment Now</option>
-                            <option value="cash">Cash</option>
-                            <option value="mobile_money">Mobile Money</option>
-                            <option value="bank_transfer">Bank Transfer</option>
-                            <option value="insurance">Insurance</option>
-                        </select>
-                    </div>
-                </div>
+            <!-- Payment handled by Accountant: receptionist only creates the visit -->
+            <div class="bg-blue-50 border border-blue-100 rounded-lg p-4 mb-4">
+                <p class="text-sm text-blue-700">Payment processing is handled by the <strong>Accountant</strong>. Receptionists should create the revisit and direct patients to <em>Accountant &gt; Payments</em> for fee collection.</p>
             </div>
 
             <!-- Submit Buttons -->

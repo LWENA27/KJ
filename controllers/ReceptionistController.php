@@ -1728,22 +1728,9 @@ class ReceptionistController extends BaseController
                 $stmt->execute([$patient_id, $visit_number, $visit_type, $_SESSION['user_id']]);
                 $visit_id = $this->pdo->lastInsertId();
 
-                // Record payment if provided
-                if ($visit_type === 'consultation' && !empty($consultation_fee) && !empty($payment_method)) {
-                    $stmt = $this->pdo->prepare(
-                        "INSERT INTO payments (visit_id, patient_id, payment_type, amount, payment_method, payment_status, reference_number, collected_by, payment_date, notes) VALUES (?, ?, 'registration', ?, ?, 'paid', NULL, ?, NOW(), ?)"
-                    );
-
-                    $stmt->execute([
-                        $visit_id,
-                        $patient_id,
-                        $consultation_fee,
-                        $payment_method,
-                        $_SESSION['user_id'],
-                        "Revisit payment - Visit #{$visit_number}"
-                    ]);
-
-                    // Create consultation record for doctor queue
+                // For consultation visits, create the consultation record but do NOT process payments here.
+                // Payment collection and payment records are handled by the Accountant module.
+                if ($visit_type === 'consultation') {
                     $default_doctor_id = 1;
                     $stmt = $this->pdo->prepare("INSERT INTO consultations (visit_id, patient_id, doctor_id, consultation_type, status, created_at) VALUES (?, ?, ?, 'new', 'pending', NOW())");
                     $stmt->execute([$visit_id, $patient_id, $default_doctor_id]);
