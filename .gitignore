@@ -19,3 +19,4 @@
 # Node and vendor
 node_modules/
 vendor/
+logs/
