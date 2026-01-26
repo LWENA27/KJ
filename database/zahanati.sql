@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: localhost:3306
--- Generation Time: Jan 18, 2026 at 11:39 AM
+-- Generation Time: Jan 19, 2026 at 12:21 PM
 -- Server version: 8.0.43-0ubuntu0.24.04.2
 -- PHP Version: 8.3.6
 
@@ -132,7 +132,9 @@ INSERT INTO `consultations` (`id`, `visit_id`, `patient_id`, `doctor_id`, `consu
 (69, 86, 70, 1, 1, 'new', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 0, NULL, NULL, NULL, NULL, 'in_progress', NULL, '2026-01-16 17:28:01', NULL, '2026-01-16 17:27:29', '2026-01-16 17:28:01'),
 (70, 87, 71, 9, 1, 'new', 'sadsuf', NULL, 'jasbsudhfdjs', NULL, 14, 'J45 - Asthma', 'J45 - Asthma', 14, 'sfhjdjh', NULL, 0, NULL, NULL, NULL, NULL, 'in_progress', NULL, '2026-01-16 17:43:07', NULL, '2026-01-16 17:30:33', '2026-01-16 17:43:26'),
 (71, 88, 72, 9, 1, 'new', 'dkfgisdhfs', NULL, 'sdfkjgfbdjfd', NULL, 4, 'B53 - Other parasitologically confirmed malaria', 'B53 - Other parasitologically confirmed malaria', 4, 'sygiwuf', NULL, 0, NULL, NULL, NULL, NULL, 'in_progress', NULL, '2026-01-17 08:09:55', NULL, '2026-01-17 08:08:16', '2026-01-17 08:09:55'),
-(72, 89, 76, 1, 1, 'new', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 0, NULL, NULL, NULL, NULL, 'pending', NULL, NULL, NULL, '2026-01-18 09:22:35', '2026-01-18 09:22:35');
+(72, 89, 76, 1, 1, 'new', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 0, NULL, NULL, NULL, NULL, 'pending', NULL, NULL, NULL, '2026-01-18 09:22:35', '2026-01-18 09:22:35'),
+(73, 93, 44, 1, 1, 'new', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 0, NULL, NULL, NULL, NULL, 'pending', NULL, NULL, NULL, '2026-01-19 10:08:58', '2026-01-19 10:08:58'),
+(74, 94, 33, 9, 1, 'new', 'djfubhigk', NULL, 'dhsfjss', NULL, 14, 'J45 - Asthma', 'J45 - Asthma', 14, 'jhjkjnjk', NULL, 0, NULL, NULL, NULL, NULL, 'in_progress', NULL, '2026-01-19 11:42:48', NULL, '2026-01-19 11:40:38', '2026-01-19 11:42:48');
 
 -- --------------------------------------------------------
 
@@ -1061,7 +1063,9 @@ INSERT INTO `patient_visits` (`id`, `patient_id`, `visit_number`, `visit_date`, 
 (87, 71, 1, '2026-01-16', 'consultation', NULL, 8, 'active', NULL, '2026-01-16 17:30:33', '2026-01-16 18:03:02'),
 (88, 72, 1, '2026-01-17', 'consultation', NULL, 8, 'active', NULL, '2026-01-17 08:08:16', '2026-01-17 11:37:39'),
 (89, 76, 1, '2026-01-18', 'consultation', NULL, 8, 'active', NULL, '2026-01-18 09:22:35', '2026-01-18 09:22:35'),
-(92, 82, 1, '2026-01-18', 'lab_only', NULL, 8, 'active', NULL, '2026-01-18 10:28:58', '2026-01-18 10:55:12');
+(92, 82, 1, '2026-01-18', 'lab_only', NULL, 8, 'active', NULL, '2026-01-18 10:28:58', '2026-01-18 10:55:12'),
+(93, 44, 2, '2026-01-19', 'consultation', NULL, 8, 'active', NULL, '2026-01-19 10:08:58', '2026-01-19 10:08:58'),
+(94, 33, 2, '2026-01-19', 'consultation', NULL, 8, 'active', NULL, '2026-01-19 11:40:38', '2026-01-19 11:44:01');
 
 -- --------------------------------------------------------
 
@@ -1105,7 +1109,10 @@ INSERT INTO `payments` (`id`, `visit_id`, `patient_id`, `payment_type`, `item_id
 (14, 88, 72, 'medicine', 118, 'prescription', 15000.00, 'cash', 'pending', 'MED-118-52070ccd6be8e31c', 13, '2026-01-17 11:37:39', 'Pending medicine payment - prescribed by doctor'),
 (15, 89, 76, 'consultation', NULL, NULL, 5000.00, 'cash', 'pending', 'CON-602caa3d01a5e3b0', 13, '2026-01-18 09:22:35', 'Pending consultation payment - patient must pay at Accountant'),
 (16, 92, 82, 'lab_test', 20, 'lab_order', 8000.00, 'cash', 'pending', 'LAB-20-e0f681088ce6ccb8', 13, '2026-01-18 10:28:58', 'Pending lab test payment'),
-(17, 92, 82, 'lab_test', NULL, NULL, 8000.00, 'cash', 'paid', 'PAY-be3eb6d0c89af336cdf5318896537726', 12, '2026-01-18 10:54:32', NULL);
+(17, 92, 82, 'lab_test', NULL, NULL, 8000.00, 'cash', 'paid', 'PAY-be3eb6d0c89af336cdf5318896537726', 12, '2026-01-18 10:54:32', NULL),
+(18, 94, 33, 'consultation', NULL, NULL, 5000.00, 'cash', 'paid', 'PAY-38016a914402ed623f537b38865e3ff5', 12, '2026-01-19 11:41:29', 'Pending consultation payment - created by receptionist revisit'),
+(19, 94, 33, 'medicine', 74, 'prescription', 5000.00, 'cash', 'pending', 'MED-74-073cf5fd5079dec1', 13, '2026-01-19 11:42:48', 'Pending medicine payment - prescribed by doctor'),
+(20, 94, 33, 'medicine', 26, 'prescription', 5000.00, 'cash', 'paid', 'PAY-4c019a9c79a774049e744fe08d0cabb2', 12, '2026-01-19 11:44:01', NULL);
 
 -- --------------------------------------------------------
 
@@ -1145,7 +1152,8 @@ INSERT INTO `prescriptions` (`id`, `consultation_id`, `visit_id`, `patient_id`, 
 (22, 44, 61, 44, 9, 1, 10, 10, 'hghsdjsbcxj', 'Once daily', '1', '', 'dispensed', NULL, 11, '2026-01-14 19:14:47', NULL, '2026-01-11 19:44:42', '2026-01-14 19:14:47'),
 (23, 44, 61, 44, 9, 1, 10, 10, '3 daily', 'Once daily', '1', '', 'dispensed', NULL, 11, '2026-01-14 19:14:47', NULL, '2026-01-11 20:08:36', '2026-01-14 19:14:47'),
 (24, 46, 63, 46, 9, 121, 100, 0, 'dfhsd', 'Once daily', '1', '', 'pending', NULL, NULL, NULL, NULL, '2026-01-14 20:15:02', '2026-01-14 20:15:02'),
-(25, 71, 88, 72, 9, 118, 100, 0, 'adgghja', 'Once daily', '1', '', 'pending', NULL, NULL, NULL, NULL, '2026-01-17 11:37:39', '2026-01-17 11:37:39');
+(25, 71, 88, 72, 9, 118, 100, 0, 'adgghja', 'Once daily', '1', '', 'pending', NULL, NULL, NULL, NULL, '2026-01-17 11:37:39', '2026-01-17 11:37:39'),
+(26, 74, 94, 33, 9, 74, 10, 0, 'hiuhjhj', 'Once daily', '1', '', 'pending', NULL, NULL, NULL, NULL, '2026-01-19 11:42:48', '2026-01-19 11:42:48');
 
 -- --------------------------------------------------------
 
@@ -1420,7 +1428,9 @@ INSERT INTO `vital_signs` (`id`, `visit_id`, `patient_id`, `temperature`, `blood
 (55, 86, 70, 36.0, 120, 79, 80, NULL, 90.0, 100.0, 8, '2026-01-16 17:27:29'),
 (56, 87, 71, 36.0, 120, 79, 80, NULL, 234.0, 167.0, 8, '2026-01-16 17:30:33'),
 (57, 88, 72, 36.0, 120, 80, 132, NULL, 23.0, 23.0, 8, '2026-01-17 08:08:16'),
-(58, 89, 76, 36.0, 120, 80, 132, NULL, 23.0, 23.0, 8, '2026-01-18 09:22:35');
+(58, 89, 76, 36.0, 120, 80, 132, NULL, 23.0, 23.0, 8, '2026-01-18 09:22:35'),
+(59, 93, 44, 39.0, 120, 80, 72, NULL, 80.0, 190.0, 8, '2026-01-19 10:08:58'),
+(60, 94, 33, 37.0, 120, 80, 72, NULL, 80.0, 190.0, 8, '2026-01-19 11:40:38');
 
 -- --------------------------------------------------------
 
@@ -1763,7 +1773,7 @@ ALTER TABLE `vital_signs`
 -- AUTO_INCREMENT for table `consultations`
 --
 ALTER TABLE `consultations`
-  MODIFY `id` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=73;
+  MODIFY `id` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=75;
 
 --
 -- AUTO_INCREMENT for table `consultation_overrides`
@@ -1859,7 +1869,7 @@ ALTER TABLE `patients`
 -- AUTO_INCREMENT for table `patient_visits`
 --
 ALTER TABLE `patient_visits`
-  MODIFY `id` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=93;
+  MODIFY `id` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=95;
 
 --
 -- AUTO_INCREMENT for table `payments`
@@ -1871,7 +1881,7 @@ ALTER TABLE `payments`
 -- AUTO_INCREMENT for table `prescriptions`
 --
 ALTER TABLE `prescriptions`
-  MODIFY `id` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=26;
+  MODIFY `id` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=27;
 
 --
 -- AUTO_INCREMENT for table `role_audit_log`
@@ -1913,7 +1923,7 @@ ALTER TABLE `user_roles`
 -- AUTO_INCREMENT for table `vital_signs`
 --
 ALTER TABLE `vital_signs`
-  MODIFY `id` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=59;
+  MODIFY `id` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=61;
 
 --
 -- Constraints for dumped tables
