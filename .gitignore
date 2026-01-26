@@ -19,3 +19,7 @@
 # Node and vendor
 node_modules/
 vendor/
+
+# Runtime storage (sessions, backups)
+storage/sessions/
+storage/backups/
