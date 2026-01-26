@@ -160,7 +160,28 @@ class ReceptionistController extends BaseController
 
             // Normalize POST inputs to avoid undefined array key notices
             $post = array_map(function($v){ return $v; }, $_POST);
-            $visit_type = $post['visit_type'] ?? 'consultation';
+            // Normalize and validate visit_type to avoid inserting invalid values into an ENUM column
+            // DB ENUM: 'consultation', 'lab_only', 'minor_service'
+            $raw_visit_type = isset($post['visit_type']) ? strtolower(trim($post['visit_type'])) : 'consultation';
+            // Map common variants to canonical DB enum values
+            $visit_type_map = [
+                'labtest'    => 'lab_only',
+                'lab_test'   => 'lab_only',
+                'lab-test'   => 'lab_only',
+                'lab'        => 'lab_only',
+                'consult'    => 'consultation',
+                'service'    => 'minor_service',
+            ];
+            $allowed_visit_types = ['consultation', 'lab_only', 'minor_service'];
+
+            if (isset($visit_type_map[$raw_visit_type])) {
+                $visit_type = $visit_type_map[$raw_visit_type];
+            } elseif (in_array($raw_visit_type, $allowed_visit_types, true)) {
+                $visit_type = $raw_visit_type;
+            } else {
+                // Reject unknown visit types early with a clear error message
+                throw new Exception('Invalid visit_type provided: ' . htmlspecialchars($post['visit_type'] ?? '') . '. Allowed: consultation, lab_only, minor_service');
+            }
             $consultation_fee = $post['consultation_fee'] ?? null;
             $payment_method = $post['payment_method'] ?? null;
             $payment_method_lab = $post['payment_method_lab'] ?? null;
@@ -181,7 +202,13 @@ class ReceptionistController extends BaseController
             $height = $post['height'] ?? null;
 
             try {
-                // For consultation visits, only require vital signs (no payment - that's handled by Accountant)
+                // Validate gender against ENUM values
+                $valid_genders = ['male', 'female'];
+                if (!empty($gender) && !in_array(strtolower($gender), $valid_genders)) {
+                    throw new Exception('Invalid gender value. Must be male or female.');
+                }
+
+                // For consultation visits, require vital signs and payment - that's handled by Accountant)
                 if ($visit_type === 'consultation') {
                     // Require basic vital signs for consultation registrations
                     // Expect blood_pressure in the form "systolic/diastolic"
@@ -240,15 +267,44 @@ class ReceptionistController extends BaseController
                 // For consultation visits, create the consultation record (payment will be handled by Accountant)
                 if ($visit_type === 'consultation') {
                     // Create a consultations row referencing visit_id so doctors can see the registered patient
-                    // Payment is not recorded here - Accountant will process payment separately
-                    // Patient will need to pay at Accountant desk before being seen by doctor
                     $default_doctor_id = 1;
                     $stmt = $this->pdo->prepare("INSERT INTO consultations (visit_id, patient_id, doctor_id, consultation_type, status, created_at) VALUES (?, ?, ?, 'new', 'pending', NOW())");
                     $stmt->execute([$visit_id, $patient_id, $default_doctor_id]);
+
+                    // Create a PENDING consultation payment - patient must pay at Accountant before seeing doctor
+                    // Registration is free, but consultation service requires payment
+                    $payment_type = 'consultation';
+                    $consultation_fee = 5000; // Default consultation fee (can be configured)
+                    $reference_number = 'CON-' . bin2hex(random_bytes(8));
+
+                    // Idempotency check: ensure no duplicate pending consultation payment
+                    $dupStmt = $this->pdo->prepare("
+                        SELECT id FROM payments 
+                        WHERE visit_id = ? AND payment_type = ? AND payment_status = 'pending' 
+                        LIMIT 1
+                    ");
+                    $dupStmt->execute([$visit_id, $payment_type]);
+
+                    if (!$dupStmt->fetch()) {
+                        $payStmt = $this->pdo->prepare("
+                            INSERT INTO payments 
+                            (visit_id, patient_id, payment_type, amount, payment_method, payment_status, reference_number, collected_by, payment_date, notes)
+                            VALUES (?, ?, ?, ?, 'cash', 'pending', ?, ?, NOW(), ?)
+                        ");
+                        $payStmt->execute([
+                            $visit_id,
+                            $patient_id,
+                            $payment_type,
+                            $consultation_fee,
+                            $reference_number,
+                            SYSTEM_USER_ID,
+                            'Pending consultation payment - patient must pay at Accountant'
+                        ]);
+                    }
                 }
 
                 // Handle lab-only visit: create lab_test_orders (payment handled by Accountant)
-                if ($visit_type === 'lab_test') {
+                if ($visit_type === 'lab_only') {
                     // Selected tests are expected as an array of test IDs
                     $selected_tests = $_POST['selected_tests'] ?? [];
                     if (!is_array($selected_tests)) {
@@ -259,18 +315,41 @@ class ReceptionistController extends BaseController
                     if (!empty($selected_tests)) {
                         // Insert lab test orders
                         $stmtOrder = $this->pdo->prepare("INSERT INTO lab_test_orders (visit_id, patient_id, test_id, ordered_by, status, created_at, updated_at) VALUES (?, ?, ?, ?, 'pending', NOW(), NOW())");
-                        $total_lab_amount = 0;
                         $stmtPrice = $this->pdo->prepare("SELECT price FROM lab_tests WHERE id = ? LIMIT 1");
+                        $stmtPayDup = $this->pdo->prepare("SELECT id FROM payments WHERE visit_id = ? AND payment_type = 'lab_test' AND item_id = ? AND payment_status = 'pending' LIMIT 1");
+                        $stmtCreatePay = $this->pdo->prepare("
+                            INSERT INTO payments 
+                            (visit_id, patient_id, payment_type, item_id, item_type, amount, payment_method, payment_status, reference_number, collected_by, payment_date, notes)
+                            VALUES (?, ?, 'lab_test', ?, 'lab_order', ?, 'cash', 'pending', ?, ?, NOW(), ?)
+                        ");
+
                         foreach ($selected_tests as $test_id) {
                             $tid = intval($test_id);
                             if ($tid <= 0) continue;
+
+                            // Create lab test order
                             $stmtOrder->execute([$visit_id, $patient_id, $tid, $_SESSION['user_id']]);
-                            // Sum price for reference (payment recorded later by Accountant)
+
+                            // Get test price
                             $stmtPrice->execute([$tid]);
                             $price = (float)$stmtPrice->fetchColumn();
-                            $total_lab_amount += $price;
+
+                            // Create PENDING payment record per test
+                            // Idempotency check: no duplicate pending payments for same test
+                            $stmtPayDup->execute([$visit_id, $tid]);
+                            if (!$stmtPayDup->fetch()) {
+                                $reference_number = 'LAB-' . $tid . '-' . bin2hex(random_bytes(8));
+                                $stmtCreatePay->execute([
+                                    $visit_id,
+                                    $patient_id,
+                                    $tid,
+                                    $price,
+                                    $reference_number,
+                                    SYSTEM_USER_ID,
+                                    'Pending lab test payment'
+                                ]);
+                            }
                         }
-                        // Note: Payment is NOT recorded here - Accountant will handle lab test payment
                     }
                 }
 
@@ -281,7 +360,7 @@ class ReceptionistController extends BaseController
                 }
                 // Record vital signs if provided — insert into vital_signs linked to the visit
                 // Skip recording vital signs for lab-only visits
-                if ($visit_type !== 'lab_test') {
+                if ($visit_type !== 'lab_only') {
                     if (!empty($temperature) || !empty($bp_systolic) || !empty($bp_diastolic) || !empty($pulse_rate) || !empty($body_weight) || !empty($height)) {
                         $stmt = $this->pdo->prepare("INSERT INTO vital_signs (visit_id, patient_id, temperature, blood_pressure_systolic, blood_pressure_diastolic, pulse_rate, weight, height, recorded_by, recorded_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())");
                         $stmt->execute([
@@ -304,14 +383,14 @@ class ReceptionistController extends BaseController
                 $success_message = "Patient registered successfully! Registration Number: $registration_number";
                 if ($visit_type === 'consultation') {
                     $success_message .= " - Please direct patient to Accountant for consultation fee payment.";
-                } else if ($visit_type === 'lab_test') {
+                } else if ($visit_type === 'lab_only') {
                     $success_message .= " - Please direct patient to Accountant for lab test payment.";
                 }
                 
                 $_SESSION['success'] = $success_message;
 
-                // Always redirect to patients list - payment is handled by Accountant
-                $this->redirect('receptionist/patients');
+                // Redirect to patient view after successful registration
+                $this->redirect('admin/view_patient/' . $patient_id);
             } catch (Exception $e) {
                 $this->pdo->rollBack();
                 $_SESSION['error'] = 'Registration failed: ' . $e->getMessage();
@@ -1584,7 +1663,26 @@ class ReceptionistController extends BaseController
 
                 // Get and validate input
                 $patient_id = filter_input(INPUT_POST, 'patient_id', FILTER_VALIDATE_INT);
-                $visit_type = $this->sanitize($_POST['visit_type'] ?? 'consultation');
+                
+                // Normalize and validate visit_type (DB ENUM: consultation, lab_only, minor_service)
+                $raw_visit_type = isset($_POST['visit_type']) ? strtolower(trim($_POST['visit_type'])) : 'consultation';
+                $visit_type_map = [
+                    'labtest'    => 'lab_only',
+                    'lab_test'   => 'lab_only',
+                    'lab-test'   => 'lab_only',
+                    'lab'        => 'lab_only',
+                    'consult'    => 'consultation',
+                    'service'    => 'minor_service',
+                ];
+                $allowed_visit_types = ['consultation', 'lab_only', 'minor_service'];
+                if (isset($visit_type_map[$raw_visit_type])) {
+                    $visit_type = $visit_type_map[$raw_visit_type];
+                } elseif (in_array($raw_visit_type, $allowed_visit_types, true)) {
+                    $visit_type = $raw_visit_type;
+                } else {
+                    throw new Exception('Invalid visit_type: ' . htmlspecialchars($_POST['visit_type'] ?? '') . '. Allowed: consultation, lab_only, minor_service');
+                }
+                
                 $consultation_fee = filter_input(INPUT_POST, 'consultation_fee', FILTER_VALIDATE_FLOAT);
                 $payment_method = $this->sanitize($_POST['payment_method'] ?? '');
 
@@ -1630,25 +1728,23 @@ class ReceptionistController extends BaseController
                 $stmt->execute([$patient_id, $visit_number, $visit_type, $_SESSION['user_id']]);
                 $visit_id = $this->pdo->lastInsertId();
 
-                // Record payment if provided
-                if ($visit_type === 'consultation' && !empty($consultation_fee) && !empty($payment_method)) {
-                    $stmt = $this->pdo->prepare(
-                        "INSERT INTO payments (visit_id, patient_id, payment_type, amount, payment_method, payment_status, reference_number, collected_by, payment_date, notes) VALUES (?, ?, 'registration', ?, ?, 'paid', NULL, ?, NOW(), ?)"
-                    );
-
-                    $stmt->execute([
-                        $visit_id,
-                        $patient_id,
-                        $consultation_fee,
-                        $payment_method,
-                        $_SESSION['user_id'],
-                        "Revisit payment - Visit #{$visit_number}"
-                    ]);
-
-                    // Create consultation record for doctor queue
+                // For consultation visits, create the consultation record but do NOT process payments here.
+                // Payment collection and payment records are handled by the Accountant module.
+                if ($visit_type === 'consultation') {
                     $default_doctor_id = 1;
                     $stmt = $this->pdo->prepare("INSERT INTO consultations (visit_id, patient_id, doctor_id, consultation_type, status, created_at) VALUES (?, ?, ?, 'new', 'pending', NOW())");
                     $stmt->execute([$visit_id, $patient_id, $default_doctor_id]);
+
+                    // Ensure there is a pending consultation payment so Accountant can collect payment
+                    $payChk = $this->pdo->prepare("SELECT id FROM payments WHERE visit_id = ? AND payment_type = 'consultation' LIMIT 1");
+                    $payChk->execute([$visit_id]);
+                    $hasConsultPay = $payChk->fetch();
+                    if (!$hasConsultPay) {
+                        $consultation_fee = 5000; // Default consultation fee
+                        $reference_number = 'CON-' . bin2hex(random_bytes(8));
+                        $insPay = $this->pdo->prepare("INSERT INTO payments (visit_id, patient_id, payment_type, amount, payment_method, payment_status, reference_number, collected_by, payment_date, notes) VALUES (?, ?, 'consultation', ?, 'cash', 'pending', ?, ?, NOW(), ?)");
+                        $insPay->execute([$visit_id, $patient_id, $consultation_fee, $reference_number, SYSTEM_USER_ID, 'Pending consultation payment - created by receptionist revisit']);
+                    }
                 }
 
                 // Record vital signs if provided (optional) - tie to this visit

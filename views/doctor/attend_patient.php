@@ -16,7 +16,7 @@
         <div class="mb-6">
             <div class="flex items-center justify-between">
                 <h1 class="text-3xl font-bold text-gray-900">Patient Consultation</h1>
-                <a href="/KJ/doctor/view_patient/<?php echo $patient['id']; ?>" 
+                <a href="<?php echo BASE_PATH; ?>/doctor/view_patient/<?php echo $patient['id']; ?>" 
                    class="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-md">
                     <i class="fas fa-arrow-left mr-2"></i>Back to Patient Record
                 </a>
@@ -61,16 +61,78 @@
             </div>
         </div>
 
+        <!-- Previous Chief Complaints History -->
+        <?php if (!empty($previous_complaints)): ?>
+        <div class="bg-amber-50 border border-amber-200 rounded-lg p-4 mb-6">
+            <div class="flex items-start mb-3">
+                <div class="flex-shrink-0">
+                    <i class="fas fa-history text-amber-600 text-lg"></i>
+                </div>
+                <div class="ml-3 flex-1">
+                    <h3 class="text-sm font-semibold text-amber-900">Previous Chief Complaints</h3>
+                    <p class="text-xs text-amber-800 mt-1">Patient's recent medical history for reference</p>
+                </div>
+                <button type="button" onclick="toggleComplaintsHistory()" class="text-amber-700 hover:text-amber-900">
+                    <i class="fas fa-chevron-down" id="complaintsToggleIcon"></i>
+                </button>
+            </div>
+            <div id="complaintsHistory" class="space-y-2">
+                <?php foreach ($previous_complaints as $index => $complaint): ?>
+                <div class="bg-white border border-amber-200 rounded p-3 <?php echo $index >= 2 ? 'hidden complaints-extra' : ''; ?>">
+                    <div class="flex justify-between items-start mb-1">
+                        <div class="text-xs text-gray-500">
+                            <i class="fas fa-calendar-alt mr-1"></i>
+                            <?php 
+                            $timestamp = strtotime($complaint['created_at']);
+                            echo $timestamp ? date('d/m/Y', $timestamp) : 'Unknown date';
+                            ?>
+                            <?php if (!empty($complaint['doctor_name'])): ?>
+                            | <i class="fas fa-user-md mr-1"></i><?php echo htmlspecialchars($complaint['doctor_name']); ?>
+                            <?php endif; ?>
+                        </div>
+                    </div>
+                    <div class="text-sm">
+                        <strong class="text-gray-700">Chief Complaint:</strong>
+                        <span class="text-gray-900"><?php echo htmlspecialchars($complaint['main_complaint']); ?></span>
+                    </div>
+                    <?php 
+                    $diagnosis = '';
+                    if (!empty(trim($complaint['final_diagnosis'] ?? ''))) {
+                        $diagnosis = $complaint['final_diagnosis'];
+                    } elseif (!empty(trim($complaint['preliminary_diagnosis'] ?? ''))) {
+                        $diagnosis = $complaint['preliminary_diagnosis'];
+                    }
+                    if ($diagnosis):
+                    ?>
+                    <div class="text-xs text-gray-600 mt-1">
+                        <i class="fas fa-stethoscope mr-1"></i>
+                        <strong>Diagnosis:</strong> 
+                        <?php echo htmlspecialchars($diagnosis); ?>
+                    </div>
+                    <?php endif; ?>
+                </div>
+                <?php endforeach; ?>
+                <?php if (count($previous_complaints) > 2): ?>
+                <button type="button" onclick="showAllComplaints()" id="showMoreBtn" class="text-xs text-amber-700 hover:text-amber-900 mt-2">
+                    <i class="fas fa-chevron-down mr-1"></i>Show <?php echo count($previous_complaints) - 2; ?> more
+                </button>
+                <?php endif; ?>
+            </div>
+        </div>
+        <?php endif; ?>
+
         <!-- Main Consultation Form -->
         <div class="bg-white rounded-lg shadow">
-        <form id="attendForm" method="POST" action="/KJ/doctor/start_consultation" 
-            onsubmit="syncSelectedMedicinesFromDOM(); syncSelectedAllocationsFromDOM(); console.log('🚀 FORM SUBMITTING NOW...'); return validateConsultationForm();" class="p-6 space-y-6">
-                
-                <input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars($csrf_token); ?>">
+<form id="attendForm" method="POST" action="<?php echo htmlspecialchars($BASE_PATH ?? '/KJ'); ?>/doctor/start_consultation">        
+                <input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars($csrf_token ?? '', ENT_QUOTES, 'UTF-8'); ?>">
                 <input type="hidden" name="patient_id" value="<?php echo $patient['id']; ?>">
                 <input type="hidden" id="selectedTests" name="selected_tests" value="">
+                <input type="hidden" id="selectedRadiology" name="selected_radiology" value="">
                 <input type="hidden" id="selectedMedicines" name="selected_medicines" value="">
                 <input type="hidden" id="selectedAllocations" name="selected_allocations" value="">
+                <input type="hidden" id="ipdAdmissionData" name="ipd_admission_data" value="">
+                <input type="hidden" id="preliminaryDiagnosisId" name="preliminary_diagnosis_id" value="">
+                <input type="hidden" id="finalDiagnosisId" name="final_diagnosis_id" value="">
 
                 <!-- Examination Section -->
                 <div class="bg-blue-50 p-4 rounded-lg">
@@ -94,18 +156,56 @@
 
                         <!-- Preliminary Diagnosis -->
                         <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-2">Preliminary Diagnosis</label>
-                            <textarea id="preliminaryDiagnosis" name="preliminary_diagnosis" rows="2"
-                                class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                                placeholder="Initial working diagnosis..."><?php echo htmlspecialchars($consultation['preliminary_diagnosis'] ?? ''); ?></textarea>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Preliminary Diagnosis (Search ICD Code or enter manually)</label>
+                            <div class="relative mb-2">
+                                <div class="flex">
+                                    <input type="text" id="preliminaryDiagnosisSearch" placeholder="Type to search diagnosis codes (e.g., Malaria, B50)..."
+                                        class="flex-1 px-3 py-2 border border-gray-300 rounded-l-md focus:outline-none focus:ring-2 focus:ring-blue-500" autocomplete="off">
+                                    <button type="button" onclick="clearPreliminaryDiagnosisSearch()" id="clearPreliminaryDiagnosisSearch"
+                                        class="px-3 py-2 bg-gray-100 border border-l-0 border-gray-300 rounded-r-md hover:bg-gray-200 hidden">
+                                        <i class="fas fa-times"></i>
+                                    </button>
+                                </div>
+                                <div id="preliminaryDiagnosisResults" class="absolute z-10 w-full bg-white border border-gray-300 rounded-md mt-1 hidden max-h-60 overflow-y-auto shadow-lg"></div>
+                            </div>
+                            <div id="selectedPreliminaryDiagnosis" class="mb-2">
+                                <?php if (!empty($consultation['preliminary_diagnosis'])): ?>
+                                <div class="p-2 bg-blue-50 border border-blue-200 rounded-md text-sm">
+                                    <strong>ICD Selected:</strong> <?php echo htmlspecialchars($consultation['preliminary_diagnosis']); ?>
+                                </div>
+                                <?php endif; ?>
+                            </div>
+                            <div class="text-xs text-gray-600 mb-1">Or enter diagnosis manually:</div>
+                            <textarea id="preliminaryDiagnosis" name="preliminary_diagnosis" rows="1"
+                                class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                                placeholder="Type diagnosis if not found in ICD codes..."><?php echo htmlspecialchars($consultation['preliminary_diagnosis'] ?? ''); ?></textarea>
                         </div>
 
                         <!-- Final Diagnosis -->
                         <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-2">Final Diagnosis</label>
-                            <textarea id="finalDiagnosis" name="final_diagnosis" rows="2"
-                                class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                                placeholder="Final confirmed diagnosis..."><?php echo htmlspecialchars($consultation['diagnosis'] ?? ''); ?></textarea>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Final Diagnosis (Search ICD Code or enter manually)</label>
+                            <div class="relative mb-2">
+                                <div class="flex">
+                                    <input type="text" id="finalDiagnosisSearch" placeholder="Type to search diagnosis codes (e.g., Pneumonia, J18)..."
+                                        class="flex-1 px-3 py-2 border border-gray-300 rounded-l-md focus:outline-none focus:ring-2 focus:ring-blue-500" autocomplete="off">
+                                    <button type="button" onclick="clearFinalDiagnosisSearch()" id="clearFinalDiagnosisSearch"
+                                        class="px-3 py-2 bg-gray-100 border border-l-0 border-gray-300 rounded-r-md hover:bg-gray-200 hidden">
+                                        <i class="fas fa-times"></i>
+                                    </button>
+                                </div>
+                                <div id="finalDiagnosisResults" class="absolute z-10 w-full bg-white border border-gray-300 rounded-md mt-1 hidden max-h-60 overflow-y-auto shadow-lg"></div>
+                            </div>
+                            <div id="selectedFinalDiagnosis" class="mb-2">
+                                <?php if (!empty($consultation['diagnosis']) || !empty($consultation['final_diagnosis'])): ?>
+                                <div class="p-2 bg-blue-50 border border-blue-200 rounded-md text-sm">
+                                    <strong>ICD Selected:</strong> <?php echo htmlspecialchars($consultation['final_diagnosis'] ?? $consultation['diagnosis'] ?? ''); ?>
+                                </div>
+                                <?php endif; ?>
+                            </div>
+                            <div class="text-xs text-gray-600 mb-1">Or enter diagnosis manually:</div>
+                            <textarea id="finalDiagnosis" name="final_diagnosis" rows="1"
+                                class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                                placeholder="Type diagnosis if not found in ICD codes..."><?php echo htmlspecialchars($consultation['final_diagnosis'] ?? $consultation['diagnosis'] ?? ''); ?></textarea>
                         </div>
                     </div>
                 </div>
@@ -114,14 +214,22 @@
                 <div class="bg-yellow-50 p-4 rounded-lg">
                     <h4 class="text-lg font-medium text-yellow-900 mb-4">Next Steps Decision</h4>
                     <div class="space-y-4">
-                        <div class="grid grid-cols-2 md:grid-cols-3 gap-3">
+                        <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
                             <label class="flex items-center">
                                 <input type="radio" name="next_step" value="lab_tests" class="mr-2" onchange="toggleSection('lab_tests')">
                                 <span class="text-sm font-medium">Lab Tests</span>
                             </label>
                             <label class="flex items-center">
+                                <input type="radio" name="next_step" value="radiology" class="mr-2" onchange="toggleSection('radiology')">
+                                <span class="text-sm font-medium">Radiology</span>
+                            </label>
+                            <label class="flex items-center">
                                 <input type="radio" name="next_step" value="medicine" class="mr-2" onchange="toggleSection('medicine')">
                                 <span class="text-sm font-medium">Medicine</span>
+                            </label>
+                            <label class="flex items-center">
+                                <input type="radio" name="next_step" value="ipd" class="mr-2" onchange="toggleSection('ipd')">
+                                <span class="text-sm font-medium">IPD Admission</span>
                             </label>
                             <label class="flex items-center">
                                 <input type="radio" name="next_step" value="allocation" class="mr-2" onchange="toggleSection('allocation')">
@@ -133,7 +241,7 @@
                             </label>
                             <label class="flex items-center">
                                 <input type="radio" name="next_step" value="all" class="mr-2" onchange="toggleSection('all')">
-                                <span class="text-sm font-medium">All (Lab, Med & Services)</span>
+                                <span class="text-sm font-medium">All</span>
                             </label>
                             <label class="flex items-center">
                                 <input type="radio" name="next_step" value="discharge" class="mr-2" onchange="toggleSection('none')">
@@ -207,6 +315,71 @@
                     </div>
                 </div>
 
+                <!-- Radiology Section -->
+                <div id="radiologySection" class="bg-blue-50 p-4 rounded-lg hidden">
+                    <h4 class="text-lg font-medium text-blue-900 mb-4">
+                        <i class="fas fa-x-ray mr-2"></i>Radiology Tests
+                    </h4>
+                    <div class="bg-blue-100 border border-blue-300 rounded p-3 mb-4">
+                        <p class="text-sm text-blue-800">
+                            <i class="fas fa-info-circle mr-1"></i>
+                            <strong>Required:</strong> Search and select at least one radiology test below before completing consultation.
+                        </p>
+                    </div>
+                    <div class="space-y-4">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Search & Select Radiology Tests</label>
+                            <div class="relative">
+                                <div class="flex">
+                                    <input type="text" id="radiologySearch" placeholder="Type to search for radiology tests..."
+                                        class="flex-1 px-3 py-2 border border-gray-300 rounded-l-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+                                    <button type="button" onclick="clearRadiologySearch()" id="clearRadiologySearch"
+                                        class="px-3 py-2 bg-gray-100 border border-l-0 border-gray-300 rounded-r-md hover:bg-gray-200 hidden">
+                                        <i class="fas fa-times"></i>
+                                    </button>
+                                </div>
+                                <div id="radiologyResults" class="absolute z-10 w-full bg-white border border-gray-300 rounded-md mt-1 hidden max-h-60 overflow-y-auto shadow-lg"></div>
+                            </div>
+                        </div>
+                        <div id="selectedRadiologyList" class="space-y-2">
+                            <!-- Selected radiology tests will appear here -->
+                        </div>
+                    </div>
+                </div>
+
+                <!-- IPD Admission Section -->
+                <div id="ipdSection" class="bg-orange-50 p-4 rounded-lg hidden">
+                    <h4 class="text-lg font-medium text-orange-900 mb-4">
+                        <i class="fas fa-hospital-user mr-2"></i>IPD Admission
+                    </h4>
+                    <div class="bg-orange-100 border border-orange-300 rounded p-3 mb-4">
+                        <p class="text-sm text-orange-800">
+                            <i class="fas fa-info-circle mr-1"></i>
+                            <strong>Required:</strong> Select a ward and admission reason before completing consultation.
+                        </p>
+                    </div>
+                    <div class="space-y-4">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Select Ward</label>
+                            <select id="ipdWard" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500">
+                                <option value="">-- Select a ward --</option>
+                                <option value="General Ward A">General Ward A</option>
+                                <option value="General Ward B">General Ward B</option>
+                                <option value="Private Ward">Private Ward</option>
+                                <option value="ICU">ICU</option>
+                                <option value="Maternity Ward">Maternity Ward</option>
+                                <option value="Pediatric Ward">Pediatric Ward</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Admission Reason / Clinical Notes</label>
+                            <textarea id="ipdReason" placeholder="Reason for admission, clinical notes, expected duration..."
+                                class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500"
+                                rows="3"></textarea>
+                        </div>
+                    </div>
+                </div>
+
                 <!-- Allocation Section -->
                 <div id="allocationSection" class="bg-indigo-50 p-4 rounded-lg hidden">
                     <h4 class="text-lg font-medium text-indigo-900 mb-4">
@@ -256,7 +429,7 @@
                             class="px-6 py-2 bg-gray-300 text-gray-700 rounded-md hover:bg-gray-400 transition duration-150">
                             <i class="fas fa-times mr-2"></i>Cancel
                         </button>
-                        <button type="submit"
+                        <button type="button" onclick="submitConsultationForm()"
                             class="px-8 py-2 bg-green-500 text-white rounded-md hover:bg-green-600 transition duration-150">
                             <i class="fas fa-save mr-2"></i>Complete Consultation
                         </button>
@@ -274,62 +447,75 @@
     const BASE_PATH = (typeof window !== 'undefined' && window.BASE_PATH) ? window.BASE_PATH : '';
 
         let selectedTests = [];
+        let selectedRadiology = [];
         let selectedMedicines = [];
+        let ipdAdmissionData = {};
 
         // Form validation before submission
         function validateConsultationForm() {
-            console.log('=== FORM VALIDATION STARTED ===');
-            // sync any UI-edited medicine inputs into the selectedMedicines array
-            syncSelectedMedicinesFromDOM();
-            const nextStep = document.querySelector('input[name="next_step"]:checked');
-            console.log('Next step value:', nextStep ? nextStep.value : 'NONE');
-            console.log('Selected tests:', selectedTests);
-            console.log('Selected medicines:', selectedMedicines);
+    console.log('=== FORM VALIDATION STARTED ===');
+    
+    const nextStep = document.querySelector('input[name="next_step"]:checked');
+    console.log('Next step value:', nextStep ? nextStep.value : 'NONE');
+    
+    if (!nextStep) {
+        alert('Please select a next step decision (Lab Tests, Medicine, Allocate Services, or Discharge)');
+        return false;
+    }
 
-            if (!nextStep) {
-                alert('Please select a next step decision (Lab Tests, Medicine, Both, or Discharge)');
-                return false;
-            }
+    const nextStepValue = nextStep.value;
+    
+    // Check lab tests requirement
+    if ((nextStepValue === 'lab_tests' || nextStepValue === 'lab_medicine' || nextStepValue === 'all') 
+        && selectedTests.length === 0) {
+        alert('Please select at least one lab test');
+        return false;
+    }
 
-            // Check if tests are selected when lab option is chosen (includes new combined options)
-            if ((nextStep.value === 'lab_tests' || nextStep.value === 'lab_medicine' || nextStep.value === 'all') && selectedTests.length === 0) {
-                alert('Please select at least one lab test');
-                return false;
-            }
+    // Check radiology requirement
+    if ((nextStepValue === 'radiology' || nextStepValue === 'all') 
+        && selectedRadiology.length === 0) {
+        alert('Please select at least one radiology test');
+        return false;
+    }
 
-            // Check if medicines are selected when medicine option is chosen (includes combined options)
-            if ((nextStep.value === 'medicine' || nextStep.value === 'lab_medicine' || nextStep.value === 'all') && selectedMedicines.length === 0) {
-                alert('Please select at least one medicine');
-                return false;
-            }
+    // Check medicine requirement
+    if ((nextStepValue === 'medicine' || nextStepValue === 'lab_medicine' || nextStepValue === 'all') 
+        && selectedMedicines.length === 0) {
+        alert('Please select at least one medicine');
+        return false;
+    }
 
-            // Check if allocations are selected when allocation option is chosen
-            if ((nextStep.value === 'allocation' || nextStep.value === 'all') && selectedAllocations.length === 0) {
-                alert('Please select at least one service to allocate');
-                return false;
-            }
-            
-            console.log('✅✅✅ Validation passed! Form will submit. ✅✅✅');
-            console.log('=== FORM VALIDATION ENDED ===');
+    // Check IPD requirement
+    if ((nextStepValue === 'ipd' || nextStepValue === 'all') 
+        && (!document.getElementById('ipdWard').value || !document.getElementById('ipdReason').value)) {
+        alert('Please select a ward and enter admission reason');
+        return false;
+    }
 
-            // Validate medicine quantities and details (we collect Dosage/Instructions as one field)
-            for (const medicine of selectedMedicines) {
-                if (!medicine.dosage || !medicine.dosage.toString().trim()) {
-                    alert(`Please specify dosage/instructions for ${medicine.name}`);
-                    return false;
-                }
-                // Ensure numeric comparison (quantities may be strings after being edited)
-                const qty = Number(medicine.quantity);
-                if (isNaN(qty) || qty < 1) {
-                    alert(`Please enter a valid quantity for ${medicine.name}`);
-                    return false;
-                }
-                // Allow prescription even if stock is 0 - patient can get medicine elsewhere
-            }
-
-            console.log('🚀🚀🚀 RETURNING TRUE - FORM WILL NOW SUBMIT TO SERVER 🚀🚀🚀');
-            return true;
+    // Check allocations requirement
+    if ((nextStepValue === 'allocation' || nextStepValue === 'all') 
+        && selectedAllocations.length === 0) {
+        alert('Please select at least one service to allocate');
+        return false;
+    }
+    
+    // Validate medicine details
+    for (const medicine of selectedMedicines) {
+        if (!medicine.dosage || !medicine.dosage.toString().trim()) {
+            alert(`Please specify dosage/instructions for ${medicine.name}`);
+            return false;
         }
+        const qty = Number(medicine.quantity);
+        if (isNaN(qty) || qty < 1) {
+            alert(`Please enter a valid quantity for ${medicine.name}`);
+            return false;
+        }
+    }
+
+    console.log('✅ Validation passed!');
+    return true;
+}
 
     // Ensure selectedMedicines contains the latest values from the DOM inputs
         function syncSelectedMedicinesFromDOM() {
@@ -534,20 +720,30 @@
 
         function toggleSection(section) {
             const labSection = document.getElementById('labSection');
+            const radiologySection = document.getElementById('radiologySection');
             const medicineSection = document.getElementById('medicineSection');
+            const ipdSection = document.getElementById('ipdSection');
             const allocationSection = document.getElementById('allocationSection');
 
             // Hide all sections first
             if (labSection) labSection.classList.add('hidden');
+            if (radiologySection) radiologySection.classList.add('hidden');
             if (medicineSection) medicineSection.classList.add('hidden');
+            if (ipdSection) ipdSection.classList.add('hidden');
             if (allocationSection) allocationSection.classList.add('hidden');
 
             // Show relevant sections based on selection
             if (section === 'lab_tests' || section === 'lab_medicine' || section === 'all') {
                 if (labSection) labSection.classList.remove('hidden');
             }
+            if (section === 'radiology' || section === 'all') {
+                if (radiologySection) radiologySection.classList.remove('hidden');
+            }
             if (section === 'medicine' || section === 'lab_medicine' || section === 'all') {
                 if (medicineSection) medicineSection.classList.remove('hidden');
+            }
+            if (section === 'ipd' || section === 'all') {
+                if (ipdSection) ipdSection.classList.remove('hidden');
             }
             if (section === 'allocation' || section === 'all') {
                 if (allocationSection) allocationSection.classList.remove('hidden');
@@ -787,6 +983,67 @@
             });
         } // End medicineSearchElement check
 
+
+        // Submit consultation form with validation
+        function submitConsultationForm() {
+            console.log('=== SUBMIT CONSULTATION FORM ===');
+            
+            // Step 1: Sync all hidden fields
+            syncSelectedTestsFromDOM();
+            syncSelectedRadiology();
+            syncSelectedMedicinesFromDOM();
+            syncSelectedAllocationsFromDOM();
+            handleIPDAdmission();
+            
+            // Step 2: Log what we're about to send
+            console.log('Selected Tests:', document.getElementById('selectedTests').value);
+            console.log('Selected Radiology:', document.getElementById('selectedRadiology').value);
+            console.log('Selected Medicines:', document.getElementById('selectedMedicines').value);
+            console.log('Selected Allocations:', document.getElementById('selectedAllocations').value);
+            console.log('IPD Admission Data:', document.getElementById('ipdAdmissionData').value);
+            console.log('Next Step:', document.querySelector('input[name="next_step"]:checked')?.value);
+            
+            // Step 3: Validate
+            if (!validateConsultationForm()) {
+                console.log('❌ Validation failed');
+                return false;
+            }
+            
+            console.log('✅ Validation passed, submitting form...');
+            
+            // Step 4: Submit the form
+            document.getElementById('attendForm').submit();
+            return true;
+        }
+
+        function syncSelectedRadiology() {
+            try {
+                const testIds = selectedRadiology.map(test => test.id);
+                document.getElementById('selectedRadiology').value = JSON.stringify(testIds);
+                console.log('Synced radiology tests:', JSON.stringify(testIds));
+            } catch (e) {
+                console.warn('syncSelectedRadiology failed', e);
+            }
+        }
+
+        // Legacy handler (kept for compatibility)
+        function handleFormSubmit(event) {
+            if (event) event.preventDefault();
+            return submitConsultationForm();
+        }
+
+
+        function syncSelectedTestsFromDOM() {
+    try {
+        // Tests are simpler - just update the hidden field
+        const testIds = selectedTests.map(test => test.id);
+        document.getElementById('selectedTests').value = JSON.stringify(testIds);
+        console.log('Synced tests:', JSON.stringify(testIds));
+    } catch (e) {
+        console.warn('syncSelectedTestsFromDOM failed', e);
+    }
+}
+        
         function showMedicineLoading() {
             const resultsDiv = document.getElementById('medicineResults');
             resultsDiv.innerHTML = '<div class="p-3 text-gray-500"><i class="fas fa-spinner fa-spin mr-2"></i>Searching...</div>';
@@ -839,6 +1096,8 @@
 
             resultsDiv.classList.remove('hidden');
         }
+
+
 
         function addMedicine(medicine) {
             if (!selectedMedicines.some(selected => selected.id === medicine.id)) {
@@ -946,6 +1205,410 @@
             currentMedicineFocus = -1;
         }
 
+        // Radiology Search Functions
+        let radiologySearchTimeout;
+        let currentRadiologyFocus = -1;
+
+        const radiologySearchElement = document.getElementById('radiologySearch');
+        if (radiologySearchElement) {
+            radiologySearchElement.addEventListener('input', function() {
+                clearTimeout(radiologySearchTimeout);
+                const query = this.value.trim();
+
+                // Show/hide clear button
+                const clearBtn = document.getElementById('clearRadiologySearch');
+                if (query.length > 0) {
+                    clearBtn.classList.remove('hidden');
+                } else {
+                    clearBtn.classList.add('hidden');
+                }
+
+                if (query.length < 2) {
+                    document.getElementById('radiologyResults').classList.add('hidden');
+                    return;
+                }
+
+                // Show loading state
+                const resultsDiv = document.getElementById('radiologyResults');
+                resultsDiv.innerHTML = '<div class="p-3 text-gray-500"><i class="fas fa-spinner fa-spin mr-2"></i>Searching...</div>';
+                resultsDiv.classList.remove('hidden');
+
+                radiologySearchTimeout = setTimeout(() => {
+                    fetch(`${BASE_PATH}/doctor/search_radiology_tests?q=${encodeURIComponent(query)}`)
+                        .then(response => response.json())
+                        .then(tests => displayRadiologyResults(tests))
+                        .catch(error => {
+                            resultsDiv.innerHTML = `<div class="p-3 text-red-500">Error: ${error.message}</div>`;
+                        });
+                }, 300);
+            });
+        }
+
+        function displayRadiologyResults(tests) {
+            const resultsDiv = document.getElementById('radiologyResults');
+            resultsDiv.innerHTML = '';
+            currentRadiologyFocus = -1;
+
+            if (tests.length === 0) {
+                resultsDiv.innerHTML = '<div class="p-3 text-gray-500">No radiology tests found</div>';
+            } else {
+                tests.forEach((test, index) => {
+                    const isSelected = selectedRadiology.some(selected => selected.id === test.id);
+                    const div = document.createElement('div');
+                    div.className = `p-3 hover:bg-gray-100 cursor-pointer border-b search-result-item ${isSelected ? 'bg-blue-50' : ''}`;
+                    div.setAttribute('data-index', index);
+                    div.innerHTML = `
+                        <div class="font-medium">${test.name || test.test_name}</div>
+                        <div class="text-sm text-gray-600">${test.code || test.test_code} ${test.price ? `- Tsh ${parseFloat(test.price).toLocaleString('en-US')}` : ''}</div>
+                    `;
+
+                    if (!isSelected) {
+                        div.addEventListener('click', () => addRadiologyTest(test));
+                    }
+
+                    resultsDiv.appendChild(div);
+                });
+            }
+
+            resultsDiv.classList.remove('hidden');
+        }
+
+        function addRadiologyTest(test) {
+            if (!selectedRadiology.some(selected => selected.id === test.id)) {
+                selectedRadiology.push(test);
+                updateSelectedRadiologyList();
+                document.getElementById('radiologyResults').classList.add('hidden');
+                document.getElementById('radiologySearch').value = '';
+            }
+        }
+
+        function removeRadiologyTest(testId) {
+            selectedRadiology = selectedRadiology.filter(test => test.id !== testId);
+            updateSelectedRadiologyList();
+        }
+
+        function updateSelectedRadiologyList() {
+            const listDiv = document.getElementById('selectedRadiologyList');
+            listDiv.innerHTML = '';
+
+            if (selectedRadiology.length === 0) {
+                listDiv.innerHTML = '<div class="text-gray-500 text-sm">No radiology tests selected</div>';
+            } else {
+                selectedRadiology.forEach(test => {
+                    const div = document.createElement('div');
+                    div.className = 'p-3 bg-white border rounded-md flex justify-between items-start';
+                    div.innerHTML = `
+                        <div>
+                            <div class="font-medium">${test.name || test.test_name}</div>
+                            <div class="text-sm text-gray-600">${test.code || test.test_code}</div>
+                        </div>
+                        <button type="button" onclick="removeRadiologyTest(${test.id})" class="text-red-600 hover:text-red-800">
+                            <i class="fas fa-times"></i>
+                        </button>
+                    `;
+                    listDiv.appendChild(div);
+                });
+            }
+
+            // Update hidden field
+            const testIds = selectedRadiology.map(test => test.id);
+            document.getElementById('selectedRadiology').value = JSON.stringify(testIds);
+        }
+
+        function clearRadiologySearch() {
+            document.getElementById('radiologySearch').value = '';
+            document.getElementById('clearRadiologySearch').classList.add('hidden');
+            document.getElementById('radiologyResults').classList.add('hidden');
+            currentRadiologyFocus = -1;
+        }
+
+        // IPD Admission Handler
+        function handleIPDAdmission() {
+            const ward = document.getElementById('ipdWard').value;
+            const reason = document.getElementById('ipdReason').value;
+            
+            if (ward && reason) {
+                ipdAdmissionData = {
+                    ward: ward,
+                    reason: reason,
+                    admission_date: new Date().toISOString().split('T')[0]
+                };
+                document.getElementById('ipdAdmissionData').value = JSON.stringify(ipdAdmissionData);
+            }
+        }
+
+        // Update IPD data when fields change
+        const ipdWardSelect = document.getElementById('ipdWard');
+        const ipdReasonTextarea = document.getElementById('ipdReason');
+        if (ipdWardSelect) ipdWardSelect.addEventListener('change', handleIPDAdmission);
+        if (ipdReasonTextarea) ipdReasonTextarea.addEventListener('input', handleIPDAdmission);
+
+        // Diagnosis Search Functions
+        let preliminaryDiagnosisSearchTimeout;
+        let finalDiagnosisSearchTimeout;
+        let selectedPreliminaryDiagnosis = null;
+        let selectedFinalDiagnosis = null;
+
+        // Preliminary Diagnosis Search
+        const preliminaryDiagnosisSearchElement = document.getElementById('preliminaryDiagnosisSearch');
+        if (preliminaryDiagnosisSearchElement) {
+            preliminaryDiagnosisSearchElement.addEventListener('input', function() {
+                clearTimeout(preliminaryDiagnosisSearchTimeout);
+                const query = this.value.trim();
+
+                const clearBtn = document.getElementById('clearPreliminaryDiagnosisSearch');
+                if (query.length > 0) {
+                    clearBtn.classList.remove('hidden');
+                } else {
+                    clearBtn.classList.add('hidden');
+                    document.getElementById('preliminaryDiagnosisResults').classList.add('hidden');
+                    return;
+                }
+
+                if (query.length < 2) {
+                    document.getElementById('preliminaryDiagnosisResults').classList.add('hidden');
+                    return;
+                }
+
+                preliminaryDiagnosisSearchTimeout = setTimeout(() => {
+                    fetch(`${BASE_PATH}/doctor/search_diagnoses?q=${encodeURIComponent(query)}`)
+                        .then(response => {
+                            if (!response.ok) {
+                                throw new Error(`HTTP error! status: ${response.status}`);
+                            }
+                            return response.json();
+                        })
+                        .then(diagnoses => displayPreliminaryDiagnosisResults(diagnoses))
+                        .catch(error => {
+                            console.error('Error searching diagnoses:', error);
+                            const resultsDiv = document.getElementById('preliminaryDiagnosisResults');
+                            resultsDiv.innerHTML = '<div class="p-3 text-red-500"><i class="fas fa-exclamation-triangle mr-2"></i>Error loading diagnoses</div>';
+                            resultsDiv.classList.remove('hidden');
+                        });
+                }, 300);
+            });
+        }
+
+        function displayPreliminaryDiagnosisResults(diagnoses) {
+            const resultsDiv = document.getElementById('preliminaryDiagnosisResults');
+            resultsDiv.innerHTML = '';
+
+            if (diagnoses.length === 0) {
+                resultsDiv.innerHTML = '<div class="p-3 text-gray-500">No diagnosis codes found</div>';
+            } else {
+                diagnoses.forEach(diagnosis => {
+                    const div = document.createElement('div');
+                    div.className = 'p-3 hover:bg-blue-100 cursor-pointer border-b';
+                    
+                    // Create elements safely to prevent XSS
+                    const titleDiv = document.createElement('div');
+                    titleDiv.className = 'font-medium';
+                    titleDiv.textContent = `${diagnosis.code} - ${diagnosis.name}`;
+                    
+                    const categoryDiv = document.createElement('div');
+                    categoryDiv.className = 'text-sm text-gray-600';
+                    categoryDiv.textContent = diagnosis.category || '';
+                    
+                    const descDiv = document.createElement('div');
+                    descDiv.className = 'text-xs text-gray-500';
+                    descDiv.textContent = diagnosis.description || '';
+                    
+                    div.appendChild(titleDiv);
+                    div.appendChild(categoryDiv);
+                    div.appendChild(descDiv);
+                    div.addEventListener('click', () => selectPreliminaryDiagnosis(diagnosis));
+                    resultsDiv.appendChild(div);
+                });
+            }
+
+            resultsDiv.classList.remove('hidden');
+        }
+
+        function selectPreliminaryDiagnosis(diagnosis) {
+            selectedPreliminaryDiagnosis = diagnosis;
+            document.getElementById('preliminaryDiagnosisId').value = diagnosis.id;
+            
+            // Also populate the manual textarea with the diagnosis name
+            const diagnosisText = diagnosis.code + ' - ' + diagnosis.name;
+            document.getElementById('preliminaryDiagnosis').value = diagnosisText;
+            
+            const displayDiv = document.getElementById('selectedPreliminaryDiagnosis');
+            displayDiv.innerHTML = ''; // Clear first
+            
+            const container = document.createElement('div');
+            container.className = 'p-2 bg-blue-50 border border-blue-200 rounded-md text-sm flex justify-between items-start';
+            
+            const infoDiv = document.createElement('div');
+            const codeText = document.createElement('strong');
+            codeText.textContent = diagnosis.code;
+            const nameText = document.createTextNode(' - ' + diagnosis.name);
+            infoDiv.appendChild(codeText);
+            infoDiv.appendChild(nameText);
+            
+            const categoryDiv = document.createElement('div');
+            categoryDiv.className = 'text-xs text-gray-600';
+            categoryDiv.textContent = diagnosis.category || '';
+            infoDiv.appendChild(categoryDiv);
+            
+            const closeBtn = document.createElement('button');
+            closeBtn.type = 'button';
+            closeBtn.className = 'text-red-600 hover:text-red-800';
+            closeBtn.onclick = clearSelectedPreliminaryDiagnosis;
+            closeBtn.innerHTML = '<i class="fas fa-times"></i>';
+            
+            container.appendChild(infoDiv);
+            container.appendChild(closeBtn);
+            displayDiv.appendChild(container);
+            
+            document.getElementById('preliminaryDiagnosisResults').classList.add('hidden');
+            document.getElementById('preliminaryDiagnosisSearch').value = '';
+            document.getElementById('clearPreliminaryDiagnosisSearch').classList.add('hidden');
+        }
+
+        function clearSelectedPreliminaryDiagnosis() {
+            selectedPreliminaryDiagnosis = null;
+            document.getElementById('preliminaryDiagnosisId').value = '';
+            // Clear the manual textarea too
+            document.getElementById('preliminaryDiagnosis').value = '';
+            document.getElementById('selectedPreliminaryDiagnosis').innerHTML = '';
+        }
+
+        function clearPreliminaryDiagnosisSearch() {
+            document.getElementById('preliminaryDiagnosisSearch').value = '';
+            document.getElementById('clearPreliminaryDiagnosisSearch').classList.add('hidden');
+            document.getElementById('preliminaryDiagnosisResults').classList.add('hidden');
+        }
+
+        // Final Diagnosis Search
+        const finalDiagnosisSearchElement = document.getElementById('finalDiagnosisSearch');
+        if (finalDiagnosisSearchElement) {
+            finalDiagnosisSearchElement.addEventListener('input', function() {
+                clearTimeout(finalDiagnosisSearchTimeout);
+                const query = this.value.trim();
+
+                const clearBtn = document.getElementById('clearFinalDiagnosisSearch');
+                if (query.length > 0) {
+                    clearBtn.classList.remove('hidden');
+                } else {
+                    clearBtn.classList.add('hidden');
+                    document.getElementById('finalDiagnosisResults').classList.add('hidden');
+                    return;
+                }
+
+                if (query.length < 2) {
+                    document.getElementById('finalDiagnosisResults').classList.add('hidden');
+                    return;
+                }
+
+                finalDiagnosisSearchTimeout = setTimeout(() => {
+                    fetch(`${BASE_PATH}/doctor/search_diagnoses?q=${encodeURIComponent(query)}`)
+                        .then(response => {
+                            if (!response.ok) {
+                                throw new Error(`HTTP error! status: ${response.status}`);
+                            }
+                            return response.json();
+                        })
+                        .then(diagnoses => displayFinalDiagnosisResults(diagnoses))
+                        .catch(error => {
+                            console.error('Error searching diagnoses:', error);
+                            const resultsDiv = document.getElementById('finalDiagnosisResults');
+                            resultsDiv.innerHTML = '<div class="p-3 text-red-500"><i class="fas fa-exclamation-triangle mr-2"></i>Error loading diagnoses</div>';
+                            resultsDiv.classList.remove('hidden');
+                        });
+                }, 300);
+            });
+        }
+
+        function displayFinalDiagnosisResults(diagnoses) {
+            const resultsDiv = document.getElementById('finalDiagnosisResults');
+            resultsDiv.innerHTML = '';
+
+            if (diagnoses.length === 0) {
+                resultsDiv.innerHTML = '<div class="p-3 text-gray-500">No diagnosis codes found</div>';
+            } else {
+                diagnoses.forEach(diagnosis => {
+                    const div = document.createElement('div');
+                    div.className = 'p-3 hover:bg-blue-100 cursor-pointer border-b';
+                    
+                    // Create elements safely to prevent XSS
+                    const titleDiv = document.createElement('div');
+                    titleDiv.className = 'font-medium';
+                    titleDiv.textContent = `${diagnosis.code} - ${diagnosis.name}`;
+                    
+                    const categoryDiv = document.createElement('div');
+                    categoryDiv.className = 'text-sm text-gray-600';
+                    categoryDiv.textContent = diagnosis.category || '';
+                    
+                    const descDiv = document.createElement('div');
+                    descDiv.className = 'text-xs text-gray-500';
+                    descDiv.textContent = diagnosis.description || '';
+                    
+                    div.appendChild(titleDiv);
+                    div.appendChild(categoryDiv);
+                    div.appendChild(descDiv);
+                    div.addEventListener('click', () => selectFinalDiagnosis(diagnosis));
+                    resultsDiv.appendChild(div);
+                });
+            }
+
+            resultsDiv.classList.remove('hidden');
+        }
+
+        function selectFinalDiagnosis(diagnosis) {
+            selectedFinalDiagnosis = diagnosis;
+            document.getElementById('finalDiagnosisId').value = diagnosis.id;
+            
+            // Also populate the manual textarea with the diagnosis name
+            const diagnosisText = diagnosis.code + ' - ' + diagnosis.name;
+            document.getElementById('finalDiagnosis').value = diagnosisText;
+            
+            const displayDiv = document.getElementById('selectedFinalDiagnosis');
+            displayDiv.innerHTML = ''; // Clear first
+            
+            const container = document.createElement('div');
+            container.className = 'p-2 bg-blue-50 border border-blue-200 rounded-md text-sm flex justify-between items-start';
+            
+            const infoDiv = document.createElement('div');
+            const codeText = document.createElement('strong');
+            codeText.textContent = diagnosis.code;
+            const nameText = document.createTextNode(' - ' + diagnosis.name);
+            infoDiv.appendChild(codeText);
+            infoDiv.appendChild(nameText);
+            
+            const categoryDiv = document.createElement('div');
+            categoryDiv.className = 'text-xs text-gray-600';
+            categoryDiv.textContent = diagnosis.category || '';
+            infoDiv.appendChild(categoryDiv);
+            
+            const closeBtn = document.createElement('button');
+            closeBtn.type = 'button';
+            closeBtn.className = 'text-red-600 hover:text-red-800';
+            closeBtn.onclick = clearSelectedFinalDiagnosis;
+            closeBtn.innerHTML = '<i class="fas fa-times"></i>';
+            
+            container.appendChild(infoDiv);
+            container.appendChild(closeBtn);
+            displayDiv.appendChild(container);
+            
+            document.getElementById('finalDiagnosisResults').classList.add('hidden');
+            document.getElementById('finalDiagnosisSearch').value = '';
+            document.getElementById('clearFinalDiagnosisSearch').classList.add('hidden');
+        }
+
+        function clearSelectedFinalDiagnosis() {
+            selectedFinalDiagnosis = null;
+            document.getElementById('finalDiagnosisId').value = '';
+            // Clear the manual textarea too
+            document.getElementById('finalDiagnosis').value = '';
+            document.getElementById('selectedFinalDiagnosis').innerHTML = '';
+        }
+
+        function clearFinalDiagnosisSearch() {
+            document.getElementById('finalDiagnosisSearch').value = '';
+            document.getElementById('clearFinalDiagnosisSearch').classList.add('hidden');
+            document.getElementById('finalDiagnosisResults').classList.add('hidden');
+        }
+
         // Hide search results when clicking outside
         document.addEventListener('click', function(e) {
             if (!e.target.closest('#testSearch') && !e.target.closest('#testResults') && !e.target.closest('#clearTestSearch')) {
@@ -955,6 +1618,14 @@
             if (!e.target.closest('#medicineSearch') && !e.target.closest('#medicineResults') && !e.target.closest('#clearMedicineSearch')) {
                 document.getElementById('medicineResults').classList.add('hidden');
                 currentMedicineFocus = -1;
+            }
+            if (!e.target.closest('#preliminaryDiagnosisSearch') && !e.target.closest('#preliminaryDiagnosisResults') && !e.target.closest('#clearPreliminaryDiagnosisSearch')) {
+                const resultsDiv = document.getElementById('preliminaryDiagnosisResults');
+                if (resultsDiv) resultsDiv.classList.add('hidden');
+            }
+            if (!e.target.closest('#finalDiagnosisSearch') && !e.target.closest('#finalDiagnosisResults') && !e.target.closest('#clearFinalDiagnosisSearch')) {
+                const resultsDiv = document.getElementById('finalDiagnosisResults');
+                if (resultsDiv) resultsDiv.classList.add('hidden');
             }
         });
 
@@ -979,6 +1650,29 @@
 
             // Show no-print elements again
             noPrintElements.forEach(el => el.style.display = '');
+        }
+
+        // Toggle complaints history visibility
+        function toggleComplaintsHistory() {
+            const history = document.getElementById('complaintsHistory');
+            const icon = document.getElementById('complaintsToggleIcon');
+            if (history.classList.contains('hidden')) {
+                history.classList.remove('hidden');
+                icon.classList.remove('fa-chevron-down');
+                icon.classList.add('fa-chevron-up');
+            } else {
+                history.classList.add('hidden');
+                icon.classList.remove('fa-chevron-up');
+                icon.classList.add('fa-chevron-down');
+            }
+        }
+
+        // Show all previous complaints
+        function showAllComplaints() {
+            const extras = document.querySelectorAll('.complaints-extra');
+            const btn = document.getElementById('showMoreBtn');
+            extras.forEach(el => el.classList.remove('hidden'));
+            if (btn) btn.style.display = 'none';
         }
     </script>
 

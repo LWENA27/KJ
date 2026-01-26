@@ -8,7 +8,7 @@
             </h1>
             <p class="text-green mt-2 text-lg">Schedule and manage patient appointments</p>
         </div>
-        <a href="/KJ/receptionist/appointments" class="bg-white text-green-700 hover:bg-green-50 px-6 py-3 rounded-lg font-medium transition-all duration-300 transform hover:scale-105 shadow-lg">
+        <a href="<?php echo BASE_PATH; ?>/receptionist/appointments" class="bg-white text-green-700 hover:bg-green-50 px-6 py-3 rounded-lg font-medium transition-all duration-300 transform hover:scale-105 shadow-lg">
             <i class="fas fa-plus mr-2"></i>New Appointment
         </a>
     </div>
@@ -65,7 +65,7 @@
             </div>
             <h3 class="text-xl font-semibold text-gray-900 mb-3">No appointments scheduled</h3>
             <p class="text-gray-600 mb-8 text-lg">Start by scheduling your first appointment</p>
-            <a href="/KJ/receptionist/appointments" class="bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white px-6 py-3 rounded-lg font-medium transition-all duration-300 transform hover:scale-105 shadow-lg">
+            <a href="<?php echo BASE_PATH; ?>/receptionist/appointments" class="bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white px-6 py-3 rounded-lg font-medium transition-all duration-300 transform hover:scale-105 shadow-lg">
                 <i class="fas fa-plus mr-2"></i>Schedule First Appointment
             </a>
         </div>

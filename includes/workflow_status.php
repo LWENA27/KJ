@@ -4,6 +4,7 @@ function renderWorkflowStatus($workflow) {
     $steps = [
         'consultation_registration' => ['label' => 'Registration & Consultation', 'icon' => 'fas fa-user-md'],
         'lab_tests' => ['label' => 'Lab Tests', 'icon' => 'fas fa-flask'],
+        'ipd' => ['label' => 'IPD / Nursing', 'icon' => 'fas fa-procedures'],
         'results_review' => ['label' => 'Results Review', 'icon' => 'fas fa-clipboard-check']
     ];
 

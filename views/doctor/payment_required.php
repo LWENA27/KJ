@@ -172,14 +172,14 @@ $visit_date = $visit_payment['visit_date'] ?? date('Y-m-d');
                             </label>
                         </div>
 
-                        <div class="flex gap-4 pt-4">
-                            <button type="submit" id="submit_override" disabled
-                                    class="flex-1 bg-red-600 text-white py-3 rounded-lg hover:bg-red-700 transition-all font-semibold disabled:opacity-50 disabled:cursor-not-allowed">
+                        <div class="flex flex-col sm:flex-row gap-4 pt-4">
+                <button type="submit" id="submit_override" disabled
+                    class="w-full sm:flex-1 inline-flex items-center justify-center bg-purple-600 text-white px-6 py-3 rounded-lg hover:bg-purple-700 transition-all font-semibold disabled:opacity-50 disabled:cursor-not-allowed shadow-md">
                                 <i class="fas fa-user-md mr-2"></i>
                                 Proceed with Consultation (Override)
                             </button>
                             <a href="<?= $BASE_PATH ?>/doctor/dashboard" 
-                               class="px-6 py-3 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-all text-center">
+                               class="w-full sm:w-auto inline-flex items-center justify-center px-6 py-3 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-all text-center">
                                 <i class="fas fa-times mr-2"></i>Cancel
                             </a>
                         </div>

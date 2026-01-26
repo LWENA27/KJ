@@ -568,20 +568,34 @@
         /* Mobile responsive utilities */
         @media (max-width: 768px) {
             .sidebar {
-                position: fixed;
-                left: 0;
-                top: 0;
-                height: 100vh;
+                position: fixed !important;
+                left: 0 !important;
+                top: 0 !important;
+                height: 100vh !important;
+                width: 16rem !important;
                 transform: translateX(-100%);
-                z-index: 50;
+                z-index: 9999 !important;
+                transition: transform 0.3s ease-in-out;
+                background: white !important;
             }
 
             .sidebar.open {
-                transform: translateX(0);
+                transform: translateX(0) !important;
+            }
+
+            .sidebar-overlay {
+                display: none;
+                position: fixed !important;
+                top: 0 !important;
+                left: 0 !important;
+                width: 100vw !important;
+                height: 100vh !important;
+                background: rgba(0, 0, 0, 0.5) !important;
+                z-index: 9998 !important;
             }
 
             .sidebar-overlay.show {
-                display: block;
+                display: block !important;
             }
 
             .main-content,
@@ -1123,8 +1137,7 @@
                                 ['url' => 'lab/results', 'icon' => 'fas fa-clipboard-check', 'text' => 'Record Results', 'badge' => '', 'color' => 'green'],
                                 ['url' => 'lab/samples', 'icon' => 'fas fa-test-tube', 'text' => 'Sample Collection', 'badge' => '2', 'color' => 'purple'],
                                 ['url' => 'lab/test_management', 'icon' => 'fas fa-cogs', 'text' => 'Test Management', 'badge' => '', 'color' => 'indigo'],
-                                ['url' => 'lab/equipment', 'icon' => 'fas fa-microscope', 'text' => 'Equipment', 'badge' => '1', 'color' => 'indigo'],
-                                ['url' => 'lab/inventory', 'icon' => 'fas fa-boxes', 'text' => 'Inventory', 'badge' => '!', 'color' => 'orange'],
+                                ['url' => 'lab/equipment', 'icon' => 'fas fa-microscope', 'text' => 'Equipment & Inventory', 'badge' => '1', 'color' => 'indigo'],
                                 ['url' => 'lab/quality', 'icon' => 'fas fa-check-double', 'text' => 'Quality Control', 'badge' => '', 'color' => 'emerald'],
                                 ['url' => 'lab/reports', 'icon' => 'fas fa-chart-bar', 'text' => 'Reports', 'badge' => '', 'color' => 'rose'],
                             ];
@@ -1140,6 +1153,20 @@
                                 ['url' => 'pharmacist/dashboard', 'icon' => 'fas fa-chart-line', 'text' => 'Dashboard', 'badge' => '', 'color' => 'blue'],
                                 ['url' => 'pharmacist/prescriptions', 'icon' => 'fas fa-prescription', 'text' => 'Prescriptions', 'badge' => isset($sidebar_data['pending_prescriptions']) && $sidebar_data['pending_prescriptions'] > 0 ? $sidebar_data['pending_prescriptions'] : '', 'color' => 'green'],
                                 ['url' => 'pharmacist/inventory', 'icon' => 'fas fa-boxes', 'text' => 'Inventory', 'badge' => isset($sidebar_data['low_stock_medicines']) && $sidebar_data['low_stock_medicines'] > 0 ? '!' : '', 'color' => 'orange'],
+                            ];
+                        } elseif ($role === 'radiologist') {
+                            $menu_items = [
+                                ['url' => 'radiologist/dashboard', 'icon' => 'fas fa-chart-line', 'text' => 'Dashboard', 'badge' => '', 'color' => 'blue'],
+                                ['url' => 'radiologist/orders', 'icon' => 'fas fa-x-ray', 'text' => 'Test Orders', 'badge' => isset($sidebar_data['pending_orders']) && $sidebar_data['pending_orders'] > 0 ? $sidebar_data['pending_orders'] : '', 'color' => 'purple'],
+                                ['url' => 'radiologist/orders?status=in_progress', 'icon' => 'fas fa-hourglass-half', 'text' => 'In Progress', 'badge' => '', 'color' => 'orange'],
+                                ['url' => 'radiologist/orders?status=completed', 'icon' => 'fas fa-check-circle', 'text' => 'Completed', 'badge' => '', 'color' => 'green'],
+                            ];
+                        } elseif ($role === 'nurse') {
+                            $menu_items = [
+                                ['url' => 'ipd/dashboard', 'icon' => 'fas fa-chart-line', 'text' => 'IPD Dashboard', 'badge' => '', 'color' => 'blue'],
+                                ['url' => 'ipd/beds', 'icon' => 'fas fa-bed', 'text' => 'Bed Management', 'badge' => '', 'color' => 'purple'],
+                                ['url' => 'ipd/admissions', 'icon' => 'fas fa-procedures', 'text' => 'Admissions', 'badge' => isset($sidebar_data['active_admissions']) && $sidebar_data['active_admissions'] > 0 ? $sidebar_data['active_admissions'] : '', 'color' => 'green'],
+                                ['url' => 'ipd/admit', 'icon' => 'fas fa-user-plus', 'text' => 'Admit Patient', 'badge' => '', 'color' => 'indigo'],
                             ];
                         }
                         ?>
@@ -1189,7 +1216,7 @@
                             <!-- Left: Breadcrumb or Page Title -->
                             <div class="flex items-center space-x-4">
                                 <!-- Mobile menu button -->
-                                <button onclick="toggleSidebar()" class="md:hidden header-action-btn">
+                                <button id="sidebarToggleBtn" onclick="toggleSidebar()" class="md:hidden header-action-btn" aria-label="Toggle sidebar">
                                     <i class="fas fa-bars text-lg"></i>
                                 </button>
 
@@ -1391,22 +1418,49 @@
 
     <!-- Mobile Navigation JavaScript -->
     <script>
+        // Use CSS media query matching instead of window.innerWidth for reliability
+        function isMobileView() {
+            return window.matchMedia('(max-width: 768px)').matches;
+        }
+
         function toggleSidebar() {
             const sidebar = document.getElementById('sidebar');
             const overlay = document.getElementById('sidebarOverlay');
             const mainContent = document.getElementById('contentWrapper');
             const topHeader = document.querySelector('.top-header');
 
-            if (!sidebar) return;
+            if (!sidebar) {
+                console.error('Sidebar element not found');
+                return;
+            }
 
-            // Mobile behaviour (slide-in with overlay)
-            if (window.innerWidth <= 768) {
-                if (overlay) {
-                    sidebar.classList.toggle('open');
-                    overlay.classList.toggle('show');
+            const mobile = isMobileView();
+            console.log('toggleSidebar called. isMobile:', mobile, 'window.innerWidth:', window.innerWidth);
+
+            // Mobile behaviour (slide-in with overlay) — breakpoint 768px
+            if (mobile) {
+                const isCurrentlyOpen = sidebar.classList.contains('open');
+                
+                if (isCurrentlyOpen) {
+                    // Close sidebar
+                    sidebar.classList.remove('open');
+                    sidebar.style.transform = 'translateX(-100%)';
+                    if (overlay) {
+                        overlay.classList.remove('show');
+                        overlay.style.display = 'none';
+                    }
                 } else {
-                    sidebar.classList.toggle('open');
+                    // Open sidebar
+                    sidebar.classList.add('open');
+                    sidebar.style.transform = 'translateX(0)';
+                    sidebar.style.zIndex = '9999';
+                    if (overlay) {
+                        overlay.classList.add('show');
+                        overlay.style.display = 'block';
+                        overlay.style.zIndex = '9998';
+                    }
                 }
+                console.log('Mobile toggle result: sidebar.open =', sidebar.classList.contains('open'));
                 return;
             }
 
@@ -1422,29 +1476,77 @@
         }
 
         function closeSidebarOnMobile() {
-            if (window.innerWidth <= 768) {
+            if (isMobileView()) {
                 const sidebar = document.getElementById('sidebar');
                 const overlay = document.getElementById('sidebarOverlay');
 
-                if (sidebar && overlay) {
+                if (sidebar) {
                     sidebar.classList.remove('open');
-                    overlay.classList.remove('show');
+                    sidebar.style.transform = 'translateX(-100%)';
                 }
+                if (overlay) {
+                    overlay.classList.remove('show');
+                    overlay.style.display = 'none';
+                }
+                console.log('Mobile close: sidebar.open =', sidebar && sidebar.classList.contains('open'));
             }
         }
 
-        // Close sidebar when clicking outside on mobile
-        document.addEventListener('click', function(event) {
-            if (window.innerWidth <= 768) {
-                const sidebar = document.getElementById('sidebar');
-                const toggleBtn = event.target.closest('[onclick*="toggleSidebar"]');
+        // Ensure event listeners are attached when DOM is ready
+        function initializeMobileToggle() {
+            const mobileBtn = document.getElementById('sidebarToggleBtn');
+            const overlay = document.getElementById('sidebarOverlay');
 
-                if (sidebar && !sidebar.contains(event.target) && !toggleBtn) {
-                    sidebar.classList.remove('open');
-                    document.getElementById('sidebarOverlay').classList.remove('show');
-                }
+            if (mobileBtn) {
+                // Click event with stopPropagation to avoid closing immediately
+                mobileBtn.addEventListener('click', function(e) {
+                    e.stopPropagation();
+                    toggleSidebar();
+                });
+
+                // Touchstart for better mobile responsiveness (Samsung S10+, etc.)
+                mobileBtn.addEventListener('touchstart', function(e) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    toggleSidebar();
+                }, { passive: false });
             }
-        });
+
+            // Overlay: close sidebar when tapped/clicked
+            if (overlay) {
+                overlay.addEventListener('click', function(e) {
+                    closeSidebarOnMobile();
+                });
+
+                overlay.addEventListener('touchstart', function(e) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    closeSidebarOnMobile();
+                }, { passive: false });
+            }
+
+            // Close sidebar when clicking outside on mobile (on the main content area)
+            document.addEventListener('click', function(event) {
+                if (window.innerWidth <= 768) {
+                    const sidebar = document.getElementById('sidebar');
+                    const toggleBtn = document.getElementById('sidebarToggleBtn');
+                    const clickedOnToggle = toggleBtn && (toggleBtn === event.target || toggleBtn.contains(event.target));
+                    const clickedOnSidebar = sidebar && (sidebar === event.target || sidebar.contains(event.target));
+
+                    // Only close if clicked outside sidebar and outside toggle button
+                    if (sidebar && !clickedOnSidebar && !clickedOnToggle && sidebar.classList.contains('open')) {
+                        closeSidebarOnMobile();
+                    }
+                }
+            });
+        }
+
+        // Initialize when DOM is ready
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', initializeMobileToggle);
+        } else {
+            initializeMobileToggle();
+        }
 
         // Handle window resize
         window.addEventListener('resize', function() {

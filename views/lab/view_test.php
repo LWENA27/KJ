@@ -7,6 +7,7 @@
             </a>
             
             <!-- Action Buttons -->
+            <?php if ($test['status'] !== 'completed'): ?>
             <button onclick="openTakeSampleModal()" 
                     class="bg-orange-500 hover:bg-orange-600 text-white px-4 py-2 rounded-md">
                 <i class="fas fa-vial mr-2"></i>Take Sample
@@ -16,8 +17,35 @@
                     class="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded-md">
                 <i class="fas fa-clipboard-check mr-2"></i>Add Result
             </button>
+            <?php else: ?>
+            <!-- Test is completed - show print button -->
+            <button onclick="printLabResult()" 
+                    class="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-md">
+                <i class="fas fa-print mr-2"></i>Print Result
+            </button>
+            <?php endif; ?>
         </div>
     </div>
+
+    <?php 
+    $isLabOnly = isset($test['visit_type']) && $test['visit_type'] === 'lab_only';
+    $isCompleted = $test['status'] === 'completed';
+    ?>
+
+    <!-- Visit Type Badge -->
+    <?php if ($isLabOnly): ?>
+    <div class="bg-purple-50 border border-purple-200 p-4 rounded-lg mb-6">
+        <div class="flex items-center">
+            <div class="p-2 bg-purple-100 rounded-full mr-3">
+                <i class="fas fa-flask text-purple-600"></i>
+            </div>
+            <div>
+                <h4 class="font-medium text-purple-800">Lab-Only Visit</h4>
+                <p class="text-sm text-purple-600">This patient registered for lab test only. Results will be given directly to patient after completion.</p>
+            </div>
+        </div>
+    </div>
+    <?php endif; ?>
 
     <!-- Patient Workflow Status -->
     <div class="bg-blue-50 p-4 rounded-lg mb-6">
@@ -42,23 +70,37 @@
                 </div>
             </div>
             <div class="flex items-center">
-                <div class="w-8 h-8 rounded-full bg-blue-500 flex items-center justify-center text-white">
-                    <i class="fas fa-flask"></i>
+                <div class="w-8 h-8 rounded-full <?php echo $isCompleted ? 'bg-green-500' : 'bg-blue-500'; ?> flex items-center justify-center text-white">
+                    <i class="fas <?php echo $isCompleted ? 'fa-check' : 'fa-flask'; ?>"></i>
                 </div>
                 <div class="ml-2">
                     <div class="text-sm font-medium">Lab Test</div>
-                    <div class="text-xs text-gray-500">In Progress</div>
+                    <div class="text-xs text-gray-500"><?php echo $isCompleted ? 'Completed' : 'In Progress'; ?></div>
                 </div>
             </div>
+            <?php if ($isLabOnly): ?>
+            <!-- Lab-only workflow: Results go to patient -->
             <div class="flex items-center">
-                <div class="w-8 h-8 rounded-full bg-gray-300 flex items-center justify-center text-white">
-                    <i class="fas fa-file-medical"></i>
+                <div class="w-8 h-8 rounded-full <?php echo $isCompleted ? 'bg-green-500' : 'bg-gray-300'; ?> flex items-center justify-center text-white">
+                    <i class="fas <?php echo $isCompleted ? 'fa-check' : 'fa-print'; ?>"></i>
                 </div>
                 <div class="ml-2">
-                    <div class="text-sm font-medium">Results</div>
-                    <div class="text-xs text-gray-500">Pending</div>
+                    <div class="text-sm font-medium">Print & Collect</div>
+                    <div class="text-xs text-gray-500"><?php echo $isCompleted ? 'Ready' : 'Waiting'; ?></div>
                 </div>
             </div>
+            <?php else: ?>
+            <!-- Consultation workflow: Results go to doctor -->
+            <div class="flex items-center">
+                <div class="w-8 h-8 rounded-full <?php echo $isCompleted ? 'bg-green-500' : 'bg-gray-300'; ?> flex items-center justify-center text-white">
+                    <i class="fas <?php echo $isCompleted ? 'fa-check' : 'fa-user-md'; ?>"></i>
+                </div>
+                <div class="ml-2">
+                    <div class="text-sm font-medium">Send to Doctor</div>
+                    <div class="text-xs text-gray-500"><?php echo $isCompleted ? 'Sent' : 'Pending'; ?></div>
+                </div>
+            </div>
+            <?php endif; ?>
         </div>
     </div>
 
@@ -381,6 +423,110 @@ function openAddResultModal() {
 function closeAddResultModal() {
     document.getElementById('addResultModal').classList.add('hidden');
     document.getElementById('addResultModal').classList.remove('flex');
+}
+
+// Print Lab Result Function
+function printLabResult() {
+    // Create a printable version of the lab result
+    const testName = '<?php echo addslashes(htmlspecialchars($test['test_name'] ?? '')); ?>';
+    const patientName = '<?php echo addslashes(htmlspecialchars(($test['first_name'] ?? '') . ' ' . ($test['last_name'] ?? ''))); ?>';
+    const regNumber = '<?php echo addslashes(htmlspecialchars($test['registration_number'] ?? 'N/A')); ?>';
+    const resultValue = '<?php echo addslashes(htmlspecialchars($test['result_value'] ?? 'N/A')); ?>';
+    const resultUnit = '<?php echo addslashes(htmlspecialchars($test['result_unit'] ?? $test['unit'] ?? '')); ?>';
+    const normalRange = '<?php echo addslashes(htmlspecialchars($test['normal_range'] ?? 'N/A')); ?>';
+    const isNormal = <?php echo ($test['is_normal'] ?? 1) ? 'true' : 'false'; ?>;
+    const resultDate = '<?php echo isset($test['result_date']) ? date('F j, Y H:i', strtotime($test['result_date'])) : date('F j, Y H:i'); ?>';
+    const notes = '<?php echo addslashes(htmlspecialchars($test['result_text'] ?? '')); ?>';
+    
+    const printWindow = window.open('', '_blank');
+    printWindow.document.write(`
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <title>Lab Result - ${patientName}</title>
+            <style>
+                body { font-family: Arial, sans-serif; padding: 20px; max-width: 800px; margin: 0 auto; }
+                .header { text-align: center; border-bottom: 2px solid #333; padding-bottom: 20px; margin-bottom: 20px; }
+                .logo { font-size: 24px; font-weight: bold; color: #2563eb; }
+                .subtitle { color: #666; margin-top: 5px; }
+                .section { margin-bottom: 20px; }
+                .section-title { font-weight: bold; color: #333; border-bottom: 1px solid #ddd; padding-bottom: 5px; margin-bottom: 10px; }
+                .info-row { display: flex; justify-content: space-between; margin-bottom: 8px; }
+                .label { color: #666; }
+                .value { font-weight: 500; }
+                .result-box { background: #f3f4f6; border: 2px solid ${isNormal ? '#10b981' : '#ef4444'}; border-radius: 8px; padding: 20px; text-align: center; margin: 20px 0; }
+                .result-value { font-size: 36px; font-weight: bold; color: ${isNormal ? '#10b981' : '#ef4444'}; }
+                .result-status { font-size: 14px; color: ${isNormal ? '#10b981' : '#ef4444'}; margin-top: 5px; }
+                .footer { text-align: center; color: #666; font-size: 12px; margin-top: 40px; border-top: 1px solid #ddd; padding-top: 20px; }
+                @media print { 
+                    body { padding: 0; }
+                    .no-print { display: none; }
+                }
+            </style>
+        </head>
+        <body>
+            <div class="header">
+                <div class="logo">🏥 Zahanati Health Center</div>
+                <div class="subtitle">Laboratory Results Report</div>
+            </div>
+            
+            <div class="section">
+                <div class="section-title">Patient Information</div>
+                <div class="info-row">
+                    <span class="label">Patient Name:</span>
+                    <span class="value">${patientName}</span>
+                </div>
+                <div class="info-row">
+                    <span class="label">Registration #:</span>
+                    <span class="value">${regNumber}</span>
+                </div>
+                <div class="info-row">
+                    <span class="label">Result Date:</span>
+                    <span class="value">${resultDate}</span>
+                </div>
+            </div>
+            
+            <div class="section">
+                <div class="section-title">Test Information</div>
+                <div class="info-row">
+                    <span class="label">Test Name:</span>
+                    <span class="value">${testName}</span>
+                </div>
+                <div class="info-row">
+                    <span class="label">Normal Range:</span>
+                    <span class="value">${normalRange}</span>
+                </div>
+            </div>
+            
+            <div class="result-box">
+                <div class="result-value">${resultValue} ${resultUnit}</div>
+                <div class="result-status">${isNormal ? '✓ Within Normal Range' : '⚠ Outside Normal Range'}</div>
+            </div>
+            
+            ${notes ? `
+            <div class="section">
+                <div class="section-title">Additional Notes</div>
+                <p>${notes}</p>
+            </div>
+            ` : ''}
+            
+            <div class="footer">
+                <p>This is a computer-generated report. For any queries, please contact the laboratory.</p>
+                <p>Printed on: ${new Date().toLocaleString()}</p>
+            </div>
+            
+            <div class="no-print" style="text-align: center; margin-top: 20px;">
+                <button onclick="window.print()" style="background: #2563eb; color: white; padding: 10px 30px; border: none; border-radius: 5px; cursor: pointer; font-size: 16px;">
+                    🖨️ Print
+                </button>
+                <button onclick="window.close()" style="background: #6b7280; color: white; padding: 10px 30px; border: none; border-radius: 5px; cursor: pointer; font-size: 16px; margin-left: 10px;">
+                    ✕ Close
+                </button>
+            </div>
+        </body>
+        </html>
+    `);
+    printWindow.document.close();
 }
 </script>
 

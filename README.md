@@ -9,7 +9,9 @@ A comprehensive PHP-based healthcare dispensary management system for patient re
 - **Lab Management**: Test orders, sample collection, results entry
 - **Pharmacy**: Medicine inventory (batch tracking), prescription dispensing
 - **Receptionist**: Patient registration, payments, medicine dispensing
-- **Admin**: User management, medicine/test catalog, reports
+- **Radiology Module**: X-Ray, Ultrasound, CT, MRI order management and results
+- **IPD (In-Patient Department)**: Bed management, patient admissions, progress notes, discharge
+- **Admin**: User management, medicine/test catalog, reports, multi-role assignment
 
 ## Tech Stack
 
@@ -59,30 +61,42 @@ KJ/
 - **[COMPATIBILITY_FIXES.md](COMPATIBILITY_FIXES.md)** - Recent database compatibility changes
 - **[database/IMPORT_INSTRUCTIONS.md](database/IMPORT_INSTRUCTIONS.md)** - Database setup guide
 - **[database/zahanati.sql](database/zahanati.sql)** - Complete schema with demo data
-
+- **[docs/IMPLEMENTATION_COMPLETE.md](docs/IMPLEMENTATION_COMPLETE.md)** - IPD & Radiology implementation summary
 ## Demo Accounts
 
 After importing the database:
 
-| Role | Username | Password |
-|------|----------|----------|
-| Admin | admin | password |
-| Receptionist | reception | password |
-| Doctor | doctor | password |
-| Lab Technician | lab | password |
+| Role | Username | Password | Notes |
+|------|----------|----------|-------|
+| Admin | admin | password | Full system access |
+| Receptionist | reception | password | Can have nurse role added |
+| Doctor | doctor | password | Can order radiology tests |
+| Lab Technician | lab | password | Lab test management |
+| Radiologist | radiologist1 | password | Create with test script |
+| Nurse | nurse1 | password | Create with test script |
 
+**Create test users:** Run `/database/create_test_users.sql` to add radiologist and nurse accounts.
 ## Workflow
 
 1. **Registration** (Receptionist): Register patient → Create visit → Collect payment
+2. **Consultation** (Doctor): Review patient → Diagnose → Prescribe medicine/tests/radiology
+3. **Lab Tests** (Lab Tech): Collect samples → Process tests → Enter results
+4. **Radiology** (Radiologist): Perform tests → Record findings → Generate reports
+5. **IPD Admission** (Nurse/Receptionist): Admit patient → Assign bed → Track progress → Discharge
+6. **Dispensing** (Receptionist): Verify payment → Dispense medicine (FEFO)
+1. **Registration** (Receptionist): Register patient → Create visit → Collect payment
 2. **Consultation** (Doctor): Review patient → Diagnose → Prescribe medicine/tests
 3. **Lab Tests** (Lab Tech): Collect samples → Process tests → Enter results
-4. **Dispensing** (Receptionist): Verify payment → Dispense medicine (FEFO)
-
 ## Key Features
 
 - **Visit-Centric Design**: All workflows revolve around `patient_visits`
+- **Multi-Role Support**: Staff can have multiple roles (e.g., receptionist + nurse)
 - **Batch Tracking**: Medicine stock tracked by batch with expiry dates
 - **FEFO Dispensing**: First-Expiry-First-Out automatic batch selection
+- **Payment Tracking**: Linked to visits (registration, consultation, lab, medicine)
+- **Workflow Status**: Auto-derived from visit status + payments + consultations
+- **IPD Management**: Complete in-patient care with bed tracking and progress notes
+- **Radiology Integration**: Full imaging workflow from order to result
 - **Payment Tracking**: Linked to visits (registration, consultation, lab, medicine)
 - **Workflow Status**: Auto-derived from visit status + payments + consultations
 

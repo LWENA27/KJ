@@ -47,6 +47,7 @@ class DoctorController extends BaseController {
 
         // Patients waiting for lab results review (join lab_results with tests to get names)
         // Scope to consultations that belong to this doctor
+        // Find patients with completed lab results from this doctor's consultations where visit is still active
         $stmt = $this->pdo->prepare("
             SELECT p.*,
                    ag.test_names,
@@ -63,7 +64,8 @@ class DoctorController extends BaseController {
                 WHERE lto.status = 'completed' AND c.doctor_id = ?
                 GROUP BY c.patient_id
             ) ag ON p.id = ag.patient_id
-            WHERE (SELECT pvx2.status FROM patient_visits pvx2 WHERE pvx2.patient_id = p.id ORDER BY pvx2.created_at DESC LIMIT 1) = 'results_review' AND ag.test_names IS NOT NULL
+            WHERE ag.test_names IS NOT NULL
+              AND (SELECT pvx2.status FROM patient_visits pvx2 WHERE pvx2.patient_id = p.id ORDER BY pvx2.created_at DESC LIMIT 1) = 'active'
             ORDER BY ag.latest_result_date DESC
         ");
         $stmt->execute([$doctor_id]);
@@ -115,7 +117,7 @@ class DoctorController extends BaseController {
                    IF(EXISTS(
                        SELECT 1 FROM payments pay 
                        WHERE pay.visit_id = pv.id 
-                       AND pay.payment_type IN ('consultation', 'registration')
+                       AND pay.payment_type = 'consultation'
                        AND pay.payment_status = 'paid'
                    ), 1, 0) as consultation_registration_paid
             FROM patients p
@@ -145,7 +147,7 @@ class DoctorController extends BaseController {
                 // Pending consultations (registered / scheduled / waiting) for this doctor
                         $stmt = $this->pdo->prepare(
                         "SELECT c.*, p.first_name AS patient_first, p.last_name AS patient_last, p.date_of_birth AS patient_dob, p.phone AS patient_phone,
-                         (SELECT IF(EXISTS(SELECT 1 FROM payments pay WHERE pay.visit_id = (SELECT id FROM patient_visits pv WHERE pv.patient_id = p.id ORDER BY pv.created_at DESC LIMIT 1) AND pay.payment_type IN ('consultation', 'registration') AND pay.payment_status = 'paid'),1,0)) as consultation_registration_paid
+                         (SELECT IF(EXISTS(SELECT 1 FROM payments pay WHERE pay.visit_id = (SELECT id FROM patient_visits pv WHERE pv.patient_id = p.id ORDER BY pv.created_at DESC LIMIT 1) AND pay.payment_type = 'consultation' AND pay.payment_status = 'paid'),1,0)) as consultation_registration_paid
                          FROM consultations c
                          JOIN patients p ON c.patient_id = p.id
                          WHERE c.doctor_id = ?
@@ -200,7 +202,7 @@ class DoctorController extends BaseController {
         $stmt = $this->pdo->prepare("
             SELECT c.*, p.first_name, p.last_name, p.date_of_birth, p.phone,
                    pv.visit_date,
-                   (SELECT IF(EXISTS(SELECT 1 FROM payments pay WHERE pay.visit_id = (SELECT id FROM patient_visits pv WHERE pv.patient_id = p.id ORDER BY pv.created_at DESC LIMIT 1) AND pay.payment_type IN ('consultation', 'registration') AND pay.payment_status = 'paid'),1,0)) as consultation_registration_paid,
+                   (SELECT IF(EXISTS(SELECT 1 FROM payments pay WHERE pay.visit_id = (SELECT id FROM patient_visits pv WHERE pv.patient_id = p.id ORDER BY pv.created_at DESC LIMIT 1) AND pay.payment_type = 'consultation' AND pay.payment_status = 'paid'),1,0)) as consultation_registration_paid,
                    (SELECT IF(EXISTS(SELECT 1 FROM payments pay2 WHERE pay2.visit_id = (SELECT id FROM patient_visits pv2 WHERE pv2.patient_id = p.id ORDER BY pv2.created_at DESC LIMIT 1) AND pay2.payment_type = 'lab_test' AND pay2.payment_status = 'paid'),1,0)) as lab_tests_paid,
                    (SELECT IF(EXISTS(SELECT 1 FROM payments pay3 WHERE pay3.visit_id = (SELECT id FROM patient_visits pv3 WHERE pv3.patient_id = p.id ORDER BY pv3.created_at DESC LIMIT 1) AND pay3.payment_type = 'lab_test' AND pay3.payment_status = 'paid'),1,0)) as results_review_paid,
                    c.main_complaint,
@@ -267,10 +269,11 @@ class DoctorController extends BaseController {
             $this->redirect('doctor/patients');
         }
 
-        // Get existing consultations
+        // Get existing consultations (include doctor's name)
         $stmt = $this->pdo->prepare("
-            SELECT c.*, pv.visit_date
+            SELECT c.*, pv.visit_date, CONCAT(u.first_name, ' ', u.last_name) AS doctor_name
             FROM consultations c
+            LEFT JOIN users u ON c.doctor_id = u.id
             LEFT JOIN patient_visits pv ON c.visit_id = pv.id
             WHERE c.patient_id = ? 
             ORDER BY COALESCE(c.follow_up_date, pv.visit_date, c.created_at) DESC
@@ -378,7 +381,7 @@ class DoctorController extends BaseController {
         }
 
         // Get all consultations for this patient (so the view can pick latest if needed)
-        $stmt = $this->pdo->prepare("\n            SELECT c.*, pv.visit_date\n            FROM consultations c\n            LEFT JOIN patient_visits pv ON c.visit_id = pv.id\n            WHERE c.patient_id = ? \n            ORDER BY COALESCE(c.follow_up_date, pv.visit_date, c.created_at) DESC\n        ");
+    $stmt = $this->pdo->prepare("\n            SELECT c.*, pv.visit_date, CONCAT(u.first_name, ' ', u.last_name) AS doctor_name\n            FROM consultations c\n            LEFT JOIN users u ON c.doctor_id = u.id\n            LEFT JOIN patient_visits pv ON c.visit_id = pv.id\n            WHERE c.patient_id = ? \n            ORDER BY COALESCE(c.follow_up_date, pv.visit_date, c.created_at) DESC\n        ");
         $stmt->execute([$patient_id]);
         $consultations = $stmt->fetchAll();
 
@@ -476,7 +479,7 @@ class DoctorController extends BaseController {
          SELECT p.*,
              COALESCE(consultation_counts.consultation_count, 0) as consultation_count,
                    (SELECT pv3.status FROM patient_visits pv3 WHERE pv3.patient_id = p.id ORDER BY pv3.created_at DESC LIMIT 1) as workflow_status,
-             (SELECT IF(EXISTS(SELECT 1 FROM payments pay WHERE pay.visit_id = (SELECT id FROM patient_visits pv2 WHERE pv2.patient_id = p.id ORDER BY pv2.created_at DESC LIMIT 1) AND pay.payment_type IN ('consultation', 'registration') AND pay.payment_status = 'paid'),1,0)) AS consultation_registration_paid,
+             (SELECT IF(EXISTS(SELECT 1 FROM payments pay WHERE pay.visit_id = (SELECT id FROM patient_visits pv2 WHERE pv2.patient_id = p.id ORDER BY pv2.created_at DESC LIMIT 1) AND pay.payment_type = 'consultation' AND pay.payment_status = 'paid'),1,0)) AS consultation_registration_paid,
              (SELECT IF(EXISTS(SELECT 1 FROM payments pay2 WHERE pay2.visit_id = (SELECT id FROM patient_visits pv3 WHERE pv3.patient_id = p.id ORDER BY pv3.created_at DESC LIMIT 1) AND pay2.payment_type = 'lab_test' AND pay2.payment_status = 'paid'),1,0)) AS lab_tests_paid,
              (SELECT IF(EXISTS(SELECT 1 FROM payments pay3 WHERE pay3.visit_id = (SELECT id FROM patient_visits pv4 WHERE pv4.patient_id = p.id ORDER BY pv4.created_at DESC LIMIT 1) AND pay3.payment_type = 'lab_test' AND pay3.payment_status = 'paid'),1,0)) AS results_review_paid
          FROM patients p
@@ -486,7 +489,7 @@ class DoctorController extends BaseController {
                 WHERE doctor_id = ?
                 GROUP BY patient_id
             ) consultation_counts ON p.id = consultation_counts.patient_id
-                WHERE (SELECT IF(EXISTS(SELECT 1 FROM payments pay WHERE pay.visit_id = (SELECT id FROM patient_visits pv WHERE pv.patient_id = p.id ORDER BY pv.created_at DESC LIMIT 1) AND pay.payment_type IN ('consultation', 'registration') AND pay.payment_status = 'paid'),1,0)) = 1
+                WHERE (SELECT IF(EXISTS(SELECT 1 FROM payments pay WHERE pay.visit_id = (SELECT id FROM patient_visits pv WHERE pv.patient_id = p.id ORDER BY pv.created_at DESC LIMIT 1) AND pay.payment_type = 'consultation' AND pay.payment_status = 'paid'),1,0)) = 1
             ORDER BY p.first_name
         ");
         $stmt->execute([$doctor_id]);
@@ -499,8 +502,14 @@ class DoctorController extends BaseController {
     }
 
     public function start_consultation() {
-    error_log('[start_consultation] METHOD CALLED - REQUEST_METHOD: ' . $_SERVER['REQUEST_METHOD']);
-    
+    error_log('=== START_CONSULTATION DEBUG ===');
+    error_log('REQUEST_METHOD: ' . $_SERVER['REQUEST_METHOD']);
+    error_log('POST Data: ' . print_r($_POST, true));
+    error_log('selected_tests raw: ' . ($_POST['selected_tests'] ?? 'NOT SET'));
+    error_log('selected_medicines raw: ' . ($_POST['selected_medicines'] ?? 'NOT SET'));
+    error_log('selected_allocations raw: ' . ($_POST['selected_allocations'] ?? 'NOT SET'));
+    error_log('next_step: ' . ($_POST['next_step'] ?? 'NOT SET'));
+
     if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
         error_log('[start_consultation] Not POST request, redirecting to dashboard');
         $this->redirect('doctor/dashboard');
@@ -521,94 +530,95 @@ class DoctorController extends BaseController {
 
     if (!$visit_id) {
         $_SESSION['error'] = 'No visit found for this patient';
+        error_log('[start_consultation] ERROR: No visit found for patient ' . $patient_id);
         $this->redirect('doctor/view_patient/' . $patient_id);
         return;
     }
 
+    error_log('[start_consultation] Found visit_id: ' . $visit_id);
+
     // Check if doctor can attend this visit
     $can = $this->canAttend($visit_id);
+    error_log('[start_consultation] canAttend result: ' . print_r($can, true));
     if (!$can['ok']) {
         $_SESSION['error'] = 'Cannot start consultation: ' . $can['reason'];
+        error_log('[start_consultation] ERROR: canAttend failed - ' . $can['reason']);
         $this->redirect('doctor/view_patient/' . $patient_id);
         return;
     }
 
     // Start or resume consultation using BaseController helper
     $start = $this->startConsultation($visit_id, $doctor_id);
+    error_log('[start_consultation] startConsultation result: ' . print_r($start, true));
     if (!$start['ok']) {
         $_SESSION['error'] = 'Failed to start consultation: ' . ($start['message'] ?? $start['reason'] ?? 'unknown');
+        error_log('[start_consultation] ERROR: startConsultation failed - ' . ($start['message'] ?? $start['reason'] ?? 'unknown'));
         $this->redirect('doctor/view_patient/' . $patient_id);
         return;
     }
 
     $consultation_id = $start['consultation_id'];
-
-    // Debug logging: record ALL incoming POST data for troubleshooting
-    error_log('[start_consultation] ========== FORM SUBMISSION ==========');
-    error_log('[start_consultation] patient_id: ' . $patient_id);
-    error_log('[start_consultation] next_step: ' . $next_step);
-    error_log('[start_consultation] selected_tests: ' . ($_POST['selected_tests'] ?? '<empty>'));
-    error_log('[start_consultation] selected_medicines: ' . ($_POST['selected_medicines'] ?? '<empty>'));
-    error_log('[start_consultation] selected_allocations: ' . ($_POST['selected_allocations'] ?? '<empty>'));
-    error_log('[start_consultation] main_complaint: ' . ($_POST['main_complaint'] ?? '<empty>'));
-    error_log('[start_consultation] on_examination: ' . ($_POST['on_examination'] ?? '<empty>'));
+    error_log('[start_consultation] Got consultation_id: ' . $consultation_id);
 
     // Now proceed to handle submitted consultation details
     try {
+        error_log('[start_consultation] Starting transaction for consultation update...');
         $this->pdo->beginTransaction();
+        error_log('[start_consultation] Transaction started successfully');
 
         // Update the consultation record with submitted data
-        // Use information_schema to avoid unknown-column errors on different schemas
-        $stmtCols = $this->pdo->prepare("SELECT COLUMN_NAME FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'consultations'");
-        $stmtCols->execute();
-        $cols = array_column($stmtCols->fetchAll(PDO::FETCH_ASSOC), 'COLUMN_NAME');
-
         $updateParts = [];
         $params = [];
 
-        if (in_array('main_complaint', $cols)) {
+        if (isset($_POST['main_complaint'])) {
             $updateParts[] = 'main_complaint = ?';
-            $params[] = $_POST['main_complaint'] ?? '';
+            $params[] = $_POST['main_complaint'];
+            error_log('[start_consultation] Adding main_complaint: ' . $_POST['main_complaint']);
         }
-        if (in_array('on_examination', $cols)) {
+        
+        if (isset($_POST['on_examination'])) {
             $updateParts[] = 'on_examination = ?';
-            $params[] = $_POST['on_examination'] ?? '';
+            $params[] = $_POST['on_examination'];
         }
-
-        // preliminary_diagnosis may not exist on some databases; fall back to 'diagnosis' if needed
-        if (in_array('preliminary_diagnosis', $cols)) {
+        
+        if (isset($_POST['preliminary_diagnosis_id']) && !empty($_POST['preliminary_diagnosis_id'])) {
+            $updateParts[] = 'preliminary_diagnosis_id = ?';
+            $params[] = $_POST['preliminary_diagnosis_id'];
+        }
+        
+        if (isset($_POST['preliminary_diagnosis']) && !empty($_POST['preliminary_diagnosis'])) {
             $updateParts[] = 'preliminary_diagnosis = ?';
-            $params[] = $_POST['preliminary_diagnosis'] ?? '';
-        } elseif (in_array('diagnosis', $cols) && !empty($_POST['preliminary_diagnosis'])) {
-            $updateParts[] = 'diagnosis = ?';
             $params[] = $_POST['preliminary_diagnosis'];
         }
-
-        if (in_array('final_diagnosis', $cols)) {
+        
+        if (isset($_POST['final_diagnosis_id']) && !empty($_POST['final_diagnosis_id'])) {
+            $updateParts[] = 'final_diagnosis_id = ?';
+            $params[] = $_POST['final_diagnosis_id'];
+        }
+        
+        if (isset($_POST['final_diagnosis']) && !empty($_POST['final_diagnosis'])) {
             $updateParts[] = 'final_diagnosis = ?';
-            $params[] = $_POST['final_diagnosis'] ?? ($_POST['diagnosis'] ?? '');
-        } elseif (in_array('diagnosis', $cols) && empty($_POST['preliminary_diagnosis']) && !empty($_POST['final_diagnosis'])) {
-            // if preliminary wasn't provided but final is, and only 'diagnosis' exists, use it
-            $updateParts[] = 'diagnosis = ?';
             $params[] = $_POST['final_diagnosis'];
         }
-
-        if (in_array('treatment_plan', $cols)) {
+        
+        if (isset($_POST['treatment_plan'])) {
             $updateParts[] = 'treatment_plan = ?';
-            $params[] = $_POST['treatment_plan'] ?? '';
+            $params[] = $_POST['treatment_plan'];
         }
-
-        // Don't mark as completed yet - consultation will be marked complete only when there are no pending payments/tests/medicines
-        // Only update the updated_at timestamp
-        if (in_array('updated_at', $cols)) {
-            $updateParts[] = 'updated_at = NOW()';
-        }
+        
+        $updateParts[] = 'updated_at = NOW()';
 
         if (!empty($updateParts)) {
             $sql = 'UPDATE consultations SET ' . implode(', ', $updateParts) . ' WHERE id = ?';
             $params[] = $consultation_id;
+            
+            error_log('[start_consultation] UPDATE SQL: ' . $sql);
+            error_log('[start_consultation] UPDATE PARAMS: ' . print_r($params, true));
+            
             $stmt = $this->pdo->prepare($sql);
             $stmt->execute($params);
+            
+            error_log('[start_consultation] Consultation updated, rows affected: ' . $stmt->rowCount());
         }
 
         // Handle selected lab tests
@@ -616,18 +626,14 @@ class DoctorController extends BaseController {
             ($next_step === 'lab_tests' || $next_step === 'lab_medicine' || $next_step === 'all')) {
             
             $selected_tests = json_decode($_POST['selected_tests'], true);
-            if (is_array($selected_tests)) {
-                // Find a lab technician for assignment
-                $stmtTech = $this->pdo->prepare("
-                    SELECT id FROM users 
-                    WHERE role = 'lab_technician' AND is_active = 1 
-                    LIMIT 1
-                ");
+            error_log('[start_consultation] Decoded selected_tests: ' . print_r($selected_tests, true));
+            
+            if (is_array($selected_tests) && count($selected_tests) > 0) {
+                $stmtTech = $this->pdo->prepare("SELECT id FROM users WHERE role = 'lab_technician' AND is_active = 1 LIMIT 1");
                 $stmtTech->execute();
                 $technician = $stmtTech->fetch();
                 $technician_id = $technician['id'] ?? null;
 
-                // Create lab test orders
                 $stmtOrder = $this->pdo->prepare("
                     INSERT INTO lab_test_orders 
                     (visit_id, patient_id, consultation_id, test_id, ordered_by, assigned_to, priority, status, created_at) 
@@ -635,28 +641,41 @@ class DoctorController extends BaseController {
                 ");
                 
                 foreach ($selected_tests as $test_id) {
-                    $stmtOrder->execute([
-                        $visit_id,
-                        $patient_id,
-                        $consultation_id,
-                        $test_id,
-                        $doctor_id,
-                        $technician_id
-                    ]);
+                    $stmtOrder->execute([$visit_id, $patient_id, $consultation_id, $test_id, $doctor_id, $technician_id]);
+                    error_log('[start_consultation] Lab test order created for test_id: ' . $test_id);
                     
-                    // Get test price to create pending payment record
                     $stmtTest = $this->pdo->prepare("SELECT price FROM lab_tests WHERE id = ?");
                     $stmtTest->execute([$test_id]);
                     $test = $stmtTest->fetch();
                     $test_price = $test['price'] ?? 0;
                     
                     if ($test_price > 0) {
-                        // Create pending payment record for this test
-                        $stmtPayment = $this->pdo->prepare("
-                            INSERT INTO payments (visit_id, patient_id, payment_type, item_id, item_type, amount, payment_status, created_at, updated_at)
-                            VALUES (?, ?, 'lab_test', ?, 'lab_test', ?, 'pending', NOW(), NOW())
+                        // Idempotency: check for existing pending payment
+                        $dupStmt = $this->pdo->prepare("
+                            SELECT id FROM payments 
+                            WHERE visit_id = ? AND payment_type = 'lab_test' AND item_id = ? AND payment_status = 'pending'
+                            LIMIT 1
                         ");
-                        $stmtPayment->execute([$visit_id, $patient_id, $test_id, $test_price]);
+                        $dupStmt->execute([$visit_id, $test_id]);
+                        
+                        if (!$dupStmt->fetch()) {
+                            $reference_number = 'LAB-' . $test_id . '-' . bin2hex(random_bytes(8));
+                            $stmtPayment = $this->pdo->prepare("
+                                INSERT INTO payments 
+                                (visit_id, patient_id, payment_type, item_id, item_type, amount, payment_status, reference_number, collected_by, payment_date, notes)
+                                VALUES (?, ?, 'lab_test', ?, 'lab_order', ?, 'pending', ?, ?, NOW(), ?)
+                            ");
+                            $stmtPayment->execute([
+                                $visit_id, 
+                                $patient_id, 
+                                $test_id, 
+                                $test_price,
+                                $reference_number,
+                                SYSTEM_USER_ID,
+                                'Pending lab test payment - ordered by doctor'
+                            ]);
+                            error_log('[start_consultation] Payment record created for test_id: ' . $test_id . ', amount: ' . $test_price);
+                        }
                     }
                 }
                 
@@ -669,7 +688,9 @@ class DoctorController extends BaseController {
             ($next_step === 'medicine' || $next_step === 'lab_medicine' || $next_step === 'all')) {
             
             $selected_medicines = json_decode($_POST['selected_medicines'], true);
-            if (is_array($selected_medicines)) {
+            error_log('[start_consultation] Decoded selected_medicines: ' . print_r($selected_medicines, true));
+            
+            if (is_array($selected_medicines) && count($selected_medicines) > 0) {
                 $stmtPrescription = $this->pdo->prepare("
                     INSERT INTO prescriptions 
                     (visit_id, patient_id, consultation_id, doctor_id, medicine_id, 
@@ -679,19 +700,12 @@ class DoctorController extends BaseController {
                 
                 foreach ($selected_medicines as $medicine_data) {
                     $stmtPrescription->execute([
-                        $visit_id,
-                        $patient_id,
-                        $consultation_id,
-                        $doctor_id,
-                        $medicine_data['id'],
-                        $medicine_data['quantity'] ?? 1,
-                        $medicine_data['dosage'] ?? '',
-                        $medicine_data['frequency'] ?? 'Once daily',
-                        $medicine_data['duration'] ?? 1,
-                        $medicine_data['instructions'] ?? '',
+                        $visit_id, $patient_id, $consultation_id, $doctor_id,
+                        $medicine_data['id'], $medicine_data['quantity'] ?? 1,
+                        $medicine_data['dosage'] ?? '', $medicine_data['frequency'] ?? 'Once daily',
+                        $medicine_data['duration'] ?? 1, $medicine_data['instructions'] ?? ''
                     ]);
                     
-                    // Get medicine price to create pending payment record
                     $stmtMed = $this->pdo->prepare("SELECT unit_price FROM medicines WHERE id = ?");
                     $stmtMed->execute([$medicine_data['id']]);
                     $medicine = $stmtMed->fetch();
@@ -699,12 +713,31 @@ class DoctorController extends BaseController {
                     $medicine_total_price = $medicine_unit_price * ($medicine_data['quantity'] ?? 1);
                     
                     if ($medicine_total_price > 0) {
-                        // Create pending payment record for this medicine
-                        $stmtPayment = $this->pdo->prepare("
-                            INSERT INTO payments (visit_id, patient_id, payment_type, item_id, item_type, amount, payment_status, created_at, updated_at)
-                            VALUES (?, ?, 'medicine', ?, 'medicine', ?, 'pending', NOW(), NOW())
+                        // Idempotency: check for existing pending payment
+                        $dupStmt = $this->pdo->prepare("
+                            SELECT id FROM payments 
+                            WHERE visit_id = ? AND payment_type = 'medicine' AND item_id = ? AND payment_status = 'pending'
+                            LIMIT 1
                         ");
-                        $stmtPayment->execute([$visit_id, $patient_id, $medicine_data['id'], $medicine_total_price]);
+                        $dupStmt->execute([$visit_id, $medicine_data['id']]);
+                        
+                        if (!$dupStmt->fetch()) {
+                            $reference_number = 'MED-' . $medicine_data['id'] . '-' . bin2hex(random_bytes(8));
+                            $stmtPayment = $this->pdo->prepare("
+                                INSERT INTO payments 
+                                (visit_id, patient_id, payment_type, item_id, item_type, amount, payment_status, reference_number, collected_by, payment_date, notes)
+                                VALUES (?, ?, 'medicine', ?, 'prescription', ?, 'pending', ?, ?, NOW(), ?)
+                            ");
+                            $stmtPayment->execute([
+                                $visit_id, 
+                                $patient_id, 
+                                $medicine_data['id'], 
+                                $medicine_total_price,
+                                $reference_number,
+                                SYSTEM_USER_ID,
+                                'Pending medicine payment - prescribed by doctor'
+                            ]);
+                        }
                     }
                 }
                 
@@ -712,13 +745,14 @@ class DoctorController extends BaseController {
             }
         }
 
-        // Handle service allocations (NEW FUNCTIONALITY)
+        // Handle service allocations
         if (!empty($_POST['selected_allocations']) && 
             ($next_step === 'allocation' || $next_step === 'all')) {
             
             $selected_allocations = json_decode($_POST['selected_allocations'], true);
-            if (is_array($selected_allocations)) {
-                
+            error_log('[start_consultation] Decoded selected_allocations: ' . print_r($selected_allocations, true));
+            
+            if (is_array($selected_allocations) && count($selected_allocations) > 0) {
                 foreach ($selected_allocations as $allocation) {
                     $service_id = $allocation['service_id'] ?? null;
                     $performed_by = $allocation['assigned_to'] ?? null;
@@ -726,57 +760,49 @@ class DoctorController extends BaseController {
 
                     if (!$service_id) continue;
 
-                    // Get service details for payment
-                    $stmt = $this->pdo->prepare("
-                        SELECT id, service_name, price 
-                        FROM services 
-                        WHERE id = ? AND is_active = 1
-                    ");
+                    $stmt = $this->pdo->prepare("SELECT id, service_name, price FROM services WHERE id = ? AND is_active = 1");
                     $stmt->execute([$service_id]);
                     $service = $stmt->fetch(PDO::FETCH_ASSOC);
                     
                     if (!$service) continue;
 
-                    // Create service order
                     $stmt = $this->pdo->prepare("
-                        INSERT INTO service_orders (
-                            visit_id, patient_id, service_id, 
-                            ordered_by, performed_by, 
-                            status, notes, created_at, updated_at
-                        ) VALUES (
-                            ?, ?, ?, 
-                            ?, ?, 
-                            'pending', ?, NOW(), NOW()
-                        )
+                        INSERT INTO service_orders (visit_id, patient_id, service_id, ordered_by, performed_by, status, notes, created_at, updated_at) 
+                        VALUES (?, ?, ?, ?, ?, 'pending', ?, NOW(), NOW())
                     ");
-                    $stmt->execute([
-                        $visit_id, 
-                        $patient_id, 
-                        $service_id,
-                        $doctor_id, 
-                        $performed_by,
-                        $notes
-                    ]);
-
+                    $stmt->execute([$visit_id, $patient_id, $service_id, $doctor_id, $performed_by, $notes]);
                     $order_id = $this->pdo->lastInsertId();
                     
-                    // Create pending payment record for this service
                     if ($service['price'] > 0) {
-                        $stmtPayment = $this->pdo->prepare("
-                            INSERT INTO payments (visit_id, patient_id, payment_type, item_id, item_type, amount, payment_status, created_at, updated_at)
-                            VALUES (?, ?, 'service', ?, 'service', ?, 'pending', NOW(), NOW())
+                        // Idempotency: check for existing pending payment
+                        $dupStmt = $this->pdo->prepare("
+                            SELECT id FROM payments 
+                            WHERE visit_id = ? AND payment_type = 'service' AND item_id = ? AND payment_status = 'pending'
+                            LIMIT 1
                         ");
-                        $stmtPayment->execute([$visit_id, $patient_id, $service_id, $service['price']]);
+                        $dupStmt->execute([$visit_id, $service_id]);
+                        
+                        if (!$dupStmt->fetch()) {
+                            $reference_number = 'SVC-' . $service_id . '-' . bin2hex(random_bytes(8));
+                            $stmtPayment = $this->pdo->prepare("
+                                INSERT INTO payments 
+                                (visit_id, patient_id, payment_type, item_id, item_type, amount, payment_status, reference_number, collected_by, payment_date, notes)
+                                VALUES (?, ?, 'service', ?, 'service_order', ?, 'pending', ?, ?, NOW(), ?)
+                            ");
+                            $stmtPayment->execute([
+                                $visit_id, 
+                                $patient_id, 
+                                $service_id, 
+                                $service['price'],
+                                $reference_number,
+                                SYSTEM_USER_ID,
+                                'Pending service payment - allocated by doctor'
+                            ]);
+                        }
                     }
                     
-                    // Send notification if staff assigned
                     if ($performed_by) {
-                        $this->sendAllocationNotification([
-                            'id' => $order_id,
-                            'service_id' => $service_id,
-                            'service_name' => $service['service_name'],
-                            'performed_by' => $performed_by
-                        ], $patient_id);
+                        $this->sendAllocationNotification(['id' => $order_id, 'service_id' => $service_id, 'service_name' => $service['service_name'], 'performed_by' => $performed_by], $patient_id);
                     }
                 }
                 
@@ -784,33 +810,160 @@ class DoctorController extends BaseController {
             }
         }
 
-        // Final workflow update
-        $has_lab_tests = !empty($_POST['selected_tests']) && 
-                        ($next_step === 'lab_tests' || $next_step === 'lab_medicine' || $next_step === 'all');
-        $has_medicines = !empty($_POST['selected_medicines']) && 
-                        ($next_step === 'medicine' || $next_step === 'lab_medicine' || $next_step === 'all');
-        $has_allocations = !empty($_POST['selected_allocations']) && 
-                          ($next_step === 'allocation' || $next_step === 'all');
-        
-        if (!$has_lab_tests && !$has_medicines && !$has_allocations) {
-            // Only mark consultation as 'completed' when there's nothing else to do (discharge case)
-            $stmt = $this->pdo->prepare("
-                UPDATE consultations 
-                SET status = 'completed', completed_at = NOW()
-                WHERE id = ?
-            ");
-            $stmt->execute([$consultation_id]);
+        // Handle selected radiology tests
+        if (!empty($_POST['selected_radiology']) && 
+            ($next_step === 'radiology' || $next_step === 'all')) {
             
+            $selected_radiology = json_decode($_POST['selected_radiology'], true);
+            error_log('[start_consultation] Decoded selected_radiology: ' . print_r($selected_radiology, true));
+            
+            if (is_array($selected_radiology) && count($selected_radiology) > 0) {
+                $stmtRadiologist = $this->pdo->prepare("SELECT id FROM users WHERE role = 'radiologist' AND is_active = 1 LIMIT 1");
+                $stmtRadiologist->execute();
+                $radiologist = $stmtRadiologist->fetch();
+                $radiologist_id = $radiologist['id'] ?? null;
+
+                $stmtOrder = $this->pdo->prepare("
+                    INSERT INTO radiology_test_orders 
+                    (visit_id, patient_id, test_id, ordered_by, assigned_to, priority, status, created_at) 
+                    VALUES (?, ?, ?, ?, ?, 'normal', 'pending', NOW())
+                ");
+                
+                foreach ($selected_radiology as $test_id) {
+                    $stmtOrder->execute([$visit_id, $patient_id, $test_id, $doctor_id, $radiologist_id]);
+                    error_log('[start_consultation] Radiology test order created for test_id: ' . $test_id);
+                    
+                    $stmtTest = $this->pdo->prepare("SELECT price FROM radiology_tests WHERE id = ?");
+                    $stmtTest->execute([$test_id]);
+                    $test = $stmtTest->fetch();
+                    $test_price = $test['price'] ?? 0;
+                    
+                    if ($test_price > 0) {
+                        // Idempotency: check for existing pending payment
+                        $dupStmt = $this->pdo->prepare("
+                            SELECT id FROM payments 
+                            WHERE visit_id = ? AND payment_type = 'service' AND item_id = ? AND payment_status = 'pending'
+                            LIMIT 1
+                        ");
+                        $dupStmt->execute([$visit_id, $test_id]);
+                        
+                        if (!$dupStmt->fetch()) {
+                            $reference_number = 'RAD-' . $test_id . '-' . bin2hex(random_bytes(8));
+                            $stmtPayment = $this->pdo->prepare("
+                                INSERT INTO payments 
+                                (visit_id, patient_id, payment_type, item_id, item_type, amount, payment_status, reference_number, collected_by, payment_date, notes)
+                                VALUES (?, ?, 'service', ?, 'radiology_order', ?, 'pending', ?, ?, NOW(), ?)
+                            ");
+                            $stmtPayment->execute([
+                                $visit_id, 
+                                $patient_id, 
+                                $test_id, 
+                                $test_price,
+                                $reference_number,
+                                SYSTEM_USER_ID,
+                                'Pending radiology test payment - ordered by doctor'
+                            ]);
+                            error_log('[start_consultation] Payment record created for radiology test_id: ' . $test_id . ', amount: ' . $test_price);
+                        }
+                    }
+                }
+                
+                $this->updateWorkflowStatus($patient_id, 'pending_payment', ['radiology_tests_ordered' => true]);
+            }
+        }
+
+        // Handle IPD admission
+        if (!empty($_POST['ipd_admission_data']) && 
+            ($next_step === 'ipd' || $next_step === 'all')) {
+            
+            $ipd_data = json_decode($_POST['ipd_admission_data'], true);
+            error_log('[start_consultation] Decoded ipd_admission_data: ' . print_r($ipd_data, true));
+            
+            if (is_array($ipd_data) && !empty($ipd_data['ward'])) {
+                $ward_name = $ipd_data['ward'];
+                $admission_diagnosis = $ipd_data['reason'] ?? '';
+                $admission_datetime = $ipd_data['admission_date'] ?? date('Y-m-d H:i:s');
+                
+                // Get ward ID
+                $stmtWard = $this->pdo->prepare("SELECT id FROM ipd_wards WHERE ward_name = ? LIMIT 1");
+                $stmtWard->execute([$ward_name]);
+                $ward = $stmtWard->fetch();
+                
+                if (!$ward) {
+                    error_log('[start_consultation] ERROR: Ward not found for name: ' . $ward_name);
+                    throw new Exception('Selected ward not found');
+                }
+                
+                $ward_id = $ward['id'];
+                
+                // Get available bed from this ward
+                $stmtBed = $this->pdo->prepare("
+                    SELECT id FROM ipd_beds 
+                    WHERE ward_id = ? AND status = 'available' 
+                    LIMIT 1
+                ");
+                $stmtBed->execute([$ward_id]);
+                $bed = $stmtBed->fetch();
+                
+                if (!$bed) {
+                    error_log('[start_consultation] ERROR: No available beds in ward: ' . $ward_name);
+                    throw new Exception('No available beds in selected ward');
+                }
+                
+                $bed_id = $bed['id'];
+                
+                // Generate unique admission number
+                $admission_number = 'ADM-' . date('Ymd') . '-' . bin2hex(random_bytes(4));
+                
+                // Create IPD admission record (using actual database columns)
+                $stmtAdmission = $this->pdo->prepare("
+                    INSERT INTO ipd_admissions 
+                    (patient_id, visit_id, bed_id, admission_number, admission_datetime, 
+                     admission_diagnosis, admitted_by, attending_doctor, status, created_at) 
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'active', NOW())
+                ");
+                $stmtAdmission->execute([
+                    $patient_id, $visit_id, $bed_id, $admission_number, $admission_datetime, 
+                    $admission_diagnosis, $doctor_id, $doctor_id
+                ]);
+                
+                $admission_id = $this->pdo->lastInsertId();
+                error_log('[start_consultation] IPD admission created with id: ' . $admission_id . ', admission_number: ' . $admission_number);
+                
+                // Update bed status to occupied
+                $stmtUpdateBed = $this->pdo->prepare("UPDATE ipd_beds SET status = 'occupied' WHERE id = ?");
+                $stmtUpdateBed->execute([$bed_id]);
+                error_log('[start_consultation] Bed ' . $bed_id . ' marked as occupied');
+                
+                // Update workflow status
+                $this->updateWorkflowStatus($patient_id, 'admitted', ['ipd_ward' => $ward_name, 'admission_id' => $admission_id]);
+                
+                $_SESSION['success'] = 'Patient admitted to IPD successfully';
+            }
+        }
+
+        // Final workflow update
+        $has_lab_tests = !empty($_POST['selected_tests']) && ($next_step === 'lab_tests' || $next_step === 'lab_medicine' || $next_step === 'all');
+        $has_medicines = !empty($_POST['selected_medicines']) && ($next_step === 'medicine' || $next_step === 'lab_medicine' || $next_step === 'all');
+        $has_allocations = !empty($_POST['selected_allocations']) && ($next_step === 'allocation' || $next_step === 'all');
+        $has_radiology = !empty($_POST['selected_radiology']) && ($next_step === 'radiology' || $next_step === 'all');
+        $has_ipd = !empty($_POST['ipd_admission_data']) && ($next_step === 'ipd' || $next_step === 'all');
+        
+        if (!$has_lab_tests && !$has_medicines && !$has_allocations && !$has_radiology && !$has_ipd) {
+            $stmt = $this->pdo->prepare("UPDATE consultations SET status = 'completed', completed_at = NOW() WHERE id = ?");
+            $stmt->execute([$consultation_id]);
             $this->updateWorkflowStatus($patient_id, 'completed');
-            // Note: patient_visits.status remains 'active' until patient is discharged (entire journey complete)
         }
 
         $this->pdo->commit();
+        error_log('[start_consultation] Transaction committed successfully');
         
-        // Redirect based on what was ordered
-        if ($has_lab_tests || $has_medicines || $has_allocations) {
-            $_SESSION['success'] = 'Consultation completed successfully. Patient needs to make payment.';
+        if ($has_lab_tests || $has_medicines || $has_allocations || $has_radiology) {
+            $_SESSION['success'] = $_SESSION['success'] ?? 'Consultation completed successfully. Patient needs to make payment.';
             $this->redirect('receptionist/payments');
+        } elseif ($has_ipd) {
+            $_SESSION['success'] = $_SESSION['success'] ?? 'Consultation completed and patient admitted to IPD successfully';
+            $this->redirect('nurse/dashboard');
         } else {
             $_SESSION['success'] = 'Consultation completed and patient discharged successfully';
             $this->redirect('doctor/dashboard');
@@ -940,6 +1093,71 @@ class DoctorController extends BaseController {
     }
 
     /**
+     * Search ICD diagnosis codes (AJAX JSON)
+     * Returns standardized diagnosis codes for NMCP compliance
+     */
+    public function search_diagnoses() {
+        // Check authentication
+        if (!isset($_SESSION['user_id']) || !isset($_SESSION['user_role']) || $_SESSION['user_role'] !== 'doctor') {
+            http_response_code(401);
+            echo json_encode(['error' => 'Unauthorized']);
+            exit;
+        }
+
+        $query = $_GET['q'] ?? '';
+
+        if (strlen($query) < 2) {
+            // Return common diagnoses if no search query
+            try {
+                $stmt = $this->pdo->prepare("
+                    SELECT id, code, name, category, description
+                    FROM icd_codes
+                    WHERE is_active = 1
+                    ORDER BY name
+                    LIMIT 20
+                ");
+                $stmt->execute();
+                $diagnoses = $stmt->fetchAll(PDO::FETCH_ASSOC);
+                header('Content-Type: application/json');
+                echo json_encode($diagnoses);
+            } catch (Exception $e) {
+                http_response_code(500);
+                echo json_encode(['error' => 'Database error']);
+            }
+            exit;
+        }
+
+        try {
+            $stmt = $this->pdo->prepare("
+                SELECT id, code, name, category, description
+                FROM icd_codes
+                WHERE is_active = 1 
+                  AND (name LIKE ? OR code LIKE ? OR description LIKE ? OR category LIKE ?)
+                ORDER BY 
+                  CASE 
+                    WHEN name LIKE ? THEN 1
+                    WHEN code LIKE ? THEN 2
+                    ELSE 3
+                  END,
+                  name
+                LIMIT 50
+            ");
+            $search = "%{$query}%";
+            $searchStart = "{$query}%";
+            $stmt->execute([$search, $search, $search, $search, $searchStart, $searchStart]);
+            $diagnoses = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+            header('Content-Type: application/json');
+            echo json_encode($diagnoses);
+        } catch (Exception $e) {
+            http_response_code(500);
+            echo json_encode(['error' => 'Failed to search diagnoses']);
+            error_log('search_diagnoses error: ' . $e->getMessage());
+        }
+        exit;
+    }
+
+    /**
      * Search services for allocation modal (AJAX JSON)
      */
     public function search_services() {
@@ -996,7 +1214,7 @@ class DoctorController extends BaseController {
             $this->redirect('doctor/patients');
         }
 
-        // Get lab results for this patient
+        // Get lab results for this patient (only from consultations by this doctor)
             $stmt = $this->pdo->prepare("
                 SELECT lr.*, t.test_name as test_name, t.test_code as test_code, t.category_id as category, t.normal_range, t.unit,
                        pv.visit_date, p.first_name, p.last_name, lto.status
@@ -1006,10 +1224,10 @@ class DoctorController extends BaseController {
                 JOIN consultations c ON lto.consultation_id = c.id
                 JOIN patients p ON c.patient_id = p.id
                 LEFT JOIN patient_visits pv ON c.visit_id = pv.id
-                WHERE c.patient_id = ? AND lto.status = 'completed'
+                WHERE c.patient_id = ? AND c.doctor_id = ? AND lto.status = 'completed'
                 ORDER BY lr.completed_at DESC
             ");
-        $stmt->execute([$patient_id]);
+        $stmt->execute([$patient_id, $_SESSION['user_id']]);
         $lab_results = $stmt->fetchAll();
 
         // Get patient details
@@ -1306,7 +1524,7 @@ class DoctorController extends BaseController {
             }
             $visit_id = $visit['id'];
 
-            $stmt = $this->pdo->prepare("SELECT COUNT(*) FROM payments WHERE visit_id = ? AND payment_type IN ('consultation', 'registration') AND payment_status = 'paid'");
+            $stmt = $this->pdo->prepare("SELECT COUNT(*) FROM payments WHERE visit_id = ? AND payment_type = 'consultation' AND payment_status = 'paid'");
             $stmt->execute([$visit_id]);
             $paid = (int)$stmt->fetchColumn();
             if ($paid === 0) {
@@ -1509,13 +1727,29 @@ class DoctorController extends BaseController {
             }
         }
 
+        // Fetch previous chief complaints for patient history reference
+        $stmt = $this->pdo->prepare("
+            SELECT c.main_complaint, c.created_at, c.preliminary_diagnosis, c.final_diagnosis,
+                   CONCAT(u.first_name, ' ', u.last_name) as doctor_name
+            FROM consultations c
+            LEFT JOIN users u ON c.doctor_id = u.id
+            WHERE c.patient_id = ? 
+              AND c.main_complaint IS NOT NULL 
+              AND c.main_complaint != ''
+            ORDER BY c.created_at DESC
+            LIMIT 5
+        ");
+        $stmt->execute([$patient_id]);
+        $previous_complaints = $stmt->fetchAll();
+
         $this->render('doctor/attend_patient', [
             'patient' => $patient,
             'csrf_token' => $this->generateCSRF(),
             'visit_id' => $latest_visit_id,
             'payment_override' => $_SESSION['payment_override'] ?? null,
             'consultation' => $consultation,
-            'is_reopening' => $is_reopening
+            'is_reopening' => $is_reopening,
+            'previous_complaints' => $previous_complaints
         ]);
         
         // Clear the override session after use
@@ -1595,7 +1829,7 @@ class DoctorController extends BaseController {
             SELECT pv.id as visit_id, pv.visit_date, pv.visit_type,
                    pay.payment_status, pay.amount, pay.payment_type
             FROM patient_visits pv
-            LEFT JOIN payments pay ON pay.visit_id = pv.id AND pay.payment_type IN ('consultation', 'registration')
+            LEFT JOIN payments pay ON pay.visit_id = pv.id AND pay.payment_type = 'consultation'
             WHERE pv.patient_id = ?
             ORDER BY pv.created_at DESC
             LIMIT 1
@@ -1716,6 +1950,42 @@ class DoctorController extends BaseController {
 
             // Update workflow status to pending_payment (same as start_consultation)
             $this->updateWorkflowStatus($patient_id, 'pending_payment', ['medicine_prescribed' => true]);
+
+            // Ensure there is a pending consultation payment for this visit (idempotent)
+            $stmt = $this->pdo->prepare("SELECT id FROM payments WHERE visit_id = ? AND payment_type = 'consultation' LIMIT 1");
+            $stmt->execute([$visit_id]);
+            $hasConsultPay = $stmt->fetch();
+            if (!$hasConsultPay) {
+                // Create a default pending consultation payment (match Receptionist default)
+                $consultation_fee = 5000; // Default consultation fee
+                $reference_number = 'CON-' . bin2hex(random_bytes(8));
+                $stmtIns = $this->pdo->prepare("\n                    INSERT INTO payments (visit_id, patient_id, payment_type, amount, payment_method, payment_status, reference_number, collected_by, payment_date, notes)\n                    VALUES (?, ?, 'consultation', ?, 'cash', 'pending', ?, ?, NOW(), ?)\n                ");
+                $stmtIns->execute([$visit_id, $patient_id, $consultation_fee, $reference_number, SYSTEM_USER_ID, 'Pending consultation payment - created by prescription flow']);
+            }
+
+            // Create pending medicine payments for each prescribed medicine (idempotent)
+            $stmtPrice = $this->pdo->prepare("SELECT unit_price FROM medicines WHERE id = ? LIMIT 1");
+            $stmtPayDup = $this->pdo->prepare("SELECT id FROM payments WHERE visit_id = ? AND payment_type = 'medicine' AND item_id = ? AND payment_status = 'pending' LIMIT 1");
+            $stmtCreatePay = $this->pdo->prepare("\n                INSERT INTO payments (visit_id, patient_id, payment_type, item_id, item_type, amount, payment_method, payment_status, reference_number, collected_by, payment_date, notes)\n                VALUES (?, ?, 'medicine', ?, 'prescription', ?, 'cash', 'pending', ?, ?, NOW(), ?)\n            ");
+
+            foreach ($medicines as $medicine_data) {
+                $mid = intval($medicine_data['id'] ?? 0);
+                $qty = max(1, intval($medicine_data['quantity'] ?? 1));
+                if ($mid <= 0) continue;
+
+                $stmtPrice->execute([$mid]);
+                $unit = (float)$stmtPrice->fetchColumn();
+                $total = $unit * $qty;
+
+                if ($total > 0) {
+                    // avoid duplicate pending payment for same medicine on this visit
+                    $stmtPayDup->execute([$visit_id, $mid]);
+                    if (!$stmtPayDup->fetch()) {
+                        $reference_number = 'MED-' . $mid . '-' . bin2hex(random_bytes(8));
+                        $stmtCreatePay->execute([$visit_id, $patient_id, $mid, $total, $reference_number, SYSTEM_USER_ID, 'Pending medicine payment - prescribed by doctor']);
+                    }
+                }
+            }
 
             $this->pdo->commit();
             
@@ -2180,6 +2450,47 @@ class DoctorController extends BaseController {
         } catch (Exception $e) {
             // Silently fail - notification is non-critical
             error_log("Notification error: " . $e->getMessage());
+        }
+    }
+
+    /**
+     * Search for radiology tests (AJAX endpoint for doctor consultation form)
+     * Returns JSON array of matching radiology tests
+     */
+    public function search_radiology_tests() {
+        // Check authentication
+        if (!isset($_SESSION['user_id']) || !isset($_SESSION['user_role']) || $_SESSION['user_role'] !== 'doctor') {
+            http_response_code(401);
+            echo json_encode(['error' => 'Unauthorized']);
+            exit;
+        }
+
+        $query = $_GET['q'] ?? '';
+
+        if (strlen($query) < 2) {
+            echo json_encode([]);
+            exit;
+        }
+
+        try {
+            $stmt = $this->pdo->prepare("
+                SELECT id, test_code, test_name, description, price, is_active
+                FROM radiology_tests
+                WHERE (test_code LIKE ? OR test_name LIKE ? OR description LIKE ?)
+                  AND is_active = 1
+                ORDER BY test_name
+                LIMIT 20
+            ");
+            $search = "%{$query}%";
+            $stmt->execute([$search, $search, $search]);
+            $tests = $stmt->fetchAll();
+
+            header('Content-Type: application/json');
+            echo json_encode($tests);
+        } catch (Exception $e) {
+            error_log('[search_radiology_tests] Error: ' . $e->getMessage());
+            http_response_code(500);
+            echo json_encode(['error' => 'Search failed']);
         }
     }
 }

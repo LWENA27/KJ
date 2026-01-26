@@ -35,4 +35,22 @@ try {
 } catch (PDOException $e) {
     die("Database connection failed: " . $e->getMessage());
 }
+
+// System constants
+define('SYSTEM_USER_ID', 13); // System collector for auto-paid payments (auto-created in config init)
+define('PAYMENT_DUPLICATE_WINDOW_SECONDS', 10); // Window to detect duplicate payments
+
+// Update system user to have a username if it doesn't have one
+try {
+    $checkSystemUser = $pdo->prepare("SELECT id, username FROM users WHERE id = ?");
+    $checkSystemUser->execute([SYSTEM_USER_ID]);
+    $sysUser = $checkSystemUser->fetch();
+    if ($sysUser && empty($sysUser['username'])) {
+        // Update username for system user
+        $updateSystemUser = $pdo->prepare("UPDATE users SET username = ? WHERE id = ?");
+        $updateSystemUser->execute(['system_collector', SYSTEM_USER_ID]);
+    }
+} catch (Exception $e) {
+    // Silently ignore if system user doesn't exist yet
+}
 ?>

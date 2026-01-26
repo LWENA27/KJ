@@ -50,9 +50,26 @@
             <div class="text-right">
                 <div class="space-y-2">
                     <?php 
-                    $hasUnpaidBills = false; // TODO: Calculate from payments
+                    // Check for unpaid bills from payments table
+                    $stmt = $pdo->prepare("
+                        SELECT COUNT(*) as count FROM payments 
+                        WHERE patient_id = ? AND payment_status = 'pending'
+                    ");
+                    $stmt->execute([$patient_id]);
+                    $unpaidCount = $stmt->fetch()['count'];
+                    $hasUnpaidBills = $unpaidCount > 0;
+                    
                     $hasActivePresciption = !empty($latest_consultation['prescription']);
-                    $needsFollowup = true; // TODO: Check if follow-up is needed
+                    
+                    // Check if follow-up is needed based on visit history
+                    $stmt = $pdo->prepare("
+                        SELECT COUNT(*) as count FROM patient_visits 
+                        WHERE patient_id = ? AND visit_type = 'consultation' 
+                        AND DATE_ADD(visit_date, INTERVAL 7 DAY) < CURDATE()
+                        AND status != 'completed'
+                    ");
+                    $stmt->execute([$patient_id]);
+                    $needsFollowup = $stmt->fetch()['count'] > 0;
                     ?>
                     
                     <?php if ($hasUnpaidBills): ?>

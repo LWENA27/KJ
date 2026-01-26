@@ -78,7 +78,7 @@ class AuthController extends BaseController {
         $role = $_SESSION['user_role'];
         
         // If user has multiple roles, check if they have a preferred dashboard
-        // Priority: admin > doctor > lab_technician > accountant > pharmacist > receptionist
+        // Priority: admin > doctor > lab_technician > accountant > pharmacist > radiologist > nurse > receptionist
         $roles = $_SESSION['user_roles'] ?? [$role];
         
         // Determine best dashboard based on role priority
@@ -92,6 +92,10 @@ class AuthController extends BaseController {
             $this->redirect('accountant/dashboard');
         } elseif (in_array('pharmacist', $roles)) {
             $this->redirect('pharmacist/dashboard');
+        } elseif (in_array('radiologist', $roles)) {
+            $this->redirect('radiologist/dashboard');
+        } elseif (in_array('nurse', $roles)) {
+            $this->redirect('ipd/dashboard');
         } elseif (in_array('receptionist', $roles)) {
             $this->redirect('receptionist/dashboard');
         } else {
@@ -114,6 +118,12 @@ class AuthController extends BaseController {
                     break;
                 case 'pharmacist':
                     $this->redirect('pharmacist/dashboard');
+                    break;
+                case 'radiologist':
+                    $this->redirect('radiologist/dashboard');
+                    break;
+                case 'nurse':
+                    $this->redirect('ipd/dashboard');
                     break;
                 default:
                     $this->redirect('auth/login');

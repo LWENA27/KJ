@@ -140,22 +140,22 @@
             Quick Actions
         </h3>
         <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
-            <a href="/KJ/receptionist/register_patient" class="bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white p-4 rounded-lg text-center transition-all duration-300 transform hover:scale-105 shadow-lg">
+            <a href="<?php echo BASE_PATH; ?>/receptionist/register_patient" class="bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white p-4 rounded-lg text-center transition-all duration-300 transform hover:scale-105 shadow-lg">
                 <i class="fas fa-user-plus text-2xl mb-2"></i>
                 <div class="font-medium">Register Patient</div>
                 <div class="text-xs mt-1 opacity-80">Add new patient</div>
             </a>
-            <a href="/KJ/receptionist/appointments" class="bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white p-4 rounded-lg text-center transition-all duration-300 transform hover:scale-105 shadow-lg">
+            <a href="<?php echo BASE_PATH; ?>/receptionist/appointments" class="bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white p-4 rounded-lg text-center transition-all duration-300 transform hover:scale-105 shadow-lg">
                 <i class="fas fa-calendar-plus text-2xl mb-2"></i>
                 <div class="font-medium">New Appointment</div>
                 <div class="text-xs mt-1 opacity-80">Schedule visit</div>
             </a>
-            <a href="/KJ/receptionist/payments" class="bg-gradient-to-r from-purple-500 to-purple-600 hover:from-purple-600 hover:to-purple-700 text-white p-4 rounded-lg text-center transition-all duration-300 transform hover:scale-105 shadow-lg">
+            <a href="<?php echo BASE_PATH; ?>/receptionist/payments" class="bg-gradient-to-r from-purple-500 to-purple-600 hover:from-purple-600 hover:to-purple-700 text-white p-4 rounded-lg text-center transition-all duration-300 transform hover:scale-105 shadow-lg">
                 <i class="fas fa-credit-card text-2xl mb-2"></i>
                 <div class="font-medium">Process Payment</div>
                 <div class="text-xs mt-1 opacity-80">Collect fees</div>
             </a>
-            <a href="/KJ/receptionist/patients" class="bg-gradient-to-r from-yellow-500 to-orange-500 hover:from-yellow-600 hover:to-orange-600 text-white p-4 rounded-lg text-center transition-all duration-300 transform hover:scale-105 shadow-lg">
+            <a href="<?php echo BASE_PATH; ?>/receptionist/patients" class="bg-gradient-to-r from-yellow-500 to-orange-500 hover:from-yellow-600 hover:to-orange-600 text-white p-4 rounded-lg text-center transition-all duration-300 transform hover:scale-105 shadow-lg">
                 <i class="fas fa-search text-2xl mb-2"></i>
                 <div class="font-medium">Search Patient</div>
                 <div class="text-xs mt-1 opacity-80">Find records</div>
@@ -185,7 +185,7 @@
                         <i class="fas fa-calendar-times text-4xl text-gray-300 mb-4"></i>
                         <p class="text-gray-500 text-lg">No appointments scheduled for today</p>
                         <p class="text-gray-400 text-sm mt-2">Schedule new appointments to get started</p>
-                        <a href="/KJ/receptionist/appointments" class="inline-block mt-4 bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors">
+                        <a href="<?php echo BASE_PATH; ?>/receptionist/appointments" class="inline-block mt-4 bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors">
                             <i class="fas fa-plus mr-2"></i>Schedule Appointment
                         </a>
                     </div>
@@ -345,12 +345,29 @@ setInterval(updateTime, 60000);
 
 // Emergency modal
 function openEmergencyModal() {
-    alert('Emergency protocols activated!\n\nContact:\n- Security: Ext. 911\n- Medical Emergency: Ext. 999\n- Admin: Ext. 101');
+    const modal = document.getElementById('emergencyModal');
+    if (modal) {
+        modal.classList.remove('hidden');
+        modal.classList.add('flex');
+    } else {
+        // Fallback: show contact info
+        const contacts = `EMERGENCY CONTACTS\n\nSecurity: Ext. 911\nMedical Emergency: Ext. 999\nAdministration: Ext. 101\nHR Department: Ext. 102`;
+        console.log(contacts);
+        alert(contacts);
+    }
+}
+
+function closeEmergencyModal() {
+    const modal = document.getElementById('emergencyModal');
+    if (modal) {
+        modal.classList.add('hidden');
+        modal.classList.remove('flex');
+    }
 }
 
 // Reports modal
 function openReportsModal() {
-    alert('Reports feature coming soon!\n\nAvailable reports:\n- Daily Summary\n- Patient Statistics\n- Payment Records\n- Appointment Analytics');
+    window.location.href = '<?php echo htmlspecialchars($BASE_PATH); ?>/receptionist/reports';
 }
 
 // Add some interactive feedback

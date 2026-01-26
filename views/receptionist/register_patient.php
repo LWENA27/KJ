@@ -73,6 +73,7 @@
                             <option value="">Select Gender</option>
                             <option value="male">Male</option>
                             <option value="female">Female</option>
+                            <option value="other">Other</option>
                         </select>
                     </div>
 
@@ -158,9 +159,8 @@
                                 class="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-colors">
                             <option value="">Select Visit Type</option>
                             <option value="consultation" <?php echo (isset($_POST['visit_type']) && $_POST['visit_type']==='consultation') ? 'selected' : ''; ?>>Doctor Consultation</option>
-                            <option value="lab_test" <?php echo (isset($_POST['visit_type']) && $_POST['visit_type']==='lab_test') ? 'selected' : ''; ?>>Laboratory Test Only</option>
-                            <option value="medicine_pickup" <?php echo (isset($_POST['visit_type']) && $_POST['visit_type']==='medicine_pickup') ? 'selected' : ''; ?>>Medicine Collection</option>
-                            <option value="minor_service" <?php echo (isset($_POST['visit_type']) && $_POST['visit_type']==='minor_service') ? 'selected' : ''; ?>>Minor Service (Injection, etc.)</option>
+                            <option value="lab_only" <?php echo (isset($_POST['visit_type']) && in_array($_POST['visit_type'], ['lab_only','lab_test'], true)) ? 'selected' : ''; ?>>Laboratory Test Only</option>
+                            <option value="minor_service" <?php echo (isset($_POST['visit_type']) && $_POST['visit_type']==='minor_service') ? 'selected' : ''; ?>>Minor Service (Injection, Dressing, etc.)</option>
                         </select>
                         <span class="error-message text-red-500 text-xs mt-1 hidden"></span>
                     </div>
@@ -347,6 +347,11 @@
         if (elements.visitBadge) {
             elements.visitBadge.classList.add('hidden');
         }
+        // Also hide lab tests section by default
+        const labSection = document.getElementById('labTestsSection');
+        if (labSection) {
+            labSection.classList.add('hidden');
+        }
 
         // Remove required from vital signs by default
         const tempField = document.getElementById('temperature');
@@ -373,19 +378,15 @@
                 if (pulseField) pulseField.setAttribute('required', 'required');
                 break;
                 
-            case 'lab_test':
+            case 'lab_only':
+            case 'lab_test': // fallback for legacy
                 // Do NOT show vital signs for lab-only visits
-                // Show lab tests selection instead
-                const labSection = document.getElementById('labTestsSection');
+                // Show lab tests selection instead (labSection already declared above)
                 if (labSection) labSection.classList.remove('hidden');
-                // Do not show the visit badge for lab-only registrations
-                break;
-                
-            case 'medicine_pickup':
-                // Hide vital signs for medicine pickup - only show badge
+                // Show a helpful badge
                 if (elements.visitBadge && elements.visitBadgeText) {
                     elements.visitBadge.classList.remove('hidden');
-                    elements.visitBadgeText.textContent = 'Medicine collection - prescription required';
+                    elements.visitBadgeText.textContent = 'Select lab tests below. Patient will pay at Accountant before proceeding to Lab.';
                 }
                 break;
                 
@@ -398,6 +399,17 @@
                     elements.visitBadge.classList.remove('hidden');
                     elements.visitBadgeText.textContent = 'Minor service fees may apply';
                 }
+                break;
+                case 'ipd':
+                // Show vital signs and IPD info for ward admissions
+                if (elements.vitalSignsSection) {
+                    elements.vitalSignsSection.classList.remove('hidden');
+                }
+                if (elements.visitBadge && elements.visitBadgeText) {
+                    elements.visitBadge.classList.remove('hidden');
+                    elements.visitBadgeText.textContent = 'IPD/Ward admission — nursing services (e.g. wound dressing) will be handled by reception/ward';
+                }
+                // Make vital signs recommended but not strictly required
                 break;
                 
             default:

@@ -2,11 +2,14 @@
 // Base Controller Class
 class BaseController {
     protected $pdo;
+    protected $db;  // Alias for backwards compatibility
     protected $layout = 'layouts/main';
 
     public function __construct() {
         global $pdo;
         $this->pdo = $pdo;
+        // Backwards compatibility: alias for controllers that use $this->db instead of $this->pdo
+        $this->db = $this->pdo;
     }
 
     // Set custom layout
@@ -23,11 +26,11 @@ class BaseController {
         // Start output buffering
         ob_start();
         include __DIR__ . "/../views/{$view}.php";
-    $content = ob_get_clean();
+        $content = ob_get_clean();
 
-    // Normalize absolute links in the rendered content to current BASE_PATH
-    $base = defined('BASE_PATH') ? BASE_PATH : '/' . basename(dirname(__DIR__));
-    $content = str_replace(['/KJ/', '/ZAHANATI/'], rtrim($base, '/') . '/', $content);
+        // Normalize absolute links in the rendered content to current BASE_PATH
+        $base = defined('BASE_PATH') ? BASE_PATH : '/' . basename(dirname(__DIR__));
+        $content = str_replace(['/KJ/', '/ZAHANATI/'], rtrim($base, '/') . '/', $content);
 
         // Include layout
         $BASE_PATH = defined('BASE_PATH') ? BASE_PATH : (rtrim(str_replace('\\', '/', dirname($_SERVER['SCRIPT_NAME'] ?? '/')), '/') ?: '');
@@ -36,8 +39,12 @@ class BaseController {
 
     // Redirect to another page
     protected function redirect($url) {
-    $base = defined('BASE_PATH') ? BASE_PATH : '/' . basename(dirname(__DIR__));
-    header("Location: {$base}/{$url}");
+        $base = defined('BASE_PATH') ? BASE_PATH : '';
+        $location = rtrim($base . '/' . ltrim($url, '/'), '/');
+        if (empty($location)) {
+            $location = '/';
+        }
+        header("Location: {$location}");
         exit;
     }
 
@@ -248,10 +255,11 @@ class BaseController {
         $visit_id = $visit['id'];
 
         $step_requirements = [
-            'consultation' => ['consultation', 'registration'],  // Check for either 'consultation' or 'registration' payment type
+            'consultation' => 'consultation',  // Only check for 'consultation' payment type (not 'registration')
             'lab_tests' => 'lab_test',
             'results_review' => 'lab_test',
-            'medicine' => 'medicine'
+            'medicine' => 'medicine',
+            'ipd' => 'service'
         ];
 
         if (isset($step_requirements[$required_step])) {
@@ -288,8 +296,8 @@ class BaseController {
 
         $visit_id = $visit['id'];
 
-        // Payments - Check for either 'consultation' or 'registration' payment type
-        $stmt = $this->pdo->prepare("SELECT COUNT(*) FROM payments WHERE visit_id = ? AND payment_type IN ('consultation', 'registration') AND payment_status = 'paid'");
+        // Payments - Check for 'consultation' payment type only (not 'registration')
+        $stmt = $this->pdo->prepare("SELECT COUNT(*) FROM payments WHERE visit_id = ? AND payment_type = 'consultation' AND payment_status = 'paid'");
         $stmt->execute([$visit_id]);
         $consultation_registration_paid = (bool)$stmt->fetchColumn();
 
@@ -311,10 +319,23 @@ class BaseController {
         $stmt->execute([$visit_id]);
         $lab_tests_required = (int)$stmt->fetchColumn() > 0 ? 1 : 0;
 
+        // (Service checks computed above) -- avoid duplicate queries
+
+        // Service orders (e.g., nursing, wound dressing, IPD procedures)
+        $stmt = $this->pdo->prepare("SELECT COUNT(*) FROM service_orders WHERE visit_id = ? AND status IN ('pending','in_progress')");
+        $stmt->execute([$visit_id]);
+        $service_orders_required = (int)$stmt->fetchColumn() > 0 ? 1 : 0;
+
+        // Check if any service payments have been made for this visit
+        $stmt = $this->pdo->prepare("SELECT COUNT(*) FROM payments WHERE visit_id = ? AND payment_type = 'service' AND payment_status = 'paid'");
+        $stmt->execute([$visit_id]);
+        $service_paid = (int)$stmt->fetchColumn() > 0 ? 1 : 0;
+
         // Determine current_step
         if ($visit['status'] === 'active') {
             if (!$consultation_registration_paid) $current_step = 'consultation_registration';
             elseif ($lab_tests_required && !$lab_tests_paid) $current_step = 'lab_tests';
+            elseif ($service_orders_required && !$service_paid) $current_step = 'ipd';
             elseif ($medicine_prescribed && !$medicine_dispensed) $current_step = 'medicine_dispensing';
             else $current_step = 'in_progress';
         } else {
@@ -327,6 +348,8 @@ class BaseController {
             'consultation_registration_paid' => $consultation_registration_paid ? 1 : 0,
             'lab_tests_paid' => $lab_tests_paid ? 1 : 0,
             'results_review_paid' => $lab_tests_paid ? 1 : 0,
+            'service_orders_required' => $service_orders_required,
+            'service_paid' => $service_paid,
             'medicine_prescribed' => $medicine_prescribed,
             'medicine_dispensed' => $medicine_dispensed,
             'final_payment_collected' => 0,
@@ -343,8 +366,8 @@ class BaseController {
 
         $patient_id = $visit['patient_id'];
 
-        // Payments
-        $stmt = $this->pdo->prepare("SELECT COUNT(*) FROM payments WHERE visit_id = ? AND payment_type = 'registration' AND payment_status = 'paid'");
+        // Payments - check for 'consultation' payment type (changed from 'registration')
+        $stmt = $this->pdo->prepare("SELECT COUNT(*) FROM payments WHERE visit_id = ? AND payment_type = 'consultation' AND payment_status = 'paid'");
         $stmt->execute([$visit_id]);
         $consultation_registration_paid = (bool)$stmt->fetchColumn();
 
@@ -366,10 +389,21 @@ class BaseController {
         $stmt->execute([$visit_id]);
         $lab_tests_required = (int)$stmt->fetchColumn() > 0 ? 1 : 0;
 
+        // Service orders (e.g., nursing, wound dressing, IPD procedures)
+        $stmt = $this->pdo->prepare("SELECT COUNT(*) FROM service_orders WHERE visit_id = ? AND status IN ('pending','in_progress')");
+        $stmt->execute([$visit_id]);
+        $service_orders_required = (int)$stmt->fetchColumn() > 0 ? 1 : 0;
+
+        // Check if any service payments have been made for this visit
+        $stmt = $this->pdo->prepare("SELECT COUNT(*) FROM payments WHERE visit_id = ? AND payment_type = 'service' AND payment_status = 'paid'");
+        $stmt->execute([$visit_id]);
+        $service_paid = (int)$stmt->fetchColumn() > 0 ? 1 : 0;
+
         // Determine current_step
         if ($visit['status'] === 'active') {
             if (!$consultation_registration_paid) $current_step = 'consultation_registration';
             elseif ($lab_tests_required && !$lab_tests_paid) $current_step = 'lab_tests';
+            elseif ($service_orders_required && !$service_paid) $current_step = 'ipd';
             elseif ($medicine_prescribed && !$medicine_dispensed) $current_step = 'medicine_dispensing';
             else $current_step = 'in_progress';
         } else {
@@ -383,6 +417,8 @@ class BaseController {
             'consultation_registration_paid' => $consultation_registration_paid ? 1 : 0,
             'lab_tests_paid' => $lab_tests_paid ? 1 : 0,
             'results_review_paid' => $lab_tests_paid ? 1 : 0,
+            'service_orders_required' => $service_orders_required,
+            'service_paid' => $service_paid,
             'medicine_prescribed' => $medicine_prescribed,
             'medicine_dispensed' => $medicine_dispensed,
             'final_payment_collected' => 0,
@@ -408,6 +444,48 @@ class BaseController {
         }
 
         if ($requirePayment && intval($status['consultation_registration_paid']) <= 0) {
+            // If there's a logged override for this visit (doctor allowed to bypass payment), permit attend
+            try {
+                // Primary check: override for this visit id
+                $stmt = $this->pdo->prepare("SELECT COUNT(*) FROM consultation_overrides WHERE visit_id = ?");
+                $stmt->execute([$visit_id]);
+                $overrideCount = (int)$stmt->fetchColumn();
+                if ($overrideCount > 0) {
+                    error_log("canAttend: found override record(s) for visit_id={$visit_id}: {$overrideCount}");
+                    return ['ok' => true, 'reason' => 'override'];
+                }
+
+                // Secondary check: sometimes visit_id may be missing in the override record (created with null),
+                // so check overrides for the patient_id (if available) and optionally scoped to the current doctor.
+                $stmt = $this->pdo->prepare("SELECT patient_id FROM patient_visits WHERE id = ? LIMIT 1");
+                $stmt->execute([$visit_id]);
+                $pv = $stmt->fetch();
+                $patient_id = $pv['patient_id'] ?? null;
+
+                if (!empty($patient_id)) {
+                    // Check for override by the same doctor first
+                    $stmt = $this->pdo->prepare("SELECT COUNT(*) FROM consultation_overrides WHERE patient_id = ? AND doctor_id = ?");
+                    $stmt->execute([$patient_id, $_SESSION['user_id'] ?? 0]);
+                    $byDoctor = (int)$stmt->fetchColumn();
+                    if ($byDoctor > 0) {
+                        error_log("canAttend: found override for patient_id={$patient_id} by current doctor ({$_SESSION['user_id']})");
+                        return ['ok' => true, 'reason' => 'override_by_doctor'];
+                    }
+
+                    // Check for any override for this patient (global)
+                    $stmt = $this->pdo->prepare("SELECT COUNT(*) FROM consultation_overrides WHERE patient_id = ?");
+                    $stmt->execute([$patient_id]);
+                    $any = (int)$stmt->fetchColumn();
+                    if ($any > 0) {
+                        error_log("canAttend: found override(s) for patient_id={$patient_id}: {$any}");
+                        return ['ok' => true, 'reason' => 'override_by_patient'];
+                    }
+                }
+            } catch (Throwable $e) {
+                // consultation_overrides table may not exist yet or query failed; fall back to payment_required
+                error_log('canAttend override check failed: ' . $e->getMessage());
+            }
+
             return ['ok' => false, 'reason' => 'payment_required'];
         }
 
@@ -416,6 +494,17 @@ class BaseController {
 
     // Start or resume a consultation for a visit. Returns ['ok'=>bool,'consultation_id'=>int] or error.
     protected function startConsultation($visit_id, $doctor_id, $data = []) {
+        // debugging: log POST data coming from attend_patient form
+        error_log('=== POST DATA ===');
+        error_log('next_step: ' . ($_POST['next_step'] ?? 'MISSING'));
+        error_log('selected_tests: ' . ($_POST['selected_tests'] ?? 'EMPTY'));
+        error_log('selected_medicines: ' . ($_POST['selected_medicines'] ?? 'EMPTY'));
+        error_log('selected_allocations: ' . ($_POST['selected_allocations'] ?? 'EMPTY'));
+
+        // ensure service-related flags exist to avoid undefined variable notices
+        $service_orders_required = false;
+        $service_paid = false;
+
         $this->pdo->beginTransaction();
         try {
             // fetch visit and patient
@@ -509,7 +598,8 @@ class BaseController {
             'consultation_registration' => 'registration',
             'lab_tests' => 'lab_test',
             'results_review' => 'lab_test',
-            'medicine' => 'medicine'
+            'medicine' => 'medicine',
+            'ipd' => 'service'
         ];
         $payment_type = $step_to_payment[$step] ?? 'registration';
 
@@ -686,4 +776,6 @@ class BaseController {
                 WHERE mb.medicine_id = {$alias}.id) as expiry_date";
     }
 }
+
+const VISIT_TYPES = ['consultation', 'lab_only', 'minor_service'];
 ?>

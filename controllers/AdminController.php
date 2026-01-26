@@ -217,6 +217,106 @@ class AdminController extends BaseController {
         ]);
     }
 
+    /**
+     * Manual backup trigger and list backups
+     */
+    public function backup_database() {
+        // Only admin allowed (constructor enforces role)
+        $backupDir = __DIR__ . '/../../storage/backups';
+        $backupFiles = [];
+        // Ensure backups directory exists and is writable. If creation fails, show a clear error to admin.
+        if (!is_dir($backupDir)) {
+            $parent = dirname($backupDir);
+            if (!is_writable($parent)) {
+                error_log("mkdir(): parent directory not writable: {$parent}");
+                $_SESSION['error'] = 'Backup directory cannot be created: parent folder is not writable. Please run: sudo mkdir -p ' . escapeshellarg($backupDir) . ' && sudo chown -R www-data:www-data ' . escapeshellarg(dirname(__DIR__ . '/../../storage')) . ' && sudo chmod -R 775 ' . escapeshellarg(dirname(__DIR__ . '/../../storage')) . '\n(or adjust ownership to your webserver user)';
+            } else {
+                try {
+                    if (!mkdir($backupDir, 0755, true) && !is_dir($backupDir)) {
+                        throw new Exception('Failed to create backup directory');
+                    }
+                } catch (Exception $e) {
+                    error_log('mkdir(): ' . $e->getMessage());
+                    $_SESSION['error'] = 'Failed to create backup directory: ' . $e->getMessage();
+                }
+            }
+        } else {
+            if (!is_writable($backupDir)) {
+                // Directory exists but not writable
+                error_log("backup dir not writable: {$backupDir}");
+                $_SESSION['error'] = 'Backup directory exists but is not writable. Please run: sudo chown -R www-data:www-data ' . escapeshellarg($backupDir) . ' && sudo chmod -R 775 ' . escapeshellarg($backupDir);
+            }
+        }
+
+        // Handle POST request to trigger backup
+        if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+            // CSRF validation: catch errors and show friendly message
+            try {
+                $this->validateCSRF($_POST['csrf_token'] ?? '');
+            } catch (Exception $e) {
+                error_log('CSRF validation failed during backup: ' . $e->getMessage());
+                $_SESSION['error'] = 'CSRF token validation failed. Please refresh the page and try again.';
+                $this->redirect('admin/backup_database');
+                return;
+            }
+
+            // Ensure backup directory is writable before attempting backup
+            if (!is_dir($backupDir) || !is_writable($backupDir)) {
+                $_SESSION['error'] = $_SESSION['error'] ?? 'Backup directory is not writable. Please fix permissions on storage/backups.';
+                $this->redirect('admin/backup_database');
+                return;
+            }
+
+            // Run the CLI backup script (use current PHP binary)
+            $script = __DIR__ . '/../../tools/backup_database.php';
+            $php = defined('PHP_BINARY') ? PHP_BINARY : 'php';
+            $cmd = escapeshellarg($php) . ' ' . escapeshellarg($script) . ' 2>&1';
+            exec($cmd, $output, $returnVar);
+            if ($returnVar === 0) {
+                $_SESSION['success'] = 'Backup completed successfully';
+            } else {
+                error_log('Backup script failed: ' . implode("\n", $output));
+                $_SESSION['error'] = 'Backup failed. See logs for details.';
+            }
+            $this->redirect('admin/backup_database');
+            return;
+        }
+
+        // List backups for display
+        $files = glob($backupDir . '/*.sql.gz');
+        if ($files) {
+            usort($files, function($a, $b){ return filemtime($b) - filemtime($a); });
+            foreach ($files as $f) {
+                $backupFiles[] = [
+                    'name' => basename($f),
+                    'path' => $f,
+                    'size' => filesize($f),
+                    'mtime' => filemtime($f)
+                ];
+            }
+        }
+
+        $this->render('admin/backup', [
+            'backups' => $backupFiles,
+            'csrf_token' => $this->generateCSRF()
+        ]);
+    }
+
+    public function delete_backup() {
+        if ($_SERVER['REQUEST_METHOD'] === 'GET') {
+            $file = $_GET['file'] ?? '';
+            $file = basename($file);
+            $backupPath = __DIR__ . '/../../storage/backups/' . $file;
+            if ($file && is_file($backupPath)) {
+                @unlink($backupPath);
+                $_SESSION['success'] = 'Backup deleted: ' . $file;
+            } else {
+                $_SESSION['error'] = 'Backup not found';
+            }
+        }
+        $this->redirect('admin/backup_database');
+    }
+
     public function medicines() {
         $medicines = $this->pdo->query("
             SELECT m.id, m.name, m.generic_name, m.unit_price,

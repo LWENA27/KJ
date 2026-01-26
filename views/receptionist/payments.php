@@ -95,12 +95,12 @@
                 <p class="text-black-100 mt-2 text-lg">Process payments for lab tests and medicines</p>
             </div>
             <div class="flex space-x-3">
-                <a href="/KJ/receptionist/payment_history" 
+                <a href="<?php echo BASE_PATH; ?>/receptionist/payment_history" 
                    class="bg-white text-purple-700 hover:bg-purple-50 px-6 py-3 rounded-lg font-medium transition-all duration-300 shadow-lg flex items-center">
                     <i class="fas fa-history mr-2"></i>
                     Payment History
                 </a>
-                <a href="/KJ/receptionist/dashboard" 
+                <a href="<?php echo BASE_PATH; ?>/receptionist/dashboard" 
                    class="bg-black-800 text-black hover:bg-purple-900 px-6 py-3 rounded-lg font-medium transition-all duration-300 shadow-lg flex items-center">
                     <i class="fas fa-arrow-left mr-2"></i>
                     Dashboard
@@ -205,7 +205,7 @@
             <p class="text-gray-600 text-lg">There are no pending payments at the moment.</p>
             <p class="text-gray-500 mt-2">New payments will appear here when doctors order lab tests or prescribe medicines.</p>
             <div class="mt-6">
-                <a href="/KJ/receptionist/payment_history" 
+                <a href="<?php echo BASE_PATH; ?>/receptionist/payment_history" 
                    class="inline-flex items-center px-6 py-3 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors">
                     <i class="fas fa-history mr-2"></i>
                     View Payment History

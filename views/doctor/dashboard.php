@@ -64,11 +64,11 @@
                                     <?php echo htmlspecialchars($patient['first_name'] . ' ' . $patient['last_name']); ?>
                                 </h4>
                                 <p class="text-sm text-neutral-600">
-                                    Tests: <?php echo htmlspecialchars($patient['test_names'] ?? 'Lab results available'); ?>
+                                    Tests: <?php echo htmlspecialchars($patient['test_names'] ?? 'Lab results available', ENT_QUOTES, 'UTF-8'); ?>
                                 </p>
                                 <?php if (!empty($patient['result_date'])): ?>
                                 <span class="text-xs text-neutral-500">
-                                    Results received: <?php echo htmlspecialchars(safe_date('M j, Y H:i', $patient['result_date'])); ?>
+                                    Results received: <?php echo htmlspecialchars(safe_date('M j, Y H:i', $patient['result_date'], 'N/A'), ENT_QUOTES, 'UTF-8'); ?>
                                 </span>
                                 <?php endif; ?>
                             </div>
@@ -130,12 +130,12 @@
                                     </div>
                                 </td>
                                 <td class="px-6 py-4 whitespace-nowrap">
-                                    <div class="text-sm text-gray-900"><?php echo htmlspecialchars($patient['phone']); ?></div>
-                                    <div class="text-sm text-gray-500"><?php echo htmlspecialchars($patient['address']); ?></div>
+                                    <div class="text-sm text-gray-900"><?php echo htmlspecialchars($patient['phone'] ?? '', ENT_QUOTES, 'UTF-8'); ?></div>
+                                    <div class="text-sm text-gray-500"><?php echo htmlspecialchars($patient['address'] ?? '', ENT_QUOTES, 'UTF-8'); ?></div>
                                 </td>
                                 <td class="px-6 py-4 whitespace-nowrap">
                                     <div class="text-sm text-gray-900">
-                                        <?php echo htmlspecialchars(safe_date('h:i A', $patient['created_at'] ?? $patient['visit_created_at'] ?? null, 'N/A')); ?>
+                                        <?php echo htmlspecialchars(safe_date('h:i A', $patient['created_at'] ?? $patient['visit_created_at'] ?? null, 'N/A'), ENT_QUOTES, 'UTF-8'); ?>
                                     </div>
                                 </td>
                                 <td class="px-6 py-4 whitespace-nowrap">
@@ -191,7 +191,7 @@
                         </div>
                         <div>
                             <p class="font-medium text-gray-900">
-                                <?php echo htmlspecialchars($result['test_name']); ?>
+                                <?php echo htmlspecialchars($result['test_name'] ?? '', ENT_QUOTES, 'UTF-8'); ?>
                             </p>
                             <p class="text-sm text-gray-600">
                                 Patient: <?php echo htmlspecialchars($result['first_name'] . ' ' . $result['last_name']); ?>
@@ -220,7 +220,7 @@
                             <?php echo ucfirst($r_status); ?>
                         </span>
                             <p class="text-xs text-gray-400 mt-1">
-                            <?php echo htmlspecialchars(safe_date('M j, H:i', $result['created_at'] ?? null, 'N/A')); ?>
+                            <?php echo htmlspecialchars(safe_date('M j, H:i', $result['created_at'] ?? null, 'N/A'), ENT_QUOTES, 'UTF-8'); ?>
                         </p>
                     </div>
                 </div>
@@ -250,7 +250,7 @@
                                     <?php echo htmlspecialchars($consultation['first_name'] . ' ' . $consultation['last_name']); ?>
                                 </span>
                                     <span class="text-sm text-neutral-600 ml-2">
-                                    - Completed at <?php echo htmlspecialchars(safe_date('H:i', $consultation['created_at'], 'N/A')); ?>
+                                    - Completed at <?php echo htmlspecialchars(safe_date('H:i', $consultation['created_at'], 'N/A'), ENT_QUOTES, 'UTF-8'); ?>
                                 </span>
                             </div>
                         </div>
@@ -356,7 +356,7 @@ document.getElementById('medicineModal')?.addEventListener('click', function(e) 
         </div>
 
         <form method="POST" action="<?php echo htmlspecialchars($BASE_PATH); ?>/doctor/allocate_patient" class="space-y-6">
-            <input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars($csrf_token); ?>">
+            <input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars($csrf_token ?? '', ENT_QUOTES, 'UTF-8'); ?>">
             <input type="hidden" id="allocatePatientId" name="patient_id">
 
             <div>

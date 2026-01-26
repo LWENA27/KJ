@@ -326,12 +326,12 @@
 
 <script>
 function viewPayment(paymentId) {
-    // TODO: Implement view payment details modal
-    alert('View payment details for payment ID: ' + paymentId);
+    // Navigate to payment details page
+    window.location.href = '<?php echo htmlspecialchars($BASE_PATH); ?>/receptionist/payment_details/' + paymentId;
 }
 
 function printReceipt(paymentId) {
-    // TODO: Implement print receipt functionality
+    // Open receipt in new window for printing
     window.open('<?php echo htmlspecialchars($BASE_PATH); ?>/receptionist/print_receipt/' + paymentId, '_blank');
 }
 </script>
