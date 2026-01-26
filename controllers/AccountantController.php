@@ -235,12 +235,64 @@ class AccountantController extends BaseController
         $stmt->execute();
         $pending_service_payments = $stmt->fetchAll();
 
+        // Get pending radiology payments
+        $sql = <<<'SQL'
+            SELECT 
+                rto.visit_id,
+                rto.patient_id,
+                p.first_name,
+                p.last_name,
+                p.registration_number,
+                pv.visit_date,
+                COUNT(DISTINCT rto.id) as test_count,
+                SUM(rt.price) as total_amount,
+                COALESCE(SUM(CASE WHEN pay.payment_status = 'paid' THEN pay.amount ELSE 0 END), 0) as paid_amount,
+                (SUM(rt.price) - COALESCE(SUM(CASE WHEN pay.payment_status = 'paid' THEN pay.amount ELSE 0 END), 0)) as remaining_amount_to_pay,
+                MAX(rto.created_at) AS last_order_created
+            FROM radiology_test_orders rto
+            JOIN radiology_tests rt ON rto.test_id = rt.id
+            JOIN patients p ON rto.patient_id = p.id
+            LEFT JOIN patient_visits pv ON rto.visit_id = pv.id
+            LEFT JOIN payments pay ON pay.visit_id = rto.visit_id AND pay.item_type = 'radiology_order' AND pay.item_id = rt.id AND pay.payment_status = 'paid'
+            WHERE rto.status = 'pending'
+            GROUP BY rto.visit_id, rto.patient_id, p.first_name, p.last_name, p.registration_number, pv.visit_date
+            HAVING remaining_amount_to_pay > 0
+            ORDER BY pv.visit_date DESC, last_order_created DESC
+        SQL;
+        $stmt = $this->pdo->prepare($sql);
+        $stmt->execute();
+        $pending_radiology_payments = $stmt->fetchAll();
+
+        // Get pending ward (IPD admission) payments - admissions with no paid payment record
+        $sql = <<<'SQL'
+            SELECT 
+                ia.id as admission_id,
+                ia.patient_id,
+                p.first_name,
+                p.last_name,
+                p.registration_number,
+                ia.admission_datetime as admission_date,
+                w.ward_name
+            FROM ipd_admissions ia
+            JOIN patients p ON ia.patient_id = p.id
+            LEFT JOIN ipd_beds b ON ia.bed_id = b.id
+            LEFT JOIN ipd_wards w ON b.ward_id = w.id
+            LEFT JOIN payments pay ON pay.item_type = 'service_order' AND pay.item_id = ia.id AND pay.payment_status = 'paid'
+            WHERE ia.status = 'active' AND pay.id IS NULL
+            ORDER BY ia.admission_datetime DESC
+        SQL;
+        $stmt = $this->pdo->prepare($sql);
+        $stmt->execute();
+        $pending_ward_payments = $stmt->fetchAll();
+
         $this->render('accountant/payments', [
             'payments' => $payments,
             'pending_consultation_payments' => $pending_consultation_payments,
             'pending_lab_payments' => $pending_lab_payments,
             'pending_medicine_payments' => $pending_medicine_payments,
             'pending_service_payments' => $pending_service_payments,
+            'pending_radiology_payments' => $pending_radiology_payments,
+            'pending_ward_payments' => $pending_ward_payments,
             'csrf_token' => $this->generateCSRF(),
             'sidebar_data' => $this->getSidebarData()
         ]);

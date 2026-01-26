@@ -1154,6 +1154,20 @@
                                 ['url' => 'pharmacist/prescriptions', 'icon' => 'fas fa-prescription', 'text' => 'Prescriptions', 'badge' => isset($sidebar_data['pending_prescriptions']) && $sidebar_data['pending_prescriptions'] > 0 ? $sidebar_data['pending_prescriptions'] : '', 'color' => 'green'],
                                 ['url' => 'pharmacist/inventory', 'icon' => 'fas fa-boxes', 'text' => 'Inventory', 'badge' => isset($sidebar_data['low_stock_medicines']) && $sidebar_data['low_stock_medicines'] > 0 ? '!' : '', 'color' => 'orange'],
                             ];
+                        } elseif ($role === 'radiologist') {
+                            $menu_items = [
+                                ['url' => 'radiologist/dashboard', 'icon' => 'fas fa-chart-line', 'text' => 'Dashboard', 'badge' => '', 'color' => 'blue'],
+                                ['url' => 'radiologist/orders', 'icon' => 'fas fa-x-ray', 'text' => 'Test Orders', 'badge' => isset($sidebar_data['pending_orders']) && $sidebar_data['pending_orders'] > 0 ? $sidebar_data['pending_orders'] : '', 'color' => 'purple'],
+                                ['url' => 'radiologist/orders?status=in_progress', 'icon' => 'fas fa-hourglass-half', 'text' => 'In Progress', 'badge' => '', 'color' => 'orange'],
+                                ['url' => 'radiologist/orders?status=completed', 'icon' => 'fas fa-check-circle', 'text' => 'Completed', 'badge' => '', 'color' => 'green'],
+                            ];
+                        } elseif ($role === 'nurse') {
+                            $menu_items = [
+                                ['url' => 'ipd/dashboard', 'icon' => 'fas fa-chart-line', 'text' => 'IPD Dashboard', 'badge' => '', 'color' => 'blue'],
+                                ['url' => 'ipd/beds', 'icon' => 'fas fa-bed', 'text' => 'Bed Management', 'badge' => '', 'color' => 'purple'],
+                                ['url' => 'ipd/admissions', 'icon' => 'fas fa-procedures', 'text' => 'Admissions', 'badge' => isset($sidebar_data['active_admissions']) && $sidebar_data['active_admissions'] > 0 ? $sidebar_data['active_admissions'] : '', 'color' => 'green'],
+                                ['url' => 'ipd/admit', 'icon' => 'fas fa-user-plus', 'text' => 'Admit Patient', 'badge' => '', 'color' => 'indigo'],
+                            ];
                         }
                         ?>
 

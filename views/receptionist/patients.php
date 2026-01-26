@@ -147,7 +147,7 @@
             </div>
             <h3 class="text-xl font-semibold text-gray-900 mb-3">No patients registered yet</h3>
             <p class="text-gray-600 mb-8 text-lg">Get started by registering your first patient to begin managing healthcare records</p>
-            <a href="/KJ/receptionist/register_patient" class="bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white px-6 py-3 rounded-lg font-medium transition-all duration-300 transform hover:scale-105 shadow-lg">
+            <a href="<?php echo BASE_PATH; ?>/receptionist/register_patient" class="bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white px-6 py-3 rounded-lg font-medium transition-all duration-300 transform hover:scale-105 shadow-lg">
                 <i class="fas fa-plus mr-2"></i>Register First Patient
             </a>
         </div>

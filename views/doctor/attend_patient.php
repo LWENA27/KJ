@@ -16,7 +16,7 @@
         <div class="mb-6">
             <div class="flex items-center justify-between">
                 <h1 class="text-3xl font-bold text-gray-900">Patient Consultation</h1>
-                <a href="/KJ/doctor/view_patient/<?php echo $patient['id']; ?>" 
+                <a href="<?php echo BASE_PATH; ?>/doctor/view_patient/<?php echo $patient['id']; ?>" 
                    class="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-md">
                     <i class="fas fa-arrow-left mr-2"></i>Back to Patient Record
                 </a>
@@ -127,8 +127,10 @@
                 <input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars($csrf_token ?? '', ENT_QUOTES, 'UTF-8'); ?>">
                 <input type="hidden" name="patient_id" value="<?php echo $patient['id']; ?>">
                 <input type="hidden" id="selectedTests" name="selected_tests" value="">
+                <input type="hidden" id="selectedRadiology" name="selected_radiology" value="">
                 <input type="hidden" id="selectedMedicines" name="selected_medicines" value="">
                 <input type="hidden" id="selectedAllocations" name="selected_allocations" value="">
+                <input type="hidden" id="ipdAdmissionData" name="ipd_admission_data" value="">
                 <input type="hidden" id="preliminaryDiagnosisId" name="preliminary_diagnosis_id" value="">
                 <input type="hidden" id="finalDiagnosisId" name="final_diagnosis_id" value="">
 
@@ -212,14 +214,22 @@
                 <div class="bg-yellow-50 p-4 rounded-lg">
                     <h4 class="text-lg font-medium text-yellow-900 mb-4">Next Steps Decision</h4>
                     <div class="space-y-4">
-                        <div class="grid grid-cols-2 md:grid-cols-3 gap-3">
+                        <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
                             <label class="flex items-center">
                                 <input type="radio" name="next_step" value="lab_tests" class="mr-2" onchange="toggleSection('lab_tests')">
                                 <span class="text-sm font-medium">Lab Tests</span>
                             </label>
                             <label class="flex items-center">
+                                <input type="radio" name="next_step" value="radiology" class="mr-2" onchange="toggleSection('radiology')">
+                                <span class="text-sm font-medium">Radiology</span>
+                            </label>
+                            <label class="flex items-center">
                                 <input type="radio" name="next_step" value="medicine" class="mr-2" onchange="toggleSection('medicine')">
                                 <span class="text-sm font-medium">Medicine</span>
+                            </label>
+                            <label class="flex items-center">
+                                <input type="radio" name="next_step" value="ipd" class="mr-2" onchange="toggleSection('ipd')">
+                                <span class="text-sm font-medium">IPD Admission</span>
                             </label>
                             <label class="flex items-center">
                                 <input type="radio" name="next_step" value="allocation" class="mr-2" onchange="toggleSection('allocation')">
@@ -231,7 +241,7 @@
                             </label>
                             <label class="flex items-center">
                                 <input type="radio" name="next_step" value="all" class="mr-2" onchange="toggleSection('all')">
-                                <span class="text-sm font-medium">All (Lab, Med & Services)</span>
+                                <span class="text-sm font-medium">All</span>
                             </label>
                             <label class="flex items-center">
                                 <input type="radio" name="next_step" value="discharge" class="mr-2" onchange="toggleSection('none')">
@@ -305,6 +315,71 @@
                     </div>
                 </div>
 
+                <!-- Radiology Section -->
+                <div id="radiologySection" class="bg-blue-50 p-4 rounded-lg hidden">
+                    <h4 class="text-lg font-medium text-blue-900 mb-4">
+                        <i class="fas fa-x-ray mr-2"></i>Radiology Tests
+                    </h4>
+                    <div class="bg-blue-100 border border-blue-300 rounded p-3 mb-4">
+                        <p class="text-sm text-blue-800">
+                            <i class="fas fa-info-circle mr-1"></i>
+                            <strong>Required:</strong> Search and select at least one radiology test below before completing consultation.
+                        </p>
+                    </div>
+                    <div class="space-y-4">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Search & Select Radiology Tests</label>
+                            <div class="relative">
+                                <div class="flex">
+                                    <input type="text" id="radiologySearch" placeholder="Type to search for radiology tests..."
+                                        class="flex-1 px-3 py-2 border border-gray-300 rounded-l-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+                                    <button type="button" onclick="clearRadiologySearch()" id="clearRadiologySearch"
+                                        class="px-3 py-2 bg-gray-100 border border-l-0 border-gray-300 rounded-r-md hover:bg-gray-200 hidden">
+                                        <i class="fas fa-times"></i>
+                                    </button>
+                                </div>
+                                <div id="radiologyResults" class="absolute z-10 w-full bg-white border border-gray-300 rounded-md mt-1 hidden max-h-60 overflow-y-auto shadow-lg"></div>
+                            </div>
+                        </div>
+                        <div id="selectedRadiologyList" class="space-y-2">
+                            <!-- Selected radiology tests will appear here -->
+                        </div>
+                    </div>
+                </div>
+
+                <!-- IPD Admission Section -->
+                <div id="ipdSection" class="bg-orange-50 p-4 rounded-lg hidden">
+                    <h4 class="text-lg font-medium text-orange-900 mb-4">
+                        <i class="fas fa-hospital-user mr-2"></i>IPD Admission
+                    </h4>
+                    <div class="bg-orange-100 border border-orange-300 rounded p-3 mb-4">
+                        <p class="text-sm text-orange-800">
+                            <i class="fas fa-info-circle mr-1"></i>
+                            <strong>Required:</strong> Select a ward and admission reason before completing consultation.
+                        </p>
+                    </div>
+                    <div class="space-y-4">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Select Ward</label>
+                            <select id="ipdWard" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500">
+                                <option value="">-- Select a ward --</option>
+                                <option value="General Ward A">General Ward A</option>
+                                <option value="General Ward B">General Ward B</option>
+                                <option value="Private Ward">Private Ward</option>
+                                <option value="ICU">ICU</option>
+                                <option value="Maternity Ward">Maternity Ward</option>
+                                <option value="Pediatric Ward">Pediatric Ward</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Admission Reason / Clinical Notes</label>
+                            <textarea id="ipdReason" placeholder="Reason for admission, clinical notes, expected duration..."
+                                class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500"
+                                rows="3"></textarea>
+                        </div>
+                    </div>
+                </div>
+
                 <!-- Allocation Section -->
                 <div id="allocationSection" class="bg-indigo-50 p-4 rounded-lg hidden">
                     <h4 class="text-lg font-medium text-indigo-900 mb-4">
@@ -372,7 +447,9 @@
     const BASE_PATH = (typeof window !== 'undefined' && window.BASE_PATH) ? window.BASE_PATH : '';
 
         let selectedTests = [];
+        let selectedRadiology = [];
         let selectedMedicines = [];
+        let ipdAdmissionData = {};
 
         // Form validation before submission
         function validateConsultationForm() {
@@ -395,10 +472,24 @@
         return false;
     }
 
+    // Check radiology requirement
+    if ((nextStepValue === 'radiology' || nextStepValue === 'all') 
+        && selectedRadiology.length === 0) {
+        alert('Please select at least one radiology test');
+        return false;
+    }
+
     // Check medicine requirement
     if ((nextStepValue === 'medicine' || nextStepValue === 'lab_medicine' || nextStepValue === 'all') 
         && selectedMedicines.length === 0) {
         alert('Please select at least one medicine');
+        return false;
+    }
+
+    // Check IPD requirement
+    if ((nextStepValue === 'ipd' || nextStepValue === 'all') 
+        && (!document.getElementById('ipdWard').value || !document.getElementById('ipdReason').value)) {
+        alert('Please select a ward and enter admission reason');
         return false;
     }
 
@@ -629,20 +720,30 @@
 
         function toggleSection(section) {
             const labSection = document.getElementById('labSection');
+            const radiologySection = document.getElementById('radiologySection');
             const medicineSection = document.getElementById('medicineSection');
+            const ipdSection = document.getElementById('ipdSection');
             const allocationSection = document.getElementById('allocationSection');
 
             // Hide all sections first
             if (labSection) labSection.classList.add('hidden');
+            if (radiologySection) radiologySection.classList.add('hidden');
             if (medicineSection) medicineSection.classList.add('hidden');
+            if (ipdSection) ipdSection.classList.add('hidden');
             if (allocationSection) allocationSection.classList.add('hidden');
 
             // Show relevant sections based on selection
             if (section === 'lab_tests' || section === 'lab_medicine' || section === 'all') {
                 if (labSection) labSection.classList.remove('hidden');
             }
+            if (section === 'radiology' || section === 'all') {
+                if (radiologySection) radiologySection.classList.remove('hidden');
+            }
             if (section === 'medicine' || section === 'lab_medicine' || section === 'all') {
                 if (medicineSection) medicineSection.classList.remove('hidden');
+            }
+            if (section === 'ipd' || section === 'all') {
+                if (ipdSection) ipdSection.classList.remove('hidden');
             }
             if (section === 'allocation' || section === 'all') {
                 if (allocationSection) allocationSection.classList.remove('hidden');
@@ -889,13 +990,17 @@
             
             // Step 1: Sync all hidden fields
             syncSelectedTestsFromDOM();
+            syncSelectedRadiology();
             syncSelectedMedicinesFromDOM();
             syncSelectedAllocationsFromDOM();
+            handleIPDAdmission();
             
             // Step 2: Log what we're about to send
             console.log('Selected Tests:', document.getElementById('selectedTests').value);
+            console.log('Selected Radiology:', document.getElementById('selectedRadiology').value);
             console.log('Selected Medicines:', document.getElementById('selectedMedicines').value);
             console.log('Selected Allocations:', document.getElementById('selectedAllocations').value);
+            console.log('IPD Admission Data:', document.getElementById('ipdAdmissionData').value);
             console.log('Next Step:', document.querySelector('input[name="next_step"]:checked')?.value);
             
             // Step 3: Validate
@@ -909,6 +1014,16 @@
             // Step 4: Submit the form
             document.getElementById('attendForm').submit();
             return true;
+        }
+
+        function syncSelectedRadiology() {
+            try {
+                const testIds = selectedRadiology.map(test => test.id);
+                document.getElementById('selectedRadiology').value = JSON.stringify(testIds);
+                console.log('Synced radiology tests:', JSON.stringify(testIds));
+            } catch (e) {
+                console.warn('syncSelectedRadiology failed', e);
+            }
         }
 
         // Legacy handler (kept for compatibility)
@@ -1089,6 +1204,144 @@
             document.getElementById('medicineResults').classList.add('hidden');
             currentMedicineFocus = -1;
         }
+
+        // Radiology Search Functions
+        let radiologySearchTimeout;
+        let currentRadiologyFocus = -1;
+
+        const radiologySearchElement = document.getElementById('radiologySearch');
+        if (radiologySearchElement) {
+            radiologySearchElement.addEventListener('input', function() {
+                clearTimeout(radiologySearchTimeout);
+                const query = this.value.trim();
+
+                // Show/hide clear button
+                const clearBtn = document.getElementById('clearRadiologySearch');
+                if (query.length > 0) {
+                    clearBtn.classList.remove('hidden');
+                } else {
+                    clearBtn.classList.add('hidden');
+                }
+
+                if (query.length < 2) {
+                    document.getElementById('radiologyResults').classList.add('hidden');
+                    return;
+                }
+
+                // Show loading state
+                const resultsDiv = document.getElementById('radiologyResults');
+                resultsDiv.innerHTML = '<div class="p-3 text-gray-500"><i class="fas fa-spinner fa-spin mr-2"></i>Searching...</div>';
+                resultsDiv.classList.remove('hidden');
+
+                radiologySearchTimeout = setTimeout(() => {
+                    fetch(`${BASE_PATH}/doctor/search_radiology_tests?q=${encodeURIComponent(query)}`)
+                        .then(response => response.json())
+                        .then(tests => displayRadiologyResults(tests))
+                        .catch(error => {
+                            resultsDiv.innerHTML = `<div class="p-3 text-red-500">Error: ${error.message}</div>`;
+                        });
+                }, 300);
+            });
+        }
+
+        function displayRadiologyResults(tests) {
+            const resultsDiv = document.getElementById('radiologyResults');
+            resultsDiv.innerHTML = '';
+            currentRadiologyFocus = -1;
+
+            if (tests.length === 0) {
+                resultsDiv.innerHTML = '<div class="p-3 text-gray-500">No radiology tests found</div>';
+            } else {
+                tests.forEach((test, index) => {
+                    const isSelected = selectedRadiology.some(selected => selected.id === test.id);
+                    const div = document.createElement('div');
+                    div.className = `p-3 hover:bg-gray-100 cursor-pointer border-b search-result-item ${isSelected ? 'bg-blue-50' : ''}`;
+                    div.setAttribute('data-index', index);
+                    div.innerHTML = `
+                        <div class="font-medium">${test.name || test.test_name}</div>
+                        <div class="text-sm text-gray-600">${test.code || test.test_code} ${test.price ? `- Tsh ${parseFloat(test.price).toLocaleString('en-US')}` : ''}</div>
+                    `;
+
+                    if (!isSelected) {
+                        div.addEventListener('click', () => addRadiologyTest(test));
+                    }
+
+                    resultsDiv.appendChild(div);
+                });
+            }
+
+            resultsDiv.classList.remove('hidden');
+        }
+
+        function addRadiologyTest(test) {
+            if (!selectedRadiology.some(selected => selected.id === test.id)) {
+                selectedRadiology.push(test);
+                updateSelectedRadiologyList();
+                document.getElementById('radiologyResults').classList.add('hidden');
+                document.getElementById('radiologySearch').value = '';
+            }
+        }
+
+        function removeRadiologyTest(testId) {
+            selectedRadiology = selectedRadiology.filter(test => test.id !== testId);
+            updateSelectedRadiologyList();
+        }
+
+        function updateSelectedRadiologyList() {
+            const listDiv = document.getElementById('selectedRadiologyList');
+            listDiv.innerHTML = '';
+
+            if (selectedRadiology.length === 0) {
+                listDiv.innerHTML = '<div class="text-gray-500 text-sm">No radiology tests selected</div>';
+            } else {
+                selectedRadiology.forEach(test => {
+                    const div = document.createElement('div');
+                    div.className = 'p-3 bg-white border rounded-md flex justify-between items-start';
+                    div.innerHTML = `
+                        <div>
+                            <div class="font-medium">${test.name || test.test_name}</div>
+                            <div class="text-sm text-gray-600">${test.code || test.test_code}</div>
+                        </div>
+                        <button type="button" onclick="removeRadiologyTest(${test.id})" class="text-red-600 hover:text-red-800">
+                            <i class="fas fa-times"></i>
+                        </button>
+                    `;
+                    listDiv.appendChild(div);
+                });
+            }
+
+            // Update hidden field
+            const testIds = selectedRadiology.map(test => test.id);
+            document.getElementById('selectedRadiology').value = JSON.stringify(testIds);
+        }
+
+        function clearRadiologySearch() {
+            document.getElementById('radiologySearch').value = '';
+            document.getElementById('clearRadiologySearch').classList.add('hidden');
+            document.getElementById('radiologyResults').classList.add('hidden');
+            currentRadiologyFocus = -1;
+        }
+
+        // IPD Admission Handler
+        function handleIPDAdmission() {
+            const ward = document.getElementById('ipdWard').value;
+            const reason = document.getElementById('ipdReason').value;
+            
+            if (ward && reason) {
+                ipdAdmissionData = {
+                    ward: ward,
+                    reason: reason,
+                    admission_date: new Date().toISOString().split('T')[0]
+                };
+                document.getElementById('ipdAdmissionData').value = JSON.stringify(ipdAdmissionData);
+            }
+        }
+
+        // Update IPD data when fields change
+        const ipdWardSelect = document.getElementById('ipdWard');
+        const ipdReasonTextarea = document.getElementById('ipdReason');
+        if (ipdWardSelect) ipdWardSelect.addEventListener('change', handleIPDAdmission);
+        if (ipdReasonTextarea) ipdReasonTextarea.addEventListener('input', handleIPDAdmission);
 
         // Diagnosis Search Functions
         let preliminaryDiagnosisSearchTimeout;

@@ -810,12 +810,146 @@ class DoctorController extends BaseController {
             }
         }
 
+        // Handle selected radiology tests
+        if (!empty($_POST['selected_radiology']) && 
+            ($next_step === 'radiology' || $next_step === 'all')) {
+            
+            $selected_radiology = json_decode($_POST['selected_radiology'], true);
+            error_log('[start_consultation] Decoded selected_radiology: ' . print_r($selected_radiology, true));
+            
+            if (is_array($selected_radiology) && count($selected_radiology) > 0) {
+                $stmtRadiologist = $this->pdo->prepare("SELECT id FROM users WHERE role = 'radiologist' AND is_active = 1 LIMIT 1");
+                $stmtRadiologist->execute();
+                $radiologist = $stmtRadiologist->fetch();
+                $radiologist_id = $radiologist['id'] ?? null;
+
+                $stmtOrder = $this->pdo->prepare("
+                    INSERT INTO radiology_test_orders 
+                    (visit_id, patient_id, test_id, ordered_by, assigned_to, priority, status, created_at) 
+                    VALUES (?, ?, ?, ?, ?, 'normal', 'pending', NOW())
+                ");
+                
+                foreach ($selected_radiology as $test_id) {
+                    $stmtOrder->execute([$visit_id, $patient_id, $test_id, $doctor_id, $radiologist_id]);
+                    error_log('[start_consultation] Radiology test order created for test_id: ' . $test_id);
+                    
+                    $stmtTest = $this->pdo->prepare("SELECT price FROM radiology_tests WHERE id = ?");
+                    $stmtTest->execute([$test_id]);
+                    $test = $stmtTest->fetch();
+                    $test_price = $test['price'] ?? 0;
+                    
+                    if ($test_price > 0) {
+                        // Idempotency: check for existing pending payment
+                        $dupStmt = $this->pdo->prepare("
+                            SELECT id FROM payments 
+                            WHERE visit_id = ? AND payment_type = 'service' AND item_id = ? AND payment_status = 'pending'
+                            LIMIT 1
+                        ");
+                        $dupStmt->execute([$visit_id, $test_id]);
+                        
+                        if (!$dupStmt->fetch()) {
+                            $reference_number = 'RAD-' . $test_id . '-' . bin2hex(random_bytes(8));
+                            $stmtPayment = $this->pdo->prepare("
+                                INSERT INTO payments 
+                                (visit_id, patient_id, payment_type, item_id, item_type, amount, payment_status, reference_number, collected_by, payment_date, notes)
+                                VALUES (?, ?, 'service', ?, 'radiology_order', ?, 'pending', ?, ?, NOW(), ?)
+                            ");
+                            $stmtPayment->execute([
+                                $visit_id, 
+                                $patient_id, 
+                                $test_id, 
+                                $test_price,
+                                $reference_number,
+                                SYSTEM_USER_ID,
+                                'Pending radiology test payment - ordered by doctor'
+                            ]);
+                            error_log('[start_consultation] Payment record created for radiology test_id: ' . $test_id . ', amount: ' . $test_price);
+                        }
+                    }
+                }
+                
+                $this->updateWorkflowStatus($patient_id, 'pending_payment', ['radiology_tests_ordered' => true]);
+            }
+        }
+
+        // Handle IPD admission
+        if (!empty($_POST['ipd_admission_data']) && 
+            ($next_step === 'ipd' || $next_step === 'all')) {
+            
+            $ipd_data = json_decode($_POST['ipd_admission_data'], true);
+            error_log('[start_consultation] Decoded ipd_admission_data: ' . print_r($ipd_data, true));
+            
+            if (is_array($ipd_data) && !empty($ipd_data['ward'])) {
+                $ward_name = $ipd_data['ward'];
+                $admission_diagnosis = $ipd_data['reason'] ?? '';
+                $admission_datetime = $ipd_data['admission_date'] ?? date('Y-m-d H:i:s');
+                
+                // Get ward ID
+                $stmtWard = $this->pdo->prepare("SELECT id FROM ipd_wards WHERE ward_name = ? LIMIT 1");
+                $stmtWard->execute([$ward_name]);
+                $ward = $stmtWard->fetch();
+                
+                if (!$ward) {
+                    error_log('[start_consultation] ERROR: Ward not found for name: ' . $ward_name);
+                    throw new Exception('Selected ward not found');
+                }
+                
+                $ward_id = $ward['id'];
+                
+                // Get available bed from this ward
+                $stmtBed = $this->pdo->prepare("
+                    SELECT id FROM ipd_beds 
+                    WHERE ward_id = ? AND status = 'available' 
+                    LIMIT 1
+                ");
+                $stmtBed->execute([$ward_id]);
+                $bed = $stmtBed->fetch();
+                
+                if (!$bed) {
+                    error_log('[start_consultation] ERROR: No available beds in ward: ' . $ward_name);
+                    throw new Exception('No available beds in selected ward');
+                }
+                
+                $bed_id = $bed['id'];
+                
+                // Generate unique admission number
+                $admission_number = 'ADM-' . date('Ymd') . '-' . bin2hex(random_bytes(4));
+                
+                // Create IPD admission record (using actual database columns)
+                $stmtAdmission = $this->pdo->prepare("
+                    INSERT INTO ipd_admissions 
+                    (patient_id, visit_id, bed_id, admission_number, admission_datetime, 
+                     admission_diagnosis, admitted_by, attending_doctor, status, created_at) 
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'active', NOW())
+                ");
+                $stmtAdmission->execute([
+                    $patient_id, $visit_id, $bed_id, $admission_number, $admission_datetime, 
+                    $admission_diagnosis, $doctor_id, $doctor_id
+                ]);
+                
+                $admission_id = $this->pdo->lastInsertId();
+                error_log('[start_consultation] IPD admission created with id: ' . $admission_id . ', admission_number: ' . $admission_number);
+                
+                // Update bed status to occupied
+                $stmtUpdateBed = $this->pdo->prepare("UPDATE ipd_beds SET status = 'occupied' WHERE id = ?");
+                $stmtUpdateBed->execute([$bed_id]);
+                error_log('[start_consultation] Bed ' . $bed_id . ' marked as occupied');
+                
+                // Update workflow status
+                $this->updateWorkflowStatus($patient_id, 'admitted', ['ipd_ward' => $ward_name, 'admission_id' => $admission_id]);
+                
+                $_SESSION['success'] = 'Patient admitted to IPD successfully';
+            }
+        }
+
         // Final workflow update
         $has_lab_tests = !empty($_POST['selected_tests']) && ($next_step === 'lab_tests' || $next_step === 'lab_medicine' || $next_step === 'all');
         $has_medicines = !empty($_POST['selected_medicines']) && ($next_step === 'medicine' || $next_step === 'lab_medicine' || $next_step === 'all');
         $has_allocations = !empty($_POST['selected_allocations']) && ($next_step === 'allocation' || $next_step === 'all');
+        $has_radiology = !empty($_POST['selected_radiology']) && ($next_step === 'radiology' || $next_step === 'all');
+        $has_ipd = !empty($_POST['ipd_admission_data']) && ($next_step === 'ipd' || $next_step === 'all');
         
-        if (!$has_lab_tests && !$has_medicines && !$has_allocations) {
+        if (!$has_lab_tests && !$has_medicines && !$has_allocations && !$has_radiology && !$has_ipd) {
             $stmt = $this->pdo->prepare("UPDATE consultations SET status = 'completed', completed_at = NOW() WHERE id = ?");
             $stmt->execute([$consultation_id]);
             $this->updateWorkflowStatus($patient_id, 'completed');
@@ -824,9 +958,12 @@ class DoctorController extends BaseController {
         $this->pdo->commit();
         error_log('[start_consultation] Transaction committed successfully');
         
-        if ($has_lab_tests || $has_medicines || $has_allocations) {
-            $_SESSION['success'] = 'Consultation completed successfully. Patient needs to make payment.';
+        if ($has_lab_tests || $has_medicines || $has_allocations || $has_radiology) {
+            $_SESSION['success'] = $_SESSION['success'] ?? 'Consultation completed successfully. Patient needs to make payment.';
             $this->redirect('receptionist/payments');
+        } elseif ($has_ipd) {
+            $_SESSION['success'] = $_SESSION['success'] ?? 'Consultation completed and patient admitted to IPD successfully';
+            $this->redirect('nurse/dashboard');
         } else {
             $_SESSION['success'] = 'Consultation completed and patient discharged successfully';
             $this->redirect('doctor/dashboard');
@@ -2313,6 +2450,47 @@ class DoctorController extends BaseController {
         } catch (Exception $e) {
             // Silently fail - notification is non-critical
             error_log("Notification error: " . $e->getMessage());
+        }
+    }
+
+    /**
+     * Search for radiology tests (AJAX endpoint for doctor consultation form)
+     * Returns JSON array of matching radiology tests
+     */
+    public function search_radiology_tests() {
+        // Check authentication
+        if (!isset($_SESSION['user_id']) || !isset($_SESSION['user_role']) || $_SESSION['user_role'] !== 'doctor') {
+            http_response_code(401);
+            echo json_encode(['error' => 'Unauthorized']);
+            exit;
+        }
+
+        $query = $_GET['q'] ?? '';
+
+        if (strlen($query) < 2) {
+            echo json_encode([]);
+            exit;
+        }
+
+        try {
+            $stmt = $this->pdo->prepare("
+                SELECT id, test_code, test_name, description, price, is_active
+                FROM radiology_tests
+                WHERE (test_code LIKE ? OR test_name LIKE ? OR description LIKE ?)
+                  AND is_active = 1
+                ORDER BY test_name
+                LIMIT 20
+            ");
+            $search = "%{$query}%";
+            $stmt->execute([$search, $search, $search]);
+            $tests = $stmt->fetchAll();
+
+            header('Content-Type: application/json');
+            echo json_encode($tests);
+        } catch (Exception $e) {
+            error_log('[search_radiology_tests] Error: ' . $e->getMessage());
+            http_response_code(500);
+            echo json_encode(['error' => 'Search failed']);
         }
     }
 }

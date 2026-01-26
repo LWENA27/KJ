@@ -2,11 +2,14 @@
 // Base Controller Class
 class BaseController {
     protected $pdo;
+    protected $db;  // Alias for backwards compatibility
     protected $layout = 'layouts/main';
 
     public function __construct() {
         global $pdo;
         $this->pdo = $pdo;
+        // Backwards compatibility: alias for controllers that use $this->db instead of $this->pdo
+        $this->db = $this->pdo;
     }
 
     // Set custom layout
@@ -23,11 +26,11 @@ class BaseController {
         // Start output buffering
         ob_start();
         include __DIR__ . "/../views/{$view}.php";
-    $content = ob_get_clean();
+        $content = ob_get_clean();
 
-    // Normalize absolute links in the rendered content to current BASE_PATH
-    $base = defined('BASE_PATH') ? BASE_PATH : '/' . basename(dirname(__DIR__));
-    $content = str_replace(['/KJ/', '/ZAHANATI/'], rtrim($base, '/') . '/', $content);
+        // Normalize absolute links in the rendered content to current BASE_PATH
+        $base = defined('BASE_PATH') ? BASE_PATH : '/' . basename(dirname(__DIR__));
+        $content = str_replace(['/KJ/', '/ZAHANATI/'], rtrim($base, '/') . '/', $content);
 
         // Include layout
         $BASE_PATH = defined('BASE_PATH') ? BASE_PATH : (rtrim(str_replace('\\', '/', dirname($_SERVER['SCRIPT_NAME'] ?? '/')), '/') ?: '');
@@ -36,8 +39,12 @@ class BaseController {
 
     // Redirect to another page
     protected function redirect($url) {
-    $base = defined('BASE_PATH') ? BASE_PATH : '/' . basename(dirname(__DIR__));
-    header("Location: {$base}/{$url}");
+        $base = defined('BASE_PATH') ? BASE_PATH : '';
+        $location = rtrim($base . '/' . ltrim($url, '/'), '/');
+        if (empty($location)) {
+            $location = '/';
+        }
+        header("Location: {$location}");
         exit;
     }
 

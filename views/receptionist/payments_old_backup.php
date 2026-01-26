@@ -8,7 +8,7 @@
             </h1>
             <p class="text-purple-100 mt-2 text-lg">Process and track patient payments</p>
         </div>
-        <a href="/KJ/receptionist/payments" class="bg-white text-purple-700 hover:bg-purple-50 px-6 py-3 rounded-lg font-medium transition-all duration-300 transform hover:scale-105 shadow-lg">
+        <a href="<?php echo BASE_PATH; ?>/receptionist/payments" class="bg-white text-purple-700 hover:bg-purple-50 px-6 py-3 rounded-lg font-medium transition-all duration-300 transform hover:scale-105 shadow-lg">
             <i class="fas fa-plus mr-2"></i>New Payment
         </a>
     </div>
@@ -189,7 +189,7 @@
             </div>
             <h3 class="text-xl font-semibold text-gray-900 mb-3">No payments recorded</h3>
             <p class="text-gray-600 mb-8 text-lg">Start by processing your first payment</p>
-            <a href="/KJ/receptionist/payments" class="bg-gradient-to-r from-purple-500 to-purple-600 hover:from-purple-600 hover:to-purple-700 text-white px-6 py-3 rounded-lg font-medium transition-all duration-300 transform hover:scale-105 shadow-lg">
+            <a href="<?php echo BASE_PATH; ?>/receptionist/payments" class="bg-gradient-to-r from-purple-500 to-purple-600 hover:from-purple-600 hover:to-purple-700 text-white px-6 py-3 rounded-lg font-medium transition-all duration-300 transform hover:scale-105 shadow-lg">
                 <i class="fas fa-plus mr-2"></i>Process First Payment
             </a>
         </div>

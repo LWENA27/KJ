@@ -4,7 +4,7 @@
 <div class="container mx-auto px-4 py-6">
     <div class="flex justify-between items-center mb-6">
         <h1 class="text-3xl font-bold text-gray-900">Medicine Orders Management</h1>
-        <a href="/receptionist/dashboard" class="bg-gray-500 hover:bg-gray-600 text-white px-4 py-2 rounded-md">
+        <a href="<?php echo BASE_PATH; ?>/receptionist/dashboard" class="bg-gray-500 hover:bg-gray-600 text-white px-4 py-2 rounded-md">
             <i class="fas fa-arrow-left mr-2"></i>Back to Dashboard
         </a>
     </div>

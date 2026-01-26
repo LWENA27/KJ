@@ -19,7 +19,7 @@
             </div>
         </div>
         <div class="flex items-center space-x-3">
-            <a href="/KJ/lab/tests" class="bg-indigo-500 hover:bg-indigo-600 text-white px-4 py-2 rounded-lg text-sm font-medium">
+            <a href="<?php echo BASE_PATH; ?>/lab/tests" class="bg-indigo-500 hover:bg-indigo-600 text-white px-4 py-2 rounded-lg text-sm font-medium">
                 <i class="fas fa-refresh mr-2"></i>Refresh
             </a>
         </div>
@@ -196,7 +196,7 @@
                                         class="bg-green-500 hover:bg-green-600 text-white px-3 py-1 rounded text-sm result-btn">
                                     <i class="fas fa-clipboard-check mr-1"></i>Result
                                 </button>
-                                <a href="/KJ/lab/view_test/<?php echo $test['id']; ?>" 
+                                <a href="<?php echo BASE_PATH; ?>/lab/view_test/<?php echo $test['id']; ?>" 
                                    class="bg-indigo-500 hover:bg-indigo-600 text-white px-3 py-1 rounded text-sm">
                                     <i class="fas fa-eye mr-1"></i>View
                                 </a>

@@ -1,0 +1,14 @@
+[2026-01-26 08:56:49] INFO: Payment override: Doctor 9 attended patient 61 without payment. Reason: Medical Emergency - Life threatening conditionvguhgg
+[2026-01-26 09:00:51] INFO: Payment override: Doctor 9 attended patient 65 without payment. Reason: Patient will pay after consultationFYUDYFG
+[2026-01-26 09:07:56] INFO: Payment override: Doctor 9 attended patient 67 without payment. Reason: Insurance pending verification
+[2026-01-26 09:16:22] INFO: Payment override: Doctor 9 attended patient 76 without payment. Reason: Medical Emergency - Life threatening condition
+[2026-01-26 12:57:11] INFO: Payment override: Doctor 9 attended patient 44 without payment. Reason: Insurance pending verification
+[2026-01-26 12:59:14] ERROR: Undefined array key "patient_number" | Context: {"errno":2,"file":"\/var\/www\/html\/KJ\/views\/radiologist\/orders.php","line":83}
+[2026-01-26 12:59:14] ERROR: htmlspecialchars(): Passing null to parameter #1 ($string) of type string is deprecated | Context: {"errno":8192,"file":"\/var\/www\/html\/KJ\/views\/radiologist\/orders.php","line":83}
+[2026-01-26 13:00:03] ERROR: Undefined array key "patient_number" | Context: {"errno":2,"file":"\/var\/www\/html\/KJ\/views\/radiologist\/orders.php","line":83}
+[2026-01-26 13:00:03] ERROR: htmlspecialchars(): Passing null to parameter #1 ($string) of type string is deprecated | Context: {"errno":8192,"file":"\/var\/www\/html\/KJ\/views\/radiologist\/orders.php","line":83}
+[2026-01-26 13:00:23] ERROR: Undefined array key "patient_number" | Context: {"errno":2,"file":"\/var\/www\/html\/KJ\/views\/radiologist\/orders.php","line":83}
+[2026-01-26 13:00:23] ERROR: htmlspecialchars(): Passing null to parameter #1 ($string) of type string is deprecated | Context: {"errno":8192,"file":"\/var\/www\/html\/KJ\/views\/radiologist\/orders.php","line":83}
+[2026-01-26 13:34:04] ERROR: Error in controller: SQLSTATE[42S22]: Column not found: 1054 Unknown column 'ia.ward_id' in 'on clause' | Context: {"controller":"accountant","action":"payments","file":"\/var\/www\/html\/KJ\/controllers\/AccountantController.php","line":283,"trace":"#0 \/var\/www\/html\/KJ\/controllers\/AccountantController.php(283): PDO->prepare()\n#1 \/var\/www\/html\/KJ\/index.php(156): AccountantController->payments()\n#2 {main}"}
+[2026-01-26 13:49:41] ERROR: Undefined array key "patient_number" | Context: {"errno":2,"file":"\/var\/www\/html\/KJ\/views\/radiologist\/perform_test.php","line":19}
+[2026-01-26 13:49:41] ERROR: htmlspecialchars(): Passing null to parameter #1 ($string) of type string is deprecated | Context: {"errno":8192,"file":"\/var\/www\/html\/KJ\/views\/radiologist\/perform_test.php","line":19}

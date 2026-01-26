@@ -51,7 +51,122 @@ $title = 'Pending Payments';
                     </span>
                     <?php endif; ?>
                 </button>
+                <button onclick="showTab('radiology')" id="tab-radiology" 
+                        class="tab-btn py-4 px-1 border-b-2 border-transparent font-medium text-sm text-neutral-500 hover:text-neutral-700 hover:border-neutral-300">
+                    Radiology
+                    <?php if (!empty($pending_radiology_payments)): ?>
+                    <span class="ml-2 bg-neutral-100 text-neutral-600 py-0.5 px-2 rounded-full text-xs">
+                        <?= count($pending_radiology_payments) ?>
+                    </span>
+                    <?php endif; ?>
+                </button>
+                <button onclick="showTab('ward')" id="tab-ward" 
+                        class="tab-btn py-4 px-1 border-b-2 border-transparent font-medium text-sm text-neutral-500 hover:text-neutral-700 hover:border-neutral-300">
+                    Ward
+                    <?php if (!empty($pending_ward_payments)): ?>
+                    <span class="ml-2 bg-neutral-100 text-neutral-600 py-0.5 px-2 rounded-full text-xs">
+                        <?= count($pending_ward_payments) ?>
+                    </span>
+                    <?php endif; ?>
+                </button>
             </nav>
+        </div>
+        <!-- Radiology Tab -->
+        <div id="content-radiology" class="tab-content p-6 hidden">
+            <?php if (empty($pending_radiology_payments)): ?>
+            <div class="text-center py-12">
+                <i class="fas fa-check-circle text-5xl text-green-400 mb-4"></i>
+                <p class="text-neutral-600">No pending radiology payments</p>
+            </div>
+            <?php else: ?>
+            <div class="overflow-x-auto">
+                <table class="w-full">
+                    <thead class="bg-neutral-50">
+                        <tr>
+                            <th class="px-4 py-3 text-left text-xs font-medium text-neutral-500 uppercase">Patient</th>
+                            <th class="px-4 py-3 text-left text-xs font-medium text-neutral-500 uppercase">Test</th>
+                            <th class="px-4 py-3 text-left text-xs font-medium text-neutral-500 uppercase">Amount</th>
+                            <th class="px-4 py-3 text-left text-xs font-medium text-neutral-500 uppercase">Visit Date</th>
+                            <th class="px-4 py-3 text-left text-xs font-medium text-neutral-500 uppercase">Action</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-neutral-200">
+                        <?php foreach ($pending_radiology_payments as $payment): ?>
+                        <tr class="hover:bg-neutral-50">
+                            <td class="px-4 py-4">
+                                <p class="font-medium text-neutral-800"><?= htmlspecialchars($payment['first_name'] . ' ' . $payment['last_name']) ?></p>
+                                <p class="text-xs text-neutral-500"><?= htmlspecialchars($payment['registration_number']) ?></p>
+                            </td>
+                            <td class="px-4 py-4 text-neutral-600">
+                                <?= htmlspecialchars($payment['test_name'] ?? 'Radiology') ?>
+                            </td>
+                            <td class="px-4 py-4 font-medium text-neutral-800">
+                                TZS <?= number_format($payment['remaining_amount_to_pay'] ?? $payment['amount'] ?? 0, 0) ?>
+                            </td>
+                            <td class="px-4 py-4 text-neutral-500 text-sm">
+                                <?= $payment['visit_date'] ? date('M d, Y', strtotime($payment['visit_date'])) : 'N/A' ?>
+                            </td>
+                            <td class="px-4 py-4">
+                                <button onclick="openPaymentModal('radiology', <?= htmlspecialchars(json_encode($payment)) ?>)"
+                                        class="px-3 py-1.5 bg-indigo-500 text-white text-sm rounded-lg hover:bg-indigo-600 transition-colors">
+                                    <i class="fas fa-money-bill-wave mr-1"></i>Collect
+                                </button>
+                            </td>
+                        </tr>
+                        <?php endforeach; ?>
+                    </tbody>
+                </table>
+            </div>
+            <?php endif; ?>
+        </div>
+
+        <!-- Ward Tab -->
+        <div id="content-ward" class="tab-content p-6 hidden">
+            <?php if (empty($pending_ward_payments)): ?>
+            <div class="text-center py-12">
+                <i class="fas fa-check-circle text-5xl text-green-400 mb-4"></i>
+                <p class="text-neutral-600">No pending ward payments</p>
+            </div>
+            <?php else: ?>
+            <div class="overflow-x-auto">
+                <table class="w-full">
+                    <thead class="bg-neutral-50">
+                        <tr>
+                            <th class="px-4 py-3 text-left text-xs font-medium text-neutral-500 uppercase">Patient</th>
+                            <th class="px-4 py-3 text-left text-xs font-medium text-neutral-500 uppercase">Admission</th>
+                            <th class="px-4 py-3 text-left text-xs font-medium text-neutral-500 uppercase">Amount</th>
+                            <th class="px-4 py-3 text-left text-xs font-medium text-neutral-500 uppercase">Admission Date</th>
+                            <th class="px-4 py-3 text-left text-xs font-medium text-neutral-500 uppercase">Action</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-neutral-200">
+                        <?php foreach ($pending_ward_payments as $payment): ?>
+                        <tr class="hover:bg-neutral-50">
+                            <td class="px-4 py-4">
+                                <p class="font-medium text-neutral-800"><?= htmlspecialchars($payment['first_name'] . ' ' . $payment['last_name']) ?></p>
+                                <p class="text-xs text-neutral-500"><?= htmlspecialchars($payment['registration_number']) ?></p>
+                            </td>
+                            <td class="px-4 py-4 text-neutral-600">
+                                <?= htmlspecialchars($payment['ward_name'] ?? 'Ward Admission') ?>
+                            </td>
+                            <td class="px-4 py-4 font-medium text-neutral-800">
+                                TZS <?= number_format($payment['remaining_amount_to_pay'] ?? $payment['amount'] ?? 0, 0) ?>
+                            </td>
+                            <td class="px-4 py-4 text-neutral-500 text-sm">
+                                <?= $payment['admission_date'] ? date('M d, Y', strtotime($payment['admission_date'])) : 'N/A' ?>
+                            </td>
+                            <td class="px-4 py-4">
+                                <button onclick="openPaymentModal('ward', <?= htmlspecialchars(json_encode($payment)) ?>)"
+                                        class="px-3 py-1.5 bg-yellow-500 text-white text-sm rounded-lg hover:bg-yellow-600 transition-colors">
+                                    <i class="fas fa-money-bill-wave mr-1"></i>Collect
+                                </button>
+                            </td>
+                        </tr>
+                        <?php endforeach; ?>
+                    </tbody>
+                </table>
+            </div>
+            <?php endif; ?>
         </div>
 
         <!-- Consultations Tab -->
@@ -358,6 +473,16 @@ function openPaymentModal(type, data) {
         document.getElementById('modal_payment_for').textContent = 'Service: ' + data.service_name;
         document.getElementById('modal_amount').value = data.amount;
         document.getElementById('modal_item_id').value = data.order_id;
+        document.getElementById('modal_item_type').value = 'service_order';
+    } else if (type === 'radiology') {
+        document.getElementById('modal_payment_for').textContent = (data.test_name ? data.test_name + ' - ' : '') + 'Radiology Test';
+        document.getElementById('modal_amount').value = data.remaining_amount_to_pay ?? data.amount ?? 0;
+        document.getElementById('modal_item_id').value = data.order_id ?? data.item_id ?? '';
+        document.getElementById('modal_item_type').value = 'radiology_order';
+    } else if (type === 'ward') {
+        document.getElementById('modal_payment_for').textContent = 'Ward Admission: ' + (data.ward_name ?? data.admission_id ?? 'Admission');
+        document.getElementById('modal_amount').value = data.remaining_amount_to_pay ?? data.amount ?? 0;
+        document.getElementById('modal_item_id').value = data.admission_id ?? data.item_id ?? '';
         document.getElementById('modal_item_type').value = 'service_order';
     }
     

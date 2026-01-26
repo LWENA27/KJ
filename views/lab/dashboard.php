@@ -303,7 +303,7 @@
                 </div>
                 <div class="p-6">
                     <div class="grid grid-cols-1 gap-3">
-                        <a href="/KJ/lab/tests" class="flex items-center p-3 bg-blue-50 hover:bg-blue-100 rounded-lg transition-colors group">
+                        <a href="<?php echo BASE_PATH; ?>/lab/tests" class="flex items-center p-3 bg-blue-50 hover:bg-blue-100 rounded-lg transition-colors group">
                             <div class="bg-blue-500 group-hover:bg-blue-600 text-white rounded-lg p-2 mr-3">
                                 <i class="fas fa-list"></i>
                             </div>
@@ -313,7 +313,7 @@
                             </div>
                         </a>
 
-                        <a href="/KJ/lab/results" class="flex items-center p-3 bg-green-50 hover:bg-green-100 rounded-lg transition-colors group">
+                        <a href="<?php echo BASE_PATH; ?>/lab/results" class="flex items-center p-3 bg-green-50 hover:bg-green-100 rounded-lg transition-colors group">
                             <div class="bg-green-500 group-hover:bg-green-600 text-white rounded-lg p-2 mr-3">
                                 <i class="fas fa-edit"></i>
                             </div>
