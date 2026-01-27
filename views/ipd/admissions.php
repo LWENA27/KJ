@@ -22,7 +22,7 @@ require_once __DIR__ . '/../layouts/header.php';
             </div>
             <div>
                 <label class="block text-sm font-medium text-gray-700 mb-2">Search</label>
-                <input type="text" name="search" value="<?php echo htmlspecialchars($search); ?>" 
+          <input type="text" name="search" value="<?php echo htmlspecialchars($search ?? ''); ?>" 
                        placeholder="Patient name or admission #" class="w-full border border-gray-300 rounded px-3 py-2">
             </div>
             <div class="flex items-end">
@@ -52,27 +52,27 @@ require_once __DIR__ . '/../layouts/header.php';
                     <?php foreach ($admissions as $admission): ?>
                         <tr class="hover:bg-gray-50">
                             <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                                <?php echo htmlspecialchars($admission['admission_number']); ?>
+                                <?php echo htmlspecialchars($admission['admission_number'] ?? ''); ?>
                             </td>
                             <td class="px-6 py-4 whitespace-nowrap">
                                 <div class="text-sm font-medium text-gray-900">
-                                    <?php echo htmlspecialchars($admission['first_name'] . ' ' . $admission['last_name']); ?>
+                                    <?php echo htmlspecialchars(($admission['first_name'] ?? '') . ' ' . ($admission['last_name'] ?? '')); ?>
                                 </div>
-                                <div class="text-sm text-gray-500"><?php echo htmlspecialchars($admission['patient_number']); ?></div>
+                                <div class="text-sm text-gray-500"><?php echo htmlspecialchars($admission['patient_number'] ?? ''); ?></div>
                             </td>
                             <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                                <?php echo htmlspecialchars($admission['ward_name'] . ' - ' . $admission['bed_number']); ?>
+                                <?php echo htmlspecialchars((($admission['ward_name'] ?? '') !== '' ? $admission['ward_name'] : '') . (isset($admission['bed_number']) && $admission['bed_number'] !== null ? ' - ' . $admission['bed_number'] : '')); ?>
                             </td>
                             <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                                <?php echo date('M d, Y', strtotime($admission['admission_datetime'])); ?>
+                                <?php echo isset($admission['admission_datetime']) && $admission['admission_datetime'] ? date('M d, Y', strtotime($admission['admission_datetime'])) : ''; ?>
                             </td>
                             <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                                <?php echo $admission['total_days']; ?> days
+                                <?php echo isset($admission['total_days']) ? (int)$admission['total_days'] : 0; ?> days
                             </td>
                             <td class="px-6 py-4 whitespace-nowrap">
                                 <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full
-                                    <?php echo $admission['status'] === 'active' ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'; ?>">
-                                    <?php echo ucfirst($admission['status']); ?>
+                                    <?php echo (($admission['status'] ?? '') === 'active') ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'; ?>">
+                                    <?php echo htmlspecialchars(ucfirst($admission['status'] ?? '')); ?>
                                 </span>
                             </td>
                             <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">

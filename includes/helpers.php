@@ -48,4 +48,38 @@ if (!function_exists('csrf_field')) {
     }
 }
 
+if (!function_exists('get_active_role')) {
+    /**
+     * Get the currently active role for the user (supports multi-role switching)
+     *
+     * @return string The active role, defaults to primary user_role
+     */
+    function get_active_role(): string {
+        return $_SESSION['active_role'] ?? $_SESSION['user_role'] ?? '';
+    }
+}
+
+if (!function_exists('user_has_roles')) {
+    /**
+     * Check if user has multiple roles
+     *
+     * @return bool True if user has more than one role
+     */
+    function user_has_roles(): bool {
+        $roles = $_SESSION['user_roles'] ?? [$_SESSION['user_role'] ?? ''];
+        return count($roles) > 1;
+    }
+}
+
+if (!function_exists('get_user_roles')) {
+    /**
+     * Get all roles for the current user
+     *
+     * @return array List of user roles
+     */
+    function get_user_roles(): array {
+        return $_SESSION['user_roles'] ?? [$_SESSION['user_role'] ?? ''];
+    }
+}
+
 ?>

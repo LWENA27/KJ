@@ -31,6 +31,9 @@ class AuthController extends BaseController {
                     // Load all roles for multi-role support
                     $this->loadUserRolesForUser($user['id'], $user['role']);
                     
+                    // Set active role to primary role initially
+                    $_SESSION['active_role'] = $user['role'];
+                    
                     $this->redirectToDashboard();
                 } else {
                     $error = 'Invalid username or password';
@@ -138,11 +141,21 @@ class AuthController extends BaseController {
         $new_role = $_POST['role'] ?? $_GET['role'] ?? '';
         $roles = $_SESSION['user_roles'] ?? [$_SESSION['user_role']];
         
-        if (in_array($new_role, $roles)) {
+        if (!empty($new_role) && in_array($new_role, $roles)) {
             $_SESSION['active_role'] = $new_role;
-            $_SESSION['success'] = 'Switched to ' . ucfirst($new_role) . ' role';
             
-            // Redirect to appropriate dashboard
+            // If called via AJAX, return JSON
+            if (!empty($_POST['ajax'])) {
+                header('Content-Type: application/json');
+                echo json_encode([
+                    'success' => true,
+                    'message' => 'Switched to ' . ucfirst($new_role) . ' role',
+                    'active_role' => $new_role
+                ]);
+                exit;
+            }
+            
+            // Otherwise redirect to appropriate dashboard
             switch ($new_role) {
                 case 'admin':
                     $this->redirect('admin/dashboard');
@@ -162,11 +175,26 @@ class AuthController extends BaseController {
                 case 'pharmacist':
                     $this->redirect('pharmacist/dashboard');
                     break;
+                case 'nurse':
+                    $this->redirect('ipd/dashboard');
+                    break;
+                case 'radiologist':
+                    $this->redirect('radiologist/dashboard');
+                    break;
                 default:
-                    $this->redirect('auth/login');
+                    $this->redirectToDashboard();
             }
         } else {
             $_SESSION['error'] = 'You do not have access to that role';
+            
+            // If called via AJAX, return JSON error
+            if (!empty($_POST['ajax'])) {
+                header('Content-Type: application/json');
+                http_response_code(403);
+                echo json_encode(['success' => false, 'error' => 'You do not have access to that role']);
+                exit;
+            }
+            
             $this->redirectToDashboard();
         }
     }

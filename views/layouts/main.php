@@ -1104,7 +1104,10 @@
                             $current_path = substr($current_path, strlen($base) + 1);
                         }
 
-                        if ($role === 'admin') {
+                        // Use active_role for multi-role support (changes when user switches roles)
+                        $active_role = get_active_role();
+
+                        if ($active_role === 'admin') {
                             $menu_items = [
                                 ['url' => 'admin/dashboard', 'icon' => 'fas fa-chart-line', 'text' => 'Dashboard'],
                                 ['url' => 'admin/users', 'icon' => 'fas fa-user-shield', 'text' => 'User Management'],
@@ -1112,7 +1115,7 @@
                                 ['url' => 'admin/medicines', 'icon' => 'fas fa-pills', 'text' => 'Medicines'],
                                 ['url' => 'admin/tests', 'icon' => 'fas fa-microscope', 'text' => 'Lab Tests'],
                             ];
-                        } elseif ($role === 'receptionist') {
+                        } elseif ($active_role === 'receptionist') {
                             $menu_items = [
                                 ['url' => 'receptionist/dashboard', 'icon' => 'fas fa-chart-line', 'text' => 'Dashboard', 'badge' => '', 'color' => 'blue'],
                                 ['url' => 'receptionist/patients', 'icon' => 'fas fa-users', 'text' => 'Patients', 'badge' => isset($sidebar_data['pending_patients']) ? $sidebar_data['pending_patients'] : '0', 'color' => 'blue'],
@@ -1121,7 +1124,7 @@
                                 ['url' => 'receptionist/tasks', 'icon' => 'fas fa-tasks', 'text' => 'Tasks', 'badge' => isset($sidebar_data['pending_tasks']) ? $sidebar_data['pending_tasks'] : '', 'color' => 'orange'],
                                 ['url' => 'receptionist/reports', 'icon' => 'fas fa-chart-bar', 'text' => 'Reports', 'badge' => '', 'color' => 'indigo'],
                             ];
-                        } elseif ($role === 'doctor') {
+                        } elseif ($active_role === 'doctor') {
                             $menu_items = [
                                 ['url' => 'doctor/dashboard', 'icon' => 'fas fa-chart-line', 'text' => 'Dashboard'],
                                 ['url' => 'doctor/consultations', 'icon' => 'fas fa-stethoscope', 'text' => 'Consultations'],
@@ -1129,7 +1132,7 @@
                                 ['url' => 'doctor/lab_results', 'icon' => 'fas fa-flask', 'text' => 'Lab Results'],
                                 ['url' => 'doctor/allocated_services', 'icon' => 'fas fa-tasks', 'text' => 'Allocated Services'],
                             ];
-                        } elseif ($role === 'lab_technician') {
+                        } elseif ($active_role === 'lab_technician') {
                             $menu_items = [
                                 ['url' => 'lab/dashboard', 'icon' => 'fas fa-chart-line', 'text' => 'Dashboard', 'badge' => '', 'color' => 'blue'],
                                 ['url' => 'lab/tasks', 'icon' => 'fas fa-clipboard-list', 'text' => 'My Tasks', 'badge' => '', 'color' => 'cyan'],
@@ -1141,27 +1144,27 @@
                                 ['url' => 'lab/quality', 'icon' => 'fas fa-check-double', 'text' => 'Quality Control', 'badge' => '', 'color' => 'emerald'],
                                 ['url' => 'lab/reports', 'icon' => 'fas fa-chart-bar', 'text' => 'Reports', 'badge' => '', 'color' => 'rose'],
                             ];
-                        } elseif ($role === 'accountant') {
+                        } elseif ($active_role === 'accountant') {
                             $menu_items = [
                                 ['url' => 'accountant/dashboard', 'icon' => 'fas fa-chart-line', 'text' => 'Dashboard', 'badge' => '', 'color' => 'blue'],
                                 ['url' => 'accountant/payments', 'icon' => 'fas fa-hand-holding-usd', 'text' => 'Collect Payments', 'badge' => isset($sidebar_data['pending_payments']) && $sidebar_data['pending_payments'] > 0 ? $sidebar_data['pending_payments'] : '', 'color' => 'green'],
                                 ['url' => 'accountant/payment_history', 'icon' => 'fas fa-history', 'text' => 'Payment History', 'badge' => '', 'color' => 'purple'],
                                 ['url' => 'accountant/reports', 'icon' => 'fas fa-chart-bar', 'text' => 'Financial Reports', 'badge' => '', 'color' => 'indigo'],
                             ];
-                        } elseif ($role === 'pharmacist') {
+                        } elseif ($active_role === 'pharmacist') {
                             $menu_items = [
                                 ['url' => 'pharmacist/dashboard', 'icon' => 'fas fa-chart-line', 'text' => 'Dashboard', 'badge' => '', 'color' => 'blue'],
                                 ['url' => 'pharmacist/prescriptions', 'icon' => 'fas fa-prescription', 'text' => 'Prescriptions', 'badge' => isset($sidebar_data['pending_prescriptions']) && $sidebar_data['pending_prescriptions'] > 0 ? $sidebar_data['pending_prescriptions'] : '', 'color' => 'green'],
                                 ['url' => 'pharmacist/inventory', 'icon' => 'fas fa-boxes', 'text' => 'Inventory', 'badge' => isset($sidebar_data['low_stock_medicines']) && $sidebar_data['low_stock_medicines'] > 0 ? '!' : '', 'color' => 'orange'],
                             ];
-                        } elseif ($role === 'radiologist') {
+                        } elseif ($active_role === 'radiologist') {
                             $menu_items = [
                                 ['url' => 'radiologist/dashboard', 'icon' => 'fas fa-chart-line', 'text' => 'Dashboard', 'badge' => '', 'color' => 'blue'],
                                 ['url' => 'radiologist/orders', 'icon' => 'fas fa-x-ray', 'text' => 'Test Orders', 'badge' => isset($sidebar_data['pending_orders']) && $sidebar_data['pending_orders'] > 0 ? $sidebar_data['pending_orders'] : '', 'color' => 'purple'],
                                 ['url' => 'radiologist/orders?status=in_progress', 'icon' => 'fas fa-hourglass-half', 'text' => 'In Progress', 'badge' => '', 'color' => 'orange'],
                                 ['url' => 'radiologist/orders?status=completed', 'icon' => 'fas fa-check-circle', 'text' => 'Completed', 'badge' => '', 'color' => 'green'],
                             ];
-                        } elseif ($role === 'nurse') {
+                        } elseif ($active_role === 'nurse') {
                             $menu_items = [
                                 ['url' => 'ipd/dashboard', 'icon' => 'fas fa-chart-line', 'text' => 'IPD Dashboard', 'badge' => '', 'color' => 'blue'],
                                 ['url' => 'ipd/beds', 'icon' => 'fas fa-bed', 'text' => 'Bed Management', 'badge' => '', 'color' => 'purple'],
@@ -1366,8 +1369,30 @@
                                     <div class="user-menu" id="userMenu">
                                         <div class="px-3 py-2 border-b border-neutral-200">
                                             <p class="text-sm font-medium text-neutral-800"><?= htmlspecialchars($_SESSION['user_name'] ?? 'User') ?></p>
-                                            <p class="text-xs text-neutral-500 capitalize"><?= htmlspecialchars($_SESSION['user_role'] ?? 'user') ?></p>
+                                            <p class="text-xs text-neutral-500 capitalize"><?= htmlspecialchars($_SESSION['active_role'] ?? $_SESSION['user_role'] ?? 'user') ?></p>
                                         </div>
+
+                                        <?php 
+                                        // Show role switcher if user has multiple roles
+                                        $user_roles = $_SESSION['user_roles'] ?? [$_SESSION['user_role'] ?? ''];
+                                        $active_role = $_SESSION['active_role'] ?? $_SESSION['user_role'] ?? '';
+                                        if (count($user_roles) > 1):
+                                        ?>
+                                        <div class="px-3 py-2 border-b border-neutral-200">
+                                            <p class="text-xs font-medium text-neutral-600 mb-2">Switch Role:</p>
+                                            <?php foreach ($user_roles as $role): ?>
+                                                <form method="POST" action="<?= htmlspecialchars($BASE_PATH) ?>/auth/switch_role" class="inline">
+                                                    <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($_SESSION['csrf_token'] ?? '') ?>">
+                                                    <input type="hidden" name="role" value="<?= htmlspecialchars($role) ?>">
+                                                    <button type="submit" class="w-full text-left px-2 py-1.5 text-xs rounded transition-colors <?= $role === $active_role ? 'bg-primary-100 text-primary-600 font-medium' : 'text-neutral-600 hover:bg-neutral-100' ?>">
+                                                        <i class="fas fa-<?= $role === 'receptionist' ? 'phone' : ($role === 'doctor' ? 'stethoscope' : ($role === 'nurse' ? 'heart' : ($role === 'lab_technician' ? 'flask' : ($role === 'pharmacist' ? 'prescription-bottle' : ($role === 'accountant' ? 'calculator' : 'user'))))) ?> text-xs mr-1"></i>
+                                                        <?= htmlspecialchars(ucfirst(str_replace('_', ' ', $role))) ?>
+                                                        <?php if ($role === $active_role): ?><i class="fas fa-check ml-1 text-primary-500"></i><?php endif; ?>
+                                                    </button>
+                                                </form>
+                                            <?php endforeach; ?>
+                                        </div>
+                                        <?php endif; ?>
 
                                         <a href="#" class="user-menu-item">
                                             <i class="fas fa-user-circle"></i>

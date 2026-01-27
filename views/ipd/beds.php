@@ -53,7 +53,7 @@ require_once __DIR__ . '/../layouts/header.php';
                             <div class="mt-3 pt-3 border-t">
                                 <p class="text-xs text-gray-600">Patient:</p>
                                 <p class="font-semibold text-sm"><?php echo htmlspecialchars($bed['first_name'] . ' ' . $bed['last_name']); ?></p>
-                                <p class="text-xs text-gray-500"><?php echo htmlspecialchars($bed['patient_number']); ?></p>
+                                <p class="text-xs text-gray-500"><?php echo htmlspecialchars($bed['patient_number'] ?? ''); ?></p>
                             </div>
                         <?php endif; ?>
                     </div>

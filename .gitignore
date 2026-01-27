@@ -20,6 +20,9 @@
 node_modules/
 vendor/
 logs/
+/var/www/html/KJ/logs/database.log
+application.log
+php_errors.log
 
 # Runtime storage (sessions, backups)
 storage/sessions/
