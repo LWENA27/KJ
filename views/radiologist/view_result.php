@@ -105,9 +105,10 @@ require_once __DIR__ . '/../layouts/header.php';
         <div class="mb-6">
             <h3 class="text-lg font-bold text-gray-800 mb-3">IMAGES</h3>
             <div class="bg-gray-50 rounded p-4">
-                <img src="/<?php echo htmlspecialchars($result['images_path'] ?? ''); ?>" 
+                <img src="<?php echo htmlspecialchars($BASE_PATH . '/' . ($result['images_path'] ?? '')); ?>" 
                      alt="Radiology Image" 
-                     class="max-w-full h-auto rounded border">
+                     class="max-w-full h-auto rounded border cursor-pointer"
+                     onclick="this.classList.toggle('max-w-full'); this.classList.toggle('w-auto');">
             </div>
         </div>
         <?php endif; ?>

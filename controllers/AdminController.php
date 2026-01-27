@@ -35,20 +35,33 @@ class AdminController extends BaseController {
                 $first_name = trim($_POST['first_name']);
                 $last_name = trim($_POST['last_name']);
                 $phone = trim($_POST['phone']);
-                $role = trim($_POST['role']);
+                $roles = $_POST['roles'] ?? []; // Multiple roles support
+                $primary_role = trim($_POST['primary_role'] ?? '');
                 $password = trim($_POST['password']);
 
                 // Validation
-                if (empty($username) || empty($email) || empty($first_name) || empty($last_name) || empty($role) || empty($password)) {
+                if (empty($username) || empty($email) || empty($first_name) || empty($last_name) || empty($password)) {
                     throw new Exception('Please fill all required fields');
+                }
+
+                if (empty($roles) || !is_array($roles)) {
+                    throw new Exception('Please select at least one role');
                 }
 
                 if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
                     throw new Exception('Please enter a valid email address');
                 }
 
-                if (!in_array($role, ['admin', 'doctor', 'receptionist', 'accountant', 'pharmacist', 'lab_technician'])) {
-                    throw new Exception('Invalid role selected');
+                $allowed_roles = ['admin', 'doctor', 'receptionist', 'accountant', 'pharmacist', 'lab_technician', 'radiologist', 'nurse'];
+                foreach ($roles as $role) {
+                    if (!in_array($role, $allowed_roles)) {
+                        throw new Exception('Invalid role selected: ' . $role);
+                    }
+                }
+
+                // If no primary role specified, use first selected role
+                if (empty($primary_role) || !in_array($primary_role, $roles)) {
+                    $primary_role = $roles[0];
                 }
 
                 if (strlen($password) < 6) {
@@ -62,24 +75,44 @@ class AdminController extends BaseController {
                     throw new Exception('Username or email already exists');
                 }
 
-                // Create user
+                $this->pdo->beginTransaction();
+
+                // Create user with primary role
                 $password_hash = password_hash($password, PASSWORD_DEFAULT);
                 $stmt = $this->pdo->prepare("
                     INSERT INTO users (username, email, first_name, last_name, phone, role, password_hash, is_active, created_at)
                     VALUES (?, ?, ?, ?, ?, ?, ?, 1, NOW())
                 ");
-                $stmt->execute([$username, $email, $first_name, $last_name, $phone, $role, $password_hash]);
+                $stmt->execute([$username, $email, $first_name, $last_name, $phone, $primary_role, $password_hash]);
+                $user_id = $this->pdo->lastInsertId();
 
-                $_SESSION['success'] = 'User created successfully';
+                // Insert all roles into user_roles table
+                $stmt = $this->pdo->prepare("
+                    INSERT INTO user_roles (user_id, role, is_primary, granted_by, granted_at, is_active)
+                    VALUES (?, ?, ?, ?, NOW(), 1)
+                ");
+                
+                foreach ($roles as $role) {
+                    $is_primary = ($role === $primary_role) ? 1 : 0;
+                    $stmt->execute([$user_id, $role, $is_primary, $_SESSION['user_id']]);
+                }
+
+                $this->pdo->commit();
+
+                $_SESSION['success'] = 'User created successfully with ' . count($roles) . ' role(s)';
                 $this->redirect('admin/users');
 
             } catch (Exception $e) {
+                if ($this->pdo->inTransaction()) {
+                    $this->pdo->rollBack();
+                }
                 $_SESSION['error'] = 'Failed to create user: ' . $e->getMessage();
             }
         }
 
         $this->render('admin/add_user', [
-            'csrf_token' => $this->generateCSRF()
+            'csrf_token' => $this->generateCSRF(),
+            'available_roles' => ['admin', 'doctor', 'receptionist', 'accountant', 'pharmacist', 'lab_technician', 'radiologist', 'nurse']
         ]);
     }
 
@@ -102,6 +135,29 @@ class AdminController extends BaseController {
             return;
         }
 
+        // Get user's current roles from user_roles table
+        $stmt = $this->pdo->prepare("
+            SELECT role, is_primary 
+            FROM user_roles 
+            WHERE user_id = ? AND is_active = 1
+        ");
+        $stmt->execute([$user_id]);
+        $user_roles_data = $stmt->fetchAll();
+        
+        $user_roles = [];
+        $primary_role = $user['role']; // fallback to users table role
+        foreach ($user_roles_data as $role_data) {
+            $user_roles[] = $role_data['role'];
+            if ($role_data['is_primary']) {
+                $primary_role = $role_data['role'];
+            }
+        }
+        
+        // If no roles in user_roles table, use the role from users table
+        if (empty($user_roles)) {
+            $user_roles = [$user['role']];
+        }
+
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $this->validateCSRF($_POST['csrf_token']);
 
@@ -111,20 +167,33 @@ class AdminController extends BaseController {
                 $first_name = trim($_POST['first_name']);
                 $last_name = trim($_POST['last_name']);
                 $phone = trim($_POST['phone']);
-                $role = trim($_POST['role']);
+                $roles = $_POST['roles'] ?? []; // Multiple roles support
+                $primary_role_new = trim($_POST['primary_role'] ?? '');
                 $is_active = isset($_POST['is_active']) ? 1 : 0;
 
                 // Validation
-                if (empty($username) || empty($email) || empty($first_name) || empty($last_name) || empty($role)) {
+                if (empty($username) || empty($email) || empty($first_name) || empty($last_name)) {
                     throw new Exception('Please fill all required fields');
+                }
+
+                if (empty($roles) || !is_array($roles)) {
+                    throw new Exception('Please select at least one role');
                 }
 
                 if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
                     throw new Exception('Please enter a valid email address');
                 }
 
-                if (!in_array($role, ['admin', 'doctor', 'receptionist', 'accountant', 'pharmacist', 'lab_technician'])) {
-                    throw new Exception('Invalid role selected');
+                $allowed_roles = ['admin', 'doctor', 'receptionist', 'accountant', 'pharmacist', 'lab_technician', 'radiologist', 'nurse'];
+                foreach ($roles as $role) {
+                    if (!in_array($role, $allowed_roles)) {
+                        throw new Exception('Invalid role selected: ' . $role);
+                    }
+                }
+
+                // If no primary role specified, use first selected role
+                if (empty($primary_role_new) || !in_array($primary_role_new, $roles)) {
+                    $primary_role_new = $roles[0];
                 }
 
                 // Check if username or email already exists (excluding current user)
@@ -134,13 +203,15 @@ class AdminController extends BaseController {
                     throw new Exception('Username or email already exists');
                 }
 
-                // Update user
+                $this->pdo->beginTransaction();
+
+                // Update user with primary role
                 $stmt = $this->pdo->prepare("
                     UPDATE users SET username = ?, email = ?, first_name = ?, last_name = ?, 
                                    phone = ?, role = ?, is_active = ?, updated_at = NOW()
                     WHERE id = ?
                 ");
-                $stmt->execute([$username, $email, $first_name, $last_name, $phone, $role, $is_active, $user_id]);
+                $stmt->execute([$username, $email, $first_name, $last_name, $phone, $primary_role_new, $is_active, $user_id]);
 
                 // Update password if provided
                 if (!empty($_POST['password'])) {
@@ -153,16 +224,40 @@ class AdminController extends BaseController {
                     $stmt->execute([$password_hash, $user_id]);
                 }
 
-                $_SESSION['success'] = 'User updated successfully';
+                // Update user_roles table - deactivate old roles
+                $stmt = $this->pdo->prepare("UPDATE user_roles SET is_active = 0 WHERE user_id = ?");
+                $stmt->execute([$user_id]);
+
+                // Insert new roles
+                $stmt = $this->pdo->prepare("
+                    INSERT INTO user_roles (user_id, role, is_primary, granted_by, granted_at, is_active)
+                    VALUES (?, ?, ?, ?, NOW(), 1)
+                    ON DUPLICATE KEY UPDATE is_primary = VALUES(is_primary), is_active = 1, granted_at = NOW()
+                ");
+                
+                foreach ($roles as $role) {
+                    $is_primary = ($role === $primary_role_new) ? 1 : 0;
+                    $stmt->execute([$user_id, $role, $is_primary, $_SESSION['user_id']]);
+                }
+
+                $this->pdo->commit();
+
+                $_SESSION['success'] = 'User updated successfully with ' . count($roles) . ' role(s)';
                 $this->redirect('admin/users');
 
             } catch (Exception $e) {
+                if ($this->pdo->inTransaction()) {
+                    $this->pdo->rollBack();
+                }
                 $_SESSION['error'] = 'Failed to update user: ' . $e->getMessage();
             }
         }
 
         $this->render('admin/edit_user', [
             'user' => $user,
+            'user_roles' => $user_roles,
+            'primary_role' => $primary_role,
+            'available_roles' => ['admin', 'doctor', 'receptionist', 'accountant', 'pharmacist', 'lab_technician', 'radiologist', 'nurse'],
             'csrf_token' => $this->generateCSRF()
         ]);
     }

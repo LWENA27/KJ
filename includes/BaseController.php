@@ -254,6 +254,24 @@ class BaseController {
 
         $visit_id = $visit['id'];
 
+        // Special handling for radiology - check for payment_type='service' AND item_type='radiology_order'
+        if ($required_step === 'radiology') {
+            $stmt = $this->pdo->prepare("
+                SELECT COUNT(*) FROM payments 
+                WHERE visit_id = ? 
+                AND payment_type = 'service' 
+                AND item_type = 'radiology_order' 
+                AND payment_status = 'paid'
+            ");
+            $stmt->execute([$visit_id]);
+            $count = (int)$stmt->fetchColumn();
+            
+            if ($count === 0) {
+                return ['access' => false, 'message' => 'Payment required for radiology test', 'step' => 'radiology'];
+            }
+            return ['access' => true];
+        }
+
         $step_requirements = [
             'consultation' => 'consultation',  // Only check for 'consultation' payment type (not 'registration')
             'lab_tests' => 'lab_test',
@@ -286,7 +304,6 @@ class BaseController {
 
         return ['access' => true];
     }
-
     // Get workflow status derived from the latest visit
     protected function getWorkflowStatus($patient_id) {
         $stmt = $this->pdo->prepare("SELECT * FROM patient_visits WHERE patient_id = ? ORDER BY created_at DESC LIMIT 1");

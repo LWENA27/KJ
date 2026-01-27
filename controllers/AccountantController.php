@@ -238,26 +238,26 @@ class AccountantController extends BaseController
         // Get pending radiology payments
         $sql = <<<'SQL'
             SELECT 
+                rto.id as order_id,
                 rto.visit_id,
                 rto.patient_id,
                 p.first_name,
                 p.last_name,
                 p.registration_number,
                 pv.visit_date,
-                COUNT(DISTINCT rto.id) as test_count,
-                SUM(rt.price) as total_amount,
-                COALESCE(SUM(CASE WHEN pay.payment_status = 'paid' THEN pay.amount ELSE 0 END), 0) as paid_amount,
-                (SUM(rt.price) - COALESCE(SUM(CASE WHEN pay.payment_status = 'paid' THEN pay.amount ELSE 0 END), 0)) as remaining_amount_to_pay,
-                MAX(rto.created_at) AS last_order_created
+                rt.test_name,
+                rt.price as amount,
+                COALESCE(pay.amount, 0) as paid_amount,
+                (rt.price - COALESCE(pay.amount, 0)) as remaining_amount_to_pay,
+                rto.created_at
             FROM radiology_test_orders rto
             JOIN radiology_tests rt ON rto.test_id = rt.id
             JOIN patients p ON rto.patient_id = p.id
             LEFT JOIN patient_visits pv ON rto.visit_id = pv.id
-            LEFT JOIN payments pay ON pay.visit_id = rto.visit_id AND pay.item_type = 'radiology_order' AND pay.item_id = rt.id AND pay.payment_status = 'paid'
-            WHERE rto.status = 'pending'
-            GROUP BY rto.visit_id, rto.patient_id, p.first_name, p.last_name, p.registration_number, pv.visit_date
-            HAVING remaining_amount_to_pay > 0
-            ORDER BY pv.visit_date DESC, last_order_created DESC
+            LEFT JOIN payments pay ON pay.item_type = 'radiology_order' AND pay.item_id = rto.id AND pay.payment_status = 'paid'
+            WHERE rto.status IN ('pending', 'scheduled')
+            AND (pay.id IS NULL OR pay.payment_status = 'pending')
+            ORDER BY pv.visit_date DESC, rto.created_at DESC
         SQL;
         $stmt = $this->pdo->prepare($sql);
         $stmt->execute();
@@ -267,18 +267,24 @@ class AccountantController extends BaseController
         $sql = <<<'SQL'
             SELECT 
                 ia.id as admission_id,
+                ia.admission_number,
+                ia.visit_id,
                 ia.patient_id,
                 p.first_name,
                 p.last_name,
                 p.registration_number,
                 ia.admission_datetime as admission_date,
-                w.ward_name
+                w.ward_name,
+                b.daily_rate * DATEDIFF(COALESCE(ia.discharge_datetime, NOW()), ia.admission_datetime) as amount,
+                COALESCE(pay.amount, 0) as paid_amount,
+                (b.daily_rate * DATEDIFF(COALESCE(ia.discharge_datetime, NOW()), ia.admission_datetime) - COALESCE(pay.amount, 0)) as remaining_amount_to_pay
             FROM ipd_admissions ia
             JOIN patients p ON ia.patient_id = p.id
             LEFT JOIN ipd_beds b ON ia.bed_id = b.id
             LEFT JOIN ipd_wards w ON b.ward_id = w.id
             LEFT JOIN payments pay ON pay.item_type = 'service_order' AND pay.item_id = ia.id AND pay.payment_status = 'paid'
-            WHERE ia.status = 'active' AND pay.id IS NULL
+            WHERE ia.status = 'active'
+            AND (pay.id IS NULL OR pay.payment_status = 'pending')
             ORDER BY ia.admission_datetime DESC
         SQL;
         $stmt = $this->pdo->prepare($sql);
@@ -425,6 +431,8 @@ class AccountantController extends BaseController
                 return;
             }
 
+            $payment_id = null;
+
             // For consultation payments, check if there's an existing pending payment to update
             if ($payment_type === 'consultation') {
                 // Try to update existing pending payment first
@@ -466,9 +474,20 @@ class AccountantController extends BaseController
                         $reference_number,
                         $_SESSION['user_id']
                     ]);
+                    $payment_id = $this->pdo->lastInsertId();
+                } else {
+                    // Get the payment ID of the updated record
+                    $getIdStmt = $this->pdo->prepare("
+                        SELECT id FROM payments 
+                        WHERE visit_id = ? AND payment_type = 'consultation' AND payment_status = 'paid'
+                        ORDER BY payment_date DESC LIMIT 1
+                    ");
+                    $getIdStmt->execute([$visit_id]);
+                    $paymentRecord = $getIdStmt->fetch(PDO::FETCH_ASSOC);
+                    $payment_id = $paymentRecord['id'] ?? null;
                 }
             } else {
-                // For other payment types (lab_test, medicine), insert new payment record
+                // For other payment types (lab_test, medicine, service), insert new payment record
                 $stmt = $this->pdo->prepare("
                     INSERT INTO payments 
                     (visit_id, patient_id, payment_type, item_id, item_type, amount, payment_method, payment_status, 
@@ -487,6 +506,7 @@ class AccountantController extends BaseController
                     $reference_number,
                     $_SESSION['user_id']
                 ]);
+                $payment_id = $this->pdo->lastInsertId();
             }
 
             // Update workflow status based on payment type
@@ -497,6 +517,28 @@ class AccountantController extends BaseController
                 $this->updateWorkflowStatus($patient_id, 'lab_testing', ['lab_tests_paid' => true]);
             } elseif ($payment_type === 'medicine') {
                 $this->updateWorkflowStatus($patient_id, 'medicine_dispensing', ['medicine_payment_received' => true]);
+            } elseif ($payment_type === 'service') {
+                // For service payments, check item_type to determine which service table to update
+                if ($item_type === 'radiology_order') {
+                    // Update radiology test order status to 'completed' or 'paid' when payment is collected
+                    $radiologyStmt = $this->pdo->prepare("
+                        UPDATE radiology_test_orders 
+                        SET status = CASE 
+                            WHEN status = 'pending' THEN 'scheduled'
+                            WHEN status = 'scheduled' THEN 'scheduled'
+                            ELSE status 
+                        END,
+                        updated_at = NOW()
+                        WHERE id = ?
+                    ");
+                    $radiologyStmt->execute([$item_id]);
+                    error_log('[record_payment] Radiology order updated - order_id: ' . $item_id . ', payment_id: ' . $payment_id);
+                } elseif ($item_type === 'service_order') {
+                    // For ward admissions (service_order), mark that payment has been received
+                    // We'll add a payment tracking in the ipd_admissions table or service_orders table
+                    // For now, just log that it was paid
+                    error_log('[record_payment] Ward admission service payment recorded - admission_id: ' . $item_id . ', payment_id: ' . $payment_id);
+                }
             }
 
             $this->pdo->commit();

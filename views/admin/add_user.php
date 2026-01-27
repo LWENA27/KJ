@@ -117,7 +117,7 @@ if (!isset($_SESSION['user_id']) || $_SESSION['user_role'] !== 'admin') {
                             <i class="fas fa-key text-indigo-500 mr-2"></i>
                             Account Information
                         </h3>
-                        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div class="space-y-6">
                             <div class="space-y-2">
                                 <label class="block text-sm font-semibold text-gray-700">Username *</label>
                                 <input type="text" name="username" 
@@ -129,23 +129,55 @@ if (!isset($_SESSION['user_id']) || $_SESSION['user_role'] !== 'admin') {
                                 </p>
                             </div>
                             
-                            <div class="space-y-2">
-                                <label class="block text-sm font-semibold text-gray-700">Role *</label>
-                                <select name="role" 
-                                        class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-colors duration-200 bg-gray-50 focus:bg-white" 
-                                        required>
-                                    <option value="">Select Role</option>
-                                    <option value="admin">🔐 Administrator</option>
-                                    <option value="doctor">👨‍⚕️ Doctor</option>
-                                    <option value="receptionist">📋 Receptionist</option>
-                                    <option value="accountant">💰 Accountant</option>
-                                    <option value="pharmacist">💊 Pharmacist</option>
-                                    <option value="lab_technician">🔬 Lab Technician</option>
-                                </select>
-                                <p class="text-sm text-gray-500 flex items-center mt-2">
+                            <!-- Role Selection -->
+                            <div class="space-y-3">
+                                <label class="block text-sm font-semibold text-gray-700">User Roles *</label>
+                                <p class="text-sm text-gray-500 flex items-center mb-3">
                                     <i class="fas fa-info-circle mr-1"></i>
-                                    Primary role. Additional roles can be assigned after creation.
+                                    Select one or more roles for this user. At least one role is required.
                                 </p>
+                                <div class="grid grid-cols-2 md:grid-cols-4 gap-4" id="roleCheckboxes">
+                                    <?php 
+                                    $roles = [
+                                        'admin' => ['icon' => '🔐', 'label' => 'Administrator'],
+                                        'doctor' => ['icon' => '👨‍⚕️', 'label' => 'Doctor'],
+                                        'receptionist' => ['icon' => '📋', 'label' => 'Receptionist'],
+                                        'nurse' => ['icon' => '👩‍⚕️', 'label' => 'Nurse'],
+                                        'accountant' => ['icon' => '💰', 'label' => 'Accountant'],
+                                        'pharmacist' => ['icon' => '💊', 'label' => 'Pharmacist'],
+                                        'lab_technician' => ['icon' => '🔬', 'label' => 'Lab Technician'],
+                                        'radiologist' => ['icon' => '🩻', 'label' => 'Radiologist']
+                                    ];
+                                    
+                                    foreach ($roles as $role_value => $role_info): 
+                                    ?>
+                                        <label class="flex items-center p-3 border border-gray-300 rounded-lg cursor-pointer hover:bg-indigo-50 hover:border-indigo-300 transition-all duration-200 role-checkbox-wrapper">
+                                            <input type="checkbox" name="roles[]" value="<?= $role_value ?>" 
+                                                   class="form-checkbox h-5 w-5 text-indigo-600 rounded focus:ring-2 focus:ring-indigo-500 mr-3 role-checkbox"
+                                                   onchange="handleRoleChange()">
+                                            <span class="text-sm font-medium text-gray-700">
+                                                <span class="mr-1"><?= $role_info['icon'] ?></span>
+                                                <?= $role_info['label'] ?>
+                                            </span>
+                                        </label>
+                                    <?php endforeach; ?>
+                                </div>
+                                <div id="roleError" class="hidden text-red-600 text-sm mt-2 flex items-center">
+                                    <i class="fas fa-exclamation-triangle mr-2"></i>
+                                    Please select at least one role.
+                                </div>
+                            </div>
+                            
+                            <!-- Primary Role Selection -->
+                            <div class="space-y-3" id="primaryRoleSection" style="display: none;">
+                                <label class="block text-sm font-semibold text-gray-700">Primary Role *</label>
+                                <p class="text-sm text-gray-500 flex items-center mb-3">
+                                    <i class="fas fa-star mr-1 text-yellow-500"></i>
+                                    Select which role should be the primary role. This determines the default dashboard and permissions.
+                                </p>
+                                <div class="grid grid-cols-2 md:grid-cols-4 gap-4" id="primaryRoleRadios">
+                                    <!-- Primary role radio buttons will be dynamically generated -->
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -196,23 +228,99 @@ if (!isset($_SESSION['user_id']) || $_SESSION['user_role'] !== 'admin') {
 </div>
 
 <script>
-function togglePassword(icon) {
-    const input = icon.closest('.relative').querySelector('input');
-    if (input.type === 'password') {
-        input.type = 'text';
-        icon.classList.remove('fa-eye-slash');
-        icon.classList.add('fa-eye');
+// Role management
+const roleData = {
+    'admin': { icon: '🔐', label: 'Administrator' },
+    'doctor': { icon: '👨‍⚕️', label: 'Doctor' },
+    'receptionist': { icon: '📋', label: 'Receptionist' },
+    'nurse': { icon: '👩‍⚕️', label: 'Nurse' },
+    'accountant': { icon: '💰', label: 'Accountant' },
+    'pharmacist': { icon: '💊', label: 'Pharmacist' },
+    'lab_technician': { icon: '🔬', label: 'Lab Technician' },
+    'radiologist': { icon: '🩻', label: 'Radiologist' }
+};
+
+function handleRoleChange() {
+    const checkboxes = document.querySelectorAll('.role-checkbox');
+    const selectedRoles = Array.from(checkboxes).filter(cb => cb.checked).map(cb => cb.value);
+    const primaryRoleSection = document.getElementById('primaryRoleSection');
+    const primaryRoleRadios = document.getElementById('primaryRoleRadios');
+    const roleError = document.getElementById('roleError');
+    
+    // Hide error if roles are selected
+    if (selectedRoles.length > 0) {
+        roleError.classList.add('hidden');
+    }
+    
+    // Show/hide primary role section based on selection
+    if (selectedRoles.length === 0) {
+        primaryRoleSection.style.display = 'none';
+    } else if (selectedRoles.length === 1) {
+        // Auto-select primary role if only one role is selected
+        primaryRoleSection.style.display = 'none';
+        // We'll handle this in form submission
     } else {
-        input.type = 'password';
-        icon.classList.remove('fa-eye');
-        icon.classList.add('fa-eye-slash');
+        // Show primary role selection for multiple roles
+        primaryRoleSection.style.display = 'block';
+        
+        // Generate radio buttons for selected roles
+        primaryRoleRadios.innerHTML = '';
+        selectedRoles.forEach((role, index) => {
+            const roleInfo = roleData[role];
+            const radioWrapper = document.createElement('label');
+            radioWrapper.className = 'flex items-center p-3 border border-gray-300 rounded-lg cursor-pointer hover:bg-yellow-50 hover:border-yellow-300 transition-all duration-200';
+            
+            const radio = document.createElement('input');
+            radio.type = 'radio';
+            radio.name = 'primary_role';
+            radio.value = role;
+            radio.className = 'form-radio h-5 w-5 text-yellow-500 focus:ring-2 focus:ring-yellow-500 mr-3';
+            radio.required = true;
+            
+            // Auto-select first role by default
+            if (index === 0) {
+                radio.checked = true;
+            }
+            
+            const label = document.createElement('span');
+            label.className = 'text-sm font-medium text-gray-700';
+            label.innerHTML = `<span class="mr-1">${roleInfo.icon}</span>${roleInfo.label}`;
+            
+            radioWrapper.appendChild(radio);
+            radioWrapper.appendChild(label);
+            primaryRoleRadios.appendChild(radioWrapper);
+        });
     }
 }
 
-// Add form validation styling
+// Form validation
 document.addEventListener('DOMContentLoaded', function() {
     const form = document.querySelector('form');
-    const inputs = form.querySelectorAll('input[required], select[required]');
+    
+    // Validate on submit
+    form.addEventListener('submit', function(e) {
+        const checkboxes = document.querySelectorAll('.role-checkbox');
+        const selectedRoles = Array.from(checkboxes).filter(cb => cb.checked);
+        const roleError = document.getElementById('roleError');
+        
+        if (selectedRoles.length === 0) {
+            e.preventDefault();
+            roleError.classList.remove('hidden');
+            roleError.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            return false;
+        }
+        
+        // If only one role selected, automatically set it as primary
+        if (selectedRoles.length === 1) {
+            const hiddenInput = document.createElement('input');
+            hiddenInput.type = 'hidden';
+            hiddenInput.name = 'primary_role';
+            hiddenInput.value = selectedRoles[0].value;
+            form.appendChild(hiddenInput);
+        }
+    });
+    
+    const inputs = form.querySelectorAll('input[required]:not([type="checkbox"]):not([type="radio"]), select[required]');
     
     inputs.forEach(input => {
         input.addEventListener('blur', function() {
@@ -254,6 +362,19 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 });
+
+function togglePassword(icon) {
+    const input = icon.closest('.relative').querySelector('input');
+    if (input.type === 'password') {
+        input.type = 'text';
+        icon.classList.remove('fa-eye-slash');
+        icon.classList.add('fa-eye');
+    } else {
+        input.type = 'password';
+        icon.classList.remove('fa-eye');
+        icon.classList.add('fa-eye-slash');
+    }
+}
 
 function checkPasswordStrength(password) {
     let strength = 0;

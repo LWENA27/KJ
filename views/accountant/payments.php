@@ -457,33 +457,40 @@ function openPaymentModal(type, data) {
     document.getElementById('modal_visit_id').value = data.visit_id;
     document.getElementById('modal_payment_type').value = type;
     document.getElementById('modal_patient_name').textContent = data.first_name + ' ' + data.last_name;
-    
     if (type === 'consultation') {
         document.getElementById('modal_payment_for').textContent = 'Consultation Fee';
         document.getElementById('modal_amount').value = data.consultation_fee;
+        document.getElementById('modal_payment_type').value = 'consultation';
     } else if (type === 'lab_test') {
         document.getElementById('modal_payment_for').textContent = data.test_count + ' Lab Test(s)';
         document.getElementById('modal_amount').value = data.remaining_amount_to_pay;
+        document.getElementById('modal_payment_type').value = 'lab_test';
     } else if (type === 'medicine') {
         document.getElementById('modal_payment_for').textContent = 'Medicine: ' + data.medicine_name;
         document.getElementById('modal_amount').value = data.remaining_amount_to_pay;
         document.getElementById('modal_item_id').value = data.prescription_id;
         document.getElementById('modal_item_type').value = 'prescription';
+        document.getElementById('modal_payment_type').value = 'medicine';
     } else if (type === 'service') {
         document.getElementById('modal_payment_for').textContent = 'Service: ' + data.service_name;
         document.getElementById('modal_amount').value = data.amount;
         document.getElementById('modal_item_id').value = data.order_id;
         document.getElementById('modal_item_type').value = 'service_order';
+        document.getElementById('modal_payment_type').value = 'service';
     } else if (type === 'radiology') {
+        // Radiology uses payment_type='service' to satisfy CHECK constraint
         document.getElementById('modal_payment_for').textContent = (data.test_name ? data.test_name + ' - ' : '') + 'Radiology Test';
         document.getElementById('modal_amount').value = data.remaining_amount_to_pay ?? data.amount ?? 0;
         document.getElementById('modal_item_id').value = data.order_id ?? data.item_id ?? '';
         document.getElementById('modal_item_type').value = 'radiology_order';
+        document.getElementById('modal_payment_type').value = 'service'; // Payment is recorded as 'service' with item_type='radiology_order'
     } else if (type === 'ward') {
+        // Ward admission uses payment_type='service' to satisfy CHECK constraint
         document.getElementById('modal_payment_for').textContent = 'Ward Admission: ' + (data.ward_name ?? data.admission_id ?? 'Admission');
         document.getElementById('modal_amount').value = data.remaining_amount_to_pay ?? data.amount ?? 0;
         document.getElementById('modal_item_id').value = data.admission_id ?? data.item_id ?? '';
         document.getElementById('modal_item_type').value = 'service_order';
+        document.getElementById('modal_payment_type').value = 'service'; // Payment is recorded as 'service' with item_type='service_order' (ward admission)
     }
     
     document.getElementById('paymentModal').classList.remove('hidden');

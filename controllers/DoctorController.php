@@ -48,6 +48,7 @@ class DoctorController extends BaseController {
         // Patients waiting for lab results review (join lab_results with tests to get names)
         // Scope to consultations that belong to this doctor
         // Find patients with completed lab results from this doctor's consultations where visit is still active
+        // Only show results that haven't been reviewed yet
         $stmt = $this->pdo->prepare("
             SELECT p.*,
                    ag.test_names,
@@ -61,7 +62,9 @@ class DoctorController extends BaseController {
                 JOIN lab_test_orders lto ON lr.order_id = lto.id
                 JOIN consultations c ON lto.consultation_id = c.id
                 JOIN lab_tests lt ON lr.test_id = lt.id
-                WHERE lto.status = 'completed' AND c.doctor_id = ?
+                WHERE lto.status = 'completed' 
+                  AND c.doctor_id = ?
+                  AND lr.reviewed_by IS NULL
                 GROUP BY c.patient_id
             ) ag ON p.id = ag.patient_id
             WHERE ag.test_names IS NOT NULL
@@ -884,7 +887,19 @@ class DoctorController extends BaseController {
                 $admission_diagnosis = $ipd_data['reason'] ?? '';
                 $admission_datetime = $ipd_data['admission_date'] ?? date('Y-m-d H:i:s');
                 
-                // Get ward ID
+                // Check if patient already has an active IPD admission
+                $stmtExisting = $this->pdo->prepare("
+                    SELECT ia.id, ia.admission_number, ia.bed_id, ib.bed_number, iw.ward_name as current_ward
+                    FROM ipd_admissions ia
+                    JOIN ipd_beds ib ON ia.bed_id = ib.id
+                    JOIN ipd_wards iw ON ib.ward_id = iw.id
+                    WHERE ia.patient_id = ? AND ia.status = 'active'
+                    LIMIT 1
+                ");
+                $stmtExisting->execute([$patient_id]);
+                $existing_admission = $stmtExisting->fetch();
+                
+                // Get ward ID for new ward
                 $stmtWard = $this->pdo->prepare("SELECT id FROM ipd_wards WHERE ward_name = ? LIMIT 1");
                 $stmtWard->execute([$ward_name]);
                 $ward = $stmtWard->fetch();
@@ -912,33 +927,67 @@ class DoctorController extends BaseController {
                 
                 $bed_id = $bed['id'];
                 
-                // Generate unique admission number
-                $admission_number = 'ADM-' . date('Ymd') . '-' . bin2hex(random_bytes(4));
-                
-                // Create IPD admission record (using actual database columns)
-                $stmtAdmission = $this->pdo->prepare("
-                    INSERT INTO ipd_admissions 
-                    (patient_id, visit_id, bed_id, admission_number, admission_datetime, 
-                     admission_diagnosis, admitted_by, attending_doctor, status, created_at) 
-                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'active', NOW())
-                ");
-                $stmtAdmission->execute([
-                    $patient_id, $visit_id, $bed_id, $admission_number, $admission_datetime, 
-                    $admission_diagnosis, $doctor_id, $doctor_id
-                ]);
-                
-                $admission_id = $this->pdo->lastInsertId();
-                error_log('[start_consultation] IPD admission created with id: ' . $admission_id . ', admission_number: ' . $admission_number);
-                
-                // Update bed status to occupied
-                $stmtUpdateBed = $this->pdo->prepare("UPDATE ipd_beds SET status = 'occupied' WHERE id = ?");
-                $stmtUpdateBed->execute([$bed_id]);
-                error_log('[start_consultation] Bed ' . $bed_id . ' marked as occupied');
-                
-                // Update workflow status
-                $this->updateWorkflowStatus($patient_id, 'admitted', ['ipd_ward' => $ward_name, 'admission_id' => $admission_id]);
-                
-                $_SESSION['success'] = 'Patient admitted to IPD successfully';
+                if ($existing_admission) {
+                    // Patient is already admitted - perform ward transfer
+                    error_log('[start_consultation] Patient already admitted. Transferring from ' . $existing_admission['current_ward'] . ' to ' . $ward_name);
+                    
+                    // Free up the old bed
+                    $stmtFreeBed = $this->pdo->prepare("UPDATE ipd_beds SET status = 'available' WHERE id = ?");
+                    $stmtFreeBed->execute([$existing_admission['bed_id']]);
+                    
+                    // Update the existing admission with new bed and add transfer note
+                    $transfer_note = 'Transferred from ' . $existing_admission['current_ward'] . ' (Bed ' . $existing_admission['bed_number'] . ') to ' . $ward_name . ' on ' . date('Y-m-d H:i:s') . '. Reason: ' . $admission_diagnosis;
+                    
+                    $stmtTransfer = $this->pdo->prepare("
+                        UPDATE ipd_admissions 
+                        SET bed_id = ?, 
+                            admission_diagnosis = CONCAT(COALESCE(admission_diagnosis, ''), '\n\n[TRANSFER] ', ?),
+                            updated_at = NOW()
+                        WHERE id = ?
+                    ");
+                    $stmtTransfer->execute([$bed_id, $transfer_note, $existing_admission['id']]);
+                    
+                    // Update new bed status to occupied
+                    $stmtUpdateBed = $this->pdo->prepare("UPDATE ipd_beds SET status = 'occupied' WHERE id = ?");
+                    $stmtUpdateBed->execute([$bed_id]);
+                    
+                    error_log('[start_consultation] Patient transferred. Old bed freed, new bed ' . $bed_id . ' assigned.');
+                    
+                    $_SESSION['success'] = 'Patient transferred from ' . $existing_admission['current_ward'] . ' to ' . $ward_name . ' successfully';
+                    
+                    // Update workflow status
+                    $this->updateWorkflowStatus($patient_id, 'admitted', ['ipd_ward' => $ward_name, 'admission_id' => $existing_admission['id'], 'transferred' => true]);
+                    
+                } else {
+                    // New admission - create new record
+                    // Generate unique admission number
+                    $admission_number = 'ADM-' . date('Ymd') . '-' . bin2hex(random_bytes(4));
+                    
+                    // Create IPD admission record (using actual database columns)
+                    $stmtAdmission = $this->pdo->prepare("
+                        INSERT INTO ipd_admissions 
+                        (patient_id, visit_id, bed_id, admission_number, admission_datetime, 
+                         admission_diagnosis, admitted_by, attending_doctor, status, created_at) 
+                        VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'active', NOW())
+                    ");
+                    $stmtAdmission->execute([
+                        $patient_id, $visit_id, $bed_id, $admission_number, $admission_datetime, 
+                        $admission_diagnosis, $doctor_id, $doctor_id
+                    ]);
+                    
+                    $admission_id = $this->pdo->lastInsertId();
+                    error_log('[start_consultation] IPD admission created with id: ' . $admission_id . ', admission_number: ' . $admission_number);
+                    
+                    // Update bed status to occupied
+                    $stmtUpdateBed = $this->pdo->prepare("UPDATE ipd_beds SET status = 'occupied' WHERE id = ?");
+                    $stmtUpdateBed->execute([$bed_id]);
+                    error_log('[start_consultation] Bed ' . $bed_id . ' marked as occupied');
+                    
+                    // Update workflow status
+                    $this->updateWorkflowStatus($patient_id, 'admitted', ['ipd_ward' => $ward_name, 'admission_id' => $admission_id]);
+                    
+                    $_SESSION['success'] = 'Patient admitted to ' . $ward_name . ' successfully';
+                }
             }
         }
 
@@ -963,7 +1012,7 @@ class DoctorController extends BaseController {
             $this->redirect('receptionist/payments');
         } elseif ($has_ipd) {
             $_SESSION['success'] = $_SESSION['success'] ?? 'Consultation completed and patient admitted to IPD successfully';
-            $this->redirect('nurse/dashboard');
+            $this->redirect('doctor/dashboard');
         } else {
             $_SESSION['success'] = 'Consultation completed and patient discharged successfully';
             $this->redirect('doctor/dashboard');
@@ -1214,6 +1263,8 @@ class DoctorController extends BaseController {
             $this->redirect('doctor/patients');
         }
 
+        $doctor_id = $_SESSION['user_id'];
+
         // Get lab results for this patient (only from consultations by this doctor)
             $stmt = $this->pdo->prepare("
                 SELECT lr.*, t.test_name as test_name, t.test_code as test_code, t.category_id as category, t.normal_range, t.unit,
@@ -1227,8 +1278,21 @@ class DoctorController extends BaseController {
                 WHERE c.patient_id = ? AND c.doctor_id = ? AND lto.status = 'completed'
                 ORDER BY lr.completed_at DESC
             ");
-        $stmt->execute([$patient_id, $_SESSION['user_id']]);
+        $stmt->execute([$patient_id, $doctor_id]);
         $lab_results = $stmt->fetchAll();
+
+        // Mark all unreviewed lab results as reviewed by this doctor
+        $stmt = $this->pdo->prepare("
+            UPDATE lab_results lr
+            JOIN lab_test_orders lto ON lr.order_id = lto.id
+            JOIN consultations c ON lto.consultation_id = c.id
+            SET lr.reviewed_by = ?, lr.reviewed_at = NOW()
+            WHERE c.patient_id = ? 
+              AND c.doctor_id = ? 
+              AND lto.status = 'completed'
+              AND lr.reviewed_by IS NULL
+        ");
+        $stmt->execute([$doctor_id, $patient_id, $doctor_id]);
 
         // Get patient details
         $stmt = $this->pdo->prepare("SELECT * FROM patients WHERE id = ?");
@@ -1272,6 +1336,45 @@ class DoctorController extends BaseController {
         $results = $stmt->fetchAll();
 
         $this->render('doctor/lab_results', [
+            'results' => $results,
+            'csrf_token' => $this->generateCSRF()
+        ]);
+    }
+
+    /**
+     * Radiology Results - View all radiology test results for patients this doctor ordered tests for
+     */
+    public function radiology_results() {
+        $doctor_id = $_SESSION['user_id'];
+
+        // Get all radiology results for tests this doctor ordered
+        $stmt = $this->pdo->prepare("
+            SELECT 
+                rr.*,
+                rt.test_name,
+                p.first_name,
+                p.last_name,
+                p.registration_number,
+                pv.visit_date,
+                rto.status,
+                rto.priority,
+                rr.completed_at as created_at,
+                u.first_name as radiologist_first,
+                u.last_name as radiologist_last
+            FROM radiology_results rr
+            JOIN radiology_test_orders rto ON rr.order_id = rto.id
+            JOIN radiology_tests rt ON rr.test_id = rt.id
+            JOIN patients p ON rto.patient_id = p.id
+            LEFT JOIN patient_visits pv ON rto.patient_id = pv.patient_id
+            LEFT JOIN users u ON rr.radiologist_id = u.id
+            WHERE rto.ordered_by = ? OR rto.ordered_by IS NULL
+            ORDER BY rr.completed_at DESC
+            LIMIT 200
+        ");
+        $stmt->execute([$doctor_id]);
+        $results = $stmt->fetchAll();
+
+        $this->render('doctor/radiology_results', [
             'results' => $results,
             'csrf_token' => $this->generateCSRF()
         ]);
@@ -1641,36 +1744,43 @@ class DoctorController extends BaseController {
             return;
         }
 
-        // Check workflow access (payment verification)
-        $access_check = $this->checkWorkflowAccess($patient_id, 'consultation');
+        // Check if this is being called with an action parameter (from radiology_results, lab_results, etc.)
+        $action = isset($_GET['action']) ? trim(htmlspecialchars($_GET['action'], ENT_QUOTES, 'UTF-8')) : null;
         
-        // If not paid, check if doctor is providing an override reason
-        if (!$access_check['access']) {
-            // Check if this is a POST with override reason
-            if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['override_reason'])) {
-                $this->validateCSRF($_POST['csrf_token'] ?? '');
-                $override_reason = trim($_POST['override_reason'] ?? '');
-                
-                if (empty($override_reason)) {
-                    $_SESSION['error'] = 'Please provide a reason for attending unpaid patient';
+        // Only check payment if NOT coming from an action (direct access to attend_patient)
+        // When coming with ?action=, doctor is allocating services, not starting new consultation
+        if (!$action) {
+            // Check workflow access (payment verification)
+            $access_check = $this->checkWorkflowAccess($patient_id, 'consultation');
+            
+            // If not paid, check if doctor is providing an override reason
+            if (!$access_check['access']) {
+                // Check if this is a POST with override reason
+                if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['override_reason'])) {
+                    $this->validateCSRF($_POST['csrf_token'] ?? '');
+                    $override_reason = trim($_POST['override_reason'] ?? '');
+                    
+                    if (empty($override_reason)) {
+                        $_SESSION['error'] = 'Please provide a reason for attending unpaid patient';
+                        $this->redirect('doctor/payment_required?patient_id=' . $patient_id);
+                        return;
+                    }
+                    
+                    // Log the override for audit
+                    $this->logPaymentOverride($patient_id, $override_reason);
+                    
+                    // Continue to attend patient with override flag
+                    $_SESSION['payment_override'] = [
+                        'patient_id' => $patient_id,
+                        'reason' => $override_reason,
+                        'timestamp' => date('Y-m-d H:i:s'),
+                        'doctor_id' => $_SESSION['user_id']
+                    ];
+                } else {
+                    // Redirect to payment required page with reason form
                     $this->redirect('doctor/payment_required?patient_id=' . $patient_id);
                     return;
                 }
-                
-                // Log the override for audit
-                $this->logPaymentOverride($patient_id, $override_reason);
-                
-                // Continue to attend patient with override flag
-                $_SESSION['payment_override'] = [
-                    'patient_id' => $patient_id,
-                    'reason' => $override_reason,
-                    'timestamp' => date('Y-m-d H:i:s'),
-                    'doctor_id' => $_SESSION['user_id']
-                ];
-            } else {
-                // Redirect to payment required page with reason form
-                $this->redirect('doctor/payment_required?patient_id=' . $patient_id);
-                return;
             }
         }
 
@@ -1742,6 +1852,19 @@ class DoctorController extends BaseController {
         $stmt->execute([$patient_id]);
         $previous_complaints = $stmt->fetchAll();
 
+        // Check if patient has an active IPD admission
+        $stmt = $this->pdo->prepare("
+            SELECT ia.id, ia.admission_number, ia.admission_datetime, ia.bed_id, 
+                   ib.bed_number, iw.ward_name, ia.status
+            FROM ipd_admissions ia
+            JOIN ipd_beds ib ON ia.bed_id = ib.id
+            JOIN ipd_wards iw ON ib.ward_id = iw.id
+            WHERE ia.patient_id = ? AND ia.status = 'active'
+            LIMIT 1
+        ");
+        $stmt->execute([$patient_id]);
+        $existing_admission = $stmt->fetch();
+
         $this->render('doctor/attend_patient', [
             'patient' => $patient,
             'csrf_token' => $this->generateCSRF(),
@@ -1749,7 +1872,8 @@ class DoctorController extends BaseController {
             'payment_override' => $_SESSION['payment_override'] ?? null,
             'consultation' => $consultation,
             'is_reopening' => $is_reopening,
-            'previous_complaints' => $previous_complaints
+            'previous_complaints' => $previous_complaints,
+            'existing_admission' => $existing_admission
         ]);
         
         // Clear the override session after use

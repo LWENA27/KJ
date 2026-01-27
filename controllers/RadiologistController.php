@@ -217,9 +217,41 @@ class RadiologistController extends BaseController {
                 exit;
             }
             
-            // If POST, update status to in-progress
+            $patient_id = $order['patient_id'];
+            
+            // Check if patient has paid for radiology test
+            $access_check = $this->checkWorkflowAccess($patient_id, 'radiology');
+            
+            // If POST, check for emergency override or update status to in-progress
             if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $this->validateCSRF();
+                
+                // If access is denied, check if there's an emergency override
+                if (!$access_check['access']) {
+                    $override_reason = $_POST['override_reason'] ?? null;
+                    
+                    if (!$override_reason) {
+                        $_SESSION['error'] = "Payment required. Please select an override reason or collect payment.";
+                        header("Location: " . BASE_PATH . "/radiologist/perform_test/$order_id");
+                        exit;
+                    }
+                    
+                    // Log the override
+                    $stmt = $this->pdo->prepare("
+                        INSERT INTO workflow_overrides 
+                        (patient_id, workflow_step, override_reason, overridden_by, created_at) 
+                        VALUES (?, ?, ?, ?, NOW())
+                    ");
+                    $stmt->execute([
+                        $patient_id,
+                        'radiology',
+                        $override_reason,
+                        $_SESSION['user_id']
+                    ]);
+                    
+                    // Log in audit trail
+                    error_log("AUDIT: Radiologist {$_SESSION['user_id']} overrode payment requirement for patient {$patient_id} with reason: {$override_reason}");
+                }
                 
                 $stmt = $this->db->prepare("
                     UPDATE radiology_test_orders 
@@ -230,13 +262,34 @@ class RadiologistController extends BaseController {
                 $stmt->execute([$_SESSION['user_id'], $order_id]);
                 
                 $_SESSION['success'] = "Test started successfully";
-                header("Location: /radiologist/record_result/$order_id");
+                header("Location: " . BASE_PATH . "/radiologist/record_result/$order_id");
                 exit;
             }
             
-            $this->render('radiologist/perform_test', [
-                'order' => $order
-            ]);
+            // If access denied, show payment required modal
+            if (!$access_check['access']) {
+                // Get workflow status for display
+                $stmt = $this->pdo->prepare("
+                    SELECT pv.id as visit_id, pv.visit_date, p.registration_number
+                    FROM patient_visits pv
+                    JOIN patients p ON pv.patient_id = p.id
+                    WHERE pv.patient_id = ? AND p.id = ?
+                    ORDER BY pv.created_at DESC 
+                    LIMIT 1
+                ");
+                $stmt->execute([$patient_id, $patient_id]);
+                $visit = $stmt->fetch();
+                
+                $this->render('radiologist/perform_test', [
+                    'order' => $order,
+                    'access_check' => $access_check,
+                    'visit' => $visit
+                ]);
+            } else {
+                $this->render('radiologist/perform_test', [
+                    'order' => $order
+                ]);
+            }
             
         } catch (Exception $e) {
             error_log("Perform test error: " . $e->getMessage());
@@ -295,7 +348,7 @@ class RadiologistController extends BaseController {
                 // Validate required fields
                 if (empty($findings) || empty($impression)) {
                     $_SESSION['error'] = "Findings and Impression are required";
-                    header("Location: /radiologist/record_result/$order_id");
+                    header("Location: " . BASE_PATH . "/radiologist/record_result/$order_id");
                     exit;
                 }
                 
@@ -365,7 +418,7 @@ class RadiologistController extends BaseController {
                     $this->db->commit();
                     
                     $_SESSION['success'] = "Result recorded successfully";
-                    header("Location: /radiologist/orders");
+                    header("Location: " . BASE_PATH . "/radiologist/orders");
                     exit;
                     
                 } catch (Exception $e) {

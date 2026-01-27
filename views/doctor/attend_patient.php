@@ -352,6 +352,29 @@
                     <h4 class="text-lg font-medium text-orange-900 mb-4">
                         <i class="fas fa-hospital-user mr-2"></i>IPD Admission
                     </h4>
+                    
+                    <?php if (!empty($existing_admission)): ?>
+                    <!-- Existing Admission Notice -->
+                    <div class="bg-yellow-100 border border-yellow-400 rounded-lg p-4 mb-4">
+                        <div class="flex items-start">
+                            <i class="fas fa-exclamation-triangle text-yellow-600 text-xl mr-3 mt-1"></i>
+                            <div>
+                                <h5 class="font-bold text-yellow-800">Patient Already Admitted</h5>
+                                <p class="text-yellow-700 text-sm mt-1">
+                                    <strong>Current Ward:</strong> <?php echo htmlspecialchars($existing_admission['ward_name']); ?><br>
+                                    <strong>Bed:</strong> <?php echo htmlspecialchars($existing_admission['bed_number']); ?><br>
+                                    <strong>Admission #:</strong> <?php echo htmlspecialchars($existing_admission['admission_number']); ?><br>
+                                    <strong>Since:</strong> <?php echo date('M j, Y H:i', strtotime($existing_admission['admission_datetime'])); ?>
+                                </p>
+                                <p class="text-yellow-800 text-sm mt-2 font-medium">
+                                    <i class="fas fa-info-circle mr-1"></i>
+                                    Selecting a new ward below will <strong>transfer</strong> the patient to the new ward. The current bed will be freed.
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                    <?php endif; ?>
+                    
                     <div class="bg-orange-100 border border-orange-300 rounded p-3 mb-4">
                         <p class="text-sm text-orange-800">
                             <i class="fas fa-info-circle mr-1"></i>
@@ -1674,6 +1697,44 @@
             extras.forEach(el => el.classList.remove('hidden'));
             if (btn) btn.style.display = 'none';
         }
+
+        // Handle URL action parameter to pre-select section
+        // This allows radiology_results to route here with ?action=lab, ?action=ipd, etc.
+        document.addEventListener('DOMContentLoaded', function() {
+            const urlParams = new URLSearchParams(window.location.search);
+            const action = urlParams.get('action');
+            
+            if (action) {
+                // Map action parameter to next_step value and toggle section
+                const actionMap = {
+                    'lab': 'lab_tests',
+                    'lab_tests': 'lab_tests',
+                    'ipd': 'ipd',
+                    'ward': 'ipd',
+                    'allocation': 'allocation',
+                    'services': 'allocation',
+                    'medicine': 'medicine'
+                };
+                
+                const nextStepValue = actionMap[action];
+                if (nextStepValue) {
+                    // Select the appropriate radio button
+                    const radio = document.querySelector(`input[name="next_step"][value="${nextStepValue}"]`);
+                    if (radio) {
+                        radio.checked = true;
+                        toggleSection(nextStepValue);
+                        
+                        // Scroll to that section for visibility
+                        const section = document.getElementById(nextStepValue + 'Section');
+                        if (section) {
+                            setTimeout(() => {
+                                section.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                            }, 100);
+                        }
+                    }
+                }
+            }
+        });
     </script>
 
 </body>

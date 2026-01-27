@@ -626,4 +626,357 @@ class IpdController extends BaseController {
             exit;
         }
     }
+
+    /**
+     * Add a new bed
+     */
+    public function add_bed() {
+        $this->requireRole(['admin', 'receptionist']);
+        
+        if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+            try {
+                $ward_id = intval($_POST['ward_id'] ?? 0);
+                $bed_number = trim($_POST['bed_number'] ?? '');
+                $bed_type = $_POST['bed_type'] ?? 'standard';
+                $daily_rate = floatval($_POST['daily_rate'] ?? 0);
+                $notes = trim($_POST['notes'] ?? '');
+                
+                if (!$ward_id || !$bed_number) {
+                    throw new Exception('Ward and bed number are required');
+                }
+                
+                // Check for duplicate bed number in ward
+                $stmt = $this->db->prepare("SELECT id FROM ipd_beds WHERE ward_id = ? AND bed_number = ?");
+                $stmt->execute([$ward_id, $bed_number]);
+                if ($stmt->fetch()) {
+                    throw new Exception('Bed number already exists in this ward');
+                }
+                
+                $stmt = $this->db->prepare("
+                    INSERT INTO ipd_beds (ward_id, bed_number, bed_type, daily_rate, notes, status, is_active)
+                    VALUES (?, ?, ?, ?, ?, 'available', 1)
+                ");
+                $stmt->execute([$ward_id, $bed_number, $bed_type, $daily_rate, $notes]);
+                
+                // Update ward total beds count
+                $stmt = $this->db->prepare("UPDATE ipd_wards SET total_beds = total_beds + 1 WHERE id = ?");
+                $stmt->execute([$ward_id]);
+                
+                $_SESSION['success'] = "Bed added successfully";
+                
+            } catch (Exception $e) {
+                $_SESSION['error'] = $e->getMessage();
+            }
+            
+            header("Location: " . BASE_PATH . "/ipd/beds");
+            exit;
+        }
+        
+        // GET request - show form
+        $stmt = $this->db->query("SELECT * FROM ipd_wards WHERE is_active = 1 ORDER BY ward_name");
+        $wards = $stmt->fetchAll(PDO::FETCH_ASSOC);
+        
+        $this->render('ipd/add_bed', [
+            'wards' => $wards,
+            'bed_types' => ['standard', 'oxygen', 'icu', 'isolation']
+        ]);
+    }
+
+    /**
+     * Edit a bed
+     */
+    public function edit_bed($bed_id = null) {
+        $this->requireRole(['admin', 'receptionist']);
+        
+        if (!$bed_id) {
+            $_SESSION['error'] = "Bed ID required";
+            header("Location: " . BASE_PATH . "/ipd/beds");
+            exit;
+        }
+        
+        // Get current bed data
+        $stmt = $this->db->prepare("SELECT * FROM ipd_beds WHERE id = ?");
+        $stmt->execute([$bed_id]);
+        $bed = $stmt->fetch(PDO::FETCH_ASSOC);
+        
+        if (!$bed) {
+            $_SESSION['error'] = "Bed not found";
+            header("Location: " . BASE_PATH . "/ipd/beds");
+            exit;
+        }
+        
+        if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+            try {
+                $ward_id = intval($_POST['ward_id'] ?? 0);
+                $bed_number = trim($_POST['bed_number'] ?? '');
+                $bed_type = $_POST['bed_type'] ?? 'standard';
+                $daily_rate = floatval($_POST['daily_rate'] ?? 0);
+                $notes = trim($_POST['notes'] ?? '');
+                $status = $_POST['status'] ?? $bed['status'];
+                
+                if (!$ward_id || !$bed_number) {
+                    throw new Exception('Ward and bed number are required');
+                }
+                
+                // Check for duplicate bed number in ward (excluding this bed)
+                $stmt = $this->db->prepare("SELECT id FROM ipd_beds WHERE ward_id = ? AND bed_number = ? AND id != ?");
+                $stmt->execute([$ward_id, $bed_number, $bed_id]);
+                if ($stmt->fetch()) {
+                    throw new Exception('Bed number already exists in this ward');
+                }
+                
+                // If ward changed, update both wards' counts
+                if ($ward_id != $bed['ward_id']) {
+                    $stmt = $this->db->prepare("UPDATE ipd_wards SET total_beds = total_beds - 1 WHERE id = ?");
+                    $stmt->execute([$bed['ward_id']]);
+                    $stmt = $this->db->prepare("UPDATE ipd_wards SET total_beds = total_beds + 1 WHERE id = ?");
+                    $stmt->execute([$ward_id]);
+                }
+                
+                $stmt = $this->db->prepare("
+                    UPDATE ipd_beds 
+                    SET ward_id = ?, bed_number = ?, bed_type = ?, daily_rate = ?, notes = ?, status = ?
+                    WHERE id = ?
+                ");
+                $stmt->execute([$ward_id, $bed_number, $bed_type, $daily_rate, $notes, $status, $bed_id]);
+                
+                $_SESSION['success'] = "Bed updated successfully";
+                header("Location: " . BASE_PATH . "/ipd/beds");
+                exit;
+                
+            } catch (Exception $e) {
+                $_SESSION['error'] = $e->getMessage();
+            }
+        }
+        
+        // GET request - show form
+        $stmt = $this->db->query("SELECT * FROM ipd_wards WHERE is_active = 1 ORDER BY ward_name");
+        $wards = $stmt->fetchAll(PDO::FETCH_ASSOC);
+        
+        $this->render('ipd/edit_bed', [
+            'bed' => $bed,
+            'wards' => $wards,
+            'bed_types' => ['standard', 'oxygen', 'icu', 'isolation'],
+            'statuses' => ['available', 'occupied', 'maintenance', 'reserved']
+        ]);
+    }
+
+    /**
+     * Delete a bed (soft delete)
+     */
+    public function delete_bed($bed_id = null) {
+        $this->requireRole(['admin']);
+        
+        if (!$bed_id) {
+            $_SESSION['error'] = "Bed ID required";
+            header("Location: " . BASE_PATH . "/ipd/beds");
+            exit;
+        }
+        
+        try {
+            // Check if bed is occupied
+            $stmt = $this->db->prepare("SELECT status, ward_id FROM ipd_beds WHERE id = ?");
+            $stmt->execute([$bed_id]);
+            $bed = $stmt->fetch(PDO::FETCH_ASSOC);
+            
+            if (!$bed) {
+                throw new Exception('Bed not found');
+            }
+            
+            if ($bed['status'] === 'occupied') {
+                throw new Exception('Cannot delete an occupied bed. Please discharge or transfer the patient first.');
+            }
+            
+            // Soft delete
+            $stmt = $this->db->prepare("UPDATE ipd_beds SET is_active = 0 WHERE id = ?");
+            $stmt->execute([$bed_id]);
+            
+            // Update ward total beds count
+            $stmt = $this->db->prepare("UPDATE ipd_wards SET total_beds = total_beds - 1 WHERE id = ?");
+            $stmt->execute([$bed['ward_id']]);
+            
+            $_SESSION['success'] = "Bed deleted successfully";
+            
+        } catch (Exception $e) {
+            $_SESSION['error'] = $e->getMessage();
+        }
+        
+        header("Location: " . BASE_PATH . "/ipd/beds");
+        exit;
+    }
+
+    /**
+     * Ward management - list all wards
+     */
+    public function wards() {
+        $this->requireRole(['admin', 'receptionist']);
+        
+        $stmt = $this->db->query("
+            SELECT w.*, 
+                   (SELECT COUNT(*) FROM ipd_beds b WHERE b.ward_id = w.id AND b.is_active = 1) as actual_beds,
+                   (SELECT COUNT(*) FROM ipd_beds b WHERE b.ward_id = w.id AND b.status = 'occupied') as actual_occupied
+            FROM ipd_wards w 
+            WHERE w.is_active = 1 
+            ORDER BY w.ward_name
+        ");
+        $wards = $stmt->fetchAll(PDO::FETCH_ASSOC);
+        
+        $this->render('ipd/wards', [
+            'wards' => $wards
+        ]);
+    }
+
+    /**
+     * Add a new ward
+     */
+    public function add_ward() {
+        $this->requireRole(['admin']);
+        
+        if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+            try {
+                $ward_name = trim($_POST['ward_name'] ?? '');
+                $ward_code = trim($_POST['ward_code'] ?? '');
+                $ward_type = $_POST['ward_type'] ?? 'general';
+                $floor_number = intval($_POST['floor_number'] ?? 1);
+                $description = trim($_POST['description'] ?? '');
+                
+                if (!$ward_name || !$ward_code) {
+                    throw new Exception('Ward name and code are required');
+                }
+                
+                // Check for duplicates
+                $stmt = $this->db->prepare("SELECT id FROM ipd_wards WHERE ward_name = ? OR ward_code = ?");
+                $stmt->execute([$ward_name, $ward_code]);
+                if ($stmt->fetch()) {
+                    throw new Exception('Ward name or code already exists');
+                }
+                
+                $stmt = $this->db->prepare("
+                    INSERT INTO ipd_wards (ward_name, ward_code, ward_type, floor_number, description, total_beds, occupied_beds, is_active)
+                    VALUES (?, ?, ?, ?, ?, 0, 0, 1)
+                ");
+                $stmt->execute([$ward_name, $ward_code, $ward_type, $floor_number, $description]);
+                
+                $_SESSION['success'] = "Ward added successfully";
+                header("Location: " . BASE_PATH . "/ipd/wards");
+                exit;
+                
+            } catch (Exception $e) {
+                $_SESSION['error'] = $e->getMessage();
+            }
+        }
+        
+        $this->render('ipd/add_ward', [
+            'ward_types' => ['general', 'private', 'icu', 'maternity', 'pediatric', 'isolation']
+        ]);
+    }
+
+    /**
+     * Edit a ward
+     */
+    public function edit_ward($ward_id = null) {
+        $this->requireRole(['admin']);
+        
+        if (!$ward_id) {
+            $_SESSION['error'] = "Ward ID required";
+            header("Location: " . BASE_PATH . "/ipd/wards");
+            exit;
+        }
+        
+        $stmt = $this->db->prepare("SELECT * FROM ipd_wards WHERE id = ?");
+        $stmt->execute([$ward_id]);
+        $ward = $stmt->fetch(PDO::FETCH_ASSOC);
+        
+        if (!$ward) {
+            $_SESSION['error'] = "Ward not found";
+            header("Location: " . BASE_PATH . "/ipd/wards");
+            exit;
+        }
+        
+        if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+            try {
+                $ward_name = trim($_POST['ward_name'] ?? '');
+                $ward_code = trim($_POST['ward_code'] ?? '');
+                $ward_type = $_POST['ward_type'] ?? 'general';
+                $floor_number = intval($_POST['floor_number'] ?? 1);
+                $description = trim($_POST['description'] ?? '');
+                
+                if (!$ward_name || !$ward_code) {
+                    throw new Exception('Ward name and code are required');
+                }
+                
+                // Check for duplicates (excluding this ward)
+                $stmt = $this->db->prepare("SELECT id FROM ipd_wards WHERE (ward_name = ? OR ward_code = ?) AND id != ?");
+                $stmt->execute([$ward_name, $ward_code, $ward_id]);
+                if ($stmt->fetch()) {
+                    throw new Exception('Ward name or code already exists');
+                }
+                
+                $stmt = $this->db->prepare("
+                    UPDATE ipd_wards 
+                    SET ward_name = ?, ward_code = ?, ward_type = ?, floor_number = ?, description = ?
+                    WHERE id = ?
+                ");
+                $stmt->execute([$ward_name, $ward_code, $ward_type, $floor_number, $description, $ward_id]);
+                
+                $_SESSION['success'] = "Ward updated successfully";
+                header("Location: " . BASE_PATH . "/ipd/wards");
+                exit;
+                
+            } catch (Exception $e) {
+                $_SESSION['error'] = $e->getMessage();
+            }
+        }
+        
+        $this->render('ipd/edit_ward', [
+            'ward' => $ward,
+            'ward_types' => ['general', 'private', 'icu', 'maternity', 'pediatric', 'isolation']
+        ]);
+    }
+
+    /**
+     * Delete a ward (soft delete)
+     */
+    public function delete_ward($ward_id = null) {
+        $this->requireRole(['admin']);
+        
+        if (!$ward_id) {
+            $_SESSION['error'] = "Ward ID required";
+            header("Location: " . BASE_PATH . "/ipd/wards");
+            exit;
+        }
+        
+        try {
+            // Check if ward has active beds
+            $stmt = $this->db->prepare("SELECT COUNT(*) as count FROM ipd_beds WHERE ward_id = ? AND is_active = 1 AND status = 'occupied'");
+            $stmt->execute([$ward_id]);
+            $result = $stmt->fetch(PDO::FETCH_ASSOC);
+            
+            if ($result['count'] > 0) {
+                throw new Exception('Cannot delete ward with occupied beds. Please discharge or transfer all patients first.');
+            }
+            
+            // Soft delete the ward and all its beds
+            $this->db->beginTransaction();
+            
+            $stmt = $this->db->prepare("UPDATE ipd_beds SET is_active = 0 WHERE ward_id = ?");
+            $stmt->execute([$ward_id]);
+            
+            $stmt = $this->db->prepare("UPDATE ipd_wards SET is_active = 0 WHERE id = ?");
+            $stmt->execute([$ward_id]);
+            
+            $this->db->commit();
+            
+            $_SESSION['success'] = "Ward deleted successfully";
+            
+        } catch (Exception $e) {
+            if ($this->db->inTransaction()) {
+                $this->db->rollBack();
+            }
+            $_SESSION['error'] = $e->getMessage();
+        }
+        
+        header("Location: " . BASE_PATH . "/ipd/wards");
+        exit;
+    }
 }

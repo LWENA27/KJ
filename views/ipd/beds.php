@@ -6,8 +6,28 @@ require_once __DIR__ . '/../layouts/header.php';
 <div class="container mx-auto px-4 py-6">
     <div class="flex justify-between items-center mb-6">
         <h1 class="text-3xl font-bold text-gray-800">Bed Management</h1>
-        <a href="<?php echo BASE_PATH; ?>/ipd/dashboard" class="bg-gray-600 text-white px-4 py-2 rounded hover:bg-gray-700">Back to Dashboard</a>
+        <div class="flex space-x-2">
+            <a href="<?php echo BASE_PATH; ?>/ipd/wards" class="bg-purple-600 text-white px-4 py-2 rounded hover:bg-purple-700">
+                <i class="fas fa-building mr-2"></i>Manage Wards
+            </a>
+            <a href="<?php echo BASE_PATH; ?>/ipd/add_bed" class="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700">
+                <i class="fas fa-plus mr-2"></i>Add Bed
+            </a>
+            <a href="<?php echo BASE_PATH; ?>/ipd/dashboard" class="bg-gray-600 text-white px-4 py-2 rounded hover:bg-gray-700">Back to Dashboard</a>
+        </div>
     </div>
+
+    <?php if (!empty($_SESSION['success'])): ?>
+        <div class="bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded mb-4">
+            <?php echo htmlspecialchars($_SESSION['success']); unset($_SESSION['success']); ?>
+        </div>
+    <?php endif; ?>
+
+    <?php if (!empty($_SESSION['error'])): ?>
+        <div class="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">
+            <?php echo htmlspecialchars($_SESSION['error']); unset($_SESSION['error']); ?>
+        </div>
+    <?php endif; ?>
 
     <!-- Ward Filter -->
     <div class="bg-white rounded-lg shadow p-4 mb-6">
@@ -52,9 +72,27 @@ require_once __DIR__ . '/../layouts/header.php';
                         <?php if ($bed['status'] === 'occupied' && $bed['patient_id']): ?>
                             <div class="mt-3 pt-3 border-t">
                                 <p class="text-xs text-gray-600">Patient:</p>
-                                <p class="font-semibold text-sm"><?php echo htmlspecialchars($bed['first_name'] . ' ' . $bed['last_name']); ?></p>
-                                <p class="text-xs text-gray-500"><?php echo htmlspecialchars($bed['patient_number'] ?? ''); ?></p>
+                                <p class="font-semibold text-sm"><?php echo htmlspecialchars(($bed['first_name'] ?? '') . ' ' . ($bed['last_name'] ?? '')); ?></p>
+                                <p class="text-xs text-gray-500"><?php echo htmlspecialchars($bed['registration_number'] ?? ''); ?></p>
                             </div>
+                        <?php endif; ?>
+                    </div>
+                    <!-- Action Buttons -->
+                    <div class="mt-4 pt-3 border-t flex justify-between">
+                        <a href="<?php echo BASE_PATH; ?>/ipd/edit_bed/<?php echo $bed['id']; ?>" 
+                           class="text-blue-600 hover:text-blue-800 text-sm">
+                            <i class="fas fa-edit mr-1"></i>Edit
+                        </a>
+                        <?php if ($bed['status'] !== 'occupied'): ?>
+                            <a href="<?php echo BASE_PATH; ?>/ipd/delete_bed/<?php echo $bed['id']; ?>" 
+                               onclick="return confirm('Are you sure you want to delete this bed?')"
+                               class="text-red-600 hover:text-red-800 text-sm">
+                                <i class="fas fa-trash mr-1"></i>Delete
+                            </a>
+                        <?php else: ?>
+                            <span class="text-gray-400 text-sm" title="Cannot delete occupied bed">
+                                <i class="fas fa-lock mr-1"></i>In Use
+                            </span>
                         <?php endif; ?>
                     </div>
                 </div>
