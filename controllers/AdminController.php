@@ -11,9 +11,13 @@ class AdminController extends BaseController {
     public function dashboard() {
         // Get statistics
         $stats = $this->getDashboardStats();
+        
+        // Get recent activity
+        $recentActivity = $this->getRecentActivity();
 
         $this->render('admin/dashboard', [
-            'stats' => $stats
+            'stats' => $stats,
+            'recentActivity' => $recentActivity
         ]);
     }
 
@@ -530,6 +534,7 @@ class AdminController extends BaseController {
     private function getDashboardStats() {
         $stats = [];
 
+        // =================== BASIC METRICS ===================
         // Total users
         $stmt = $this->pdo->query("SELECT COUNT(*) as total FROM users");
         $stats['total_users'] = $stmt->fetch()['total'];
@@ -566,7 +571,273 @@ class AdminController extends BaseController {
         $result = $stmt->fetch();
         $stats['pending_payments'] = $result ? $result['total'] : 0;
 
+        // =================== FINANCIAL METRICS ===================
+        // Dispensary/Pharmacy Income - Today
+        $stmt = $this->pdo->prepare("
+            SELECT COALESCE(SUM(amount), 0) as total 
+            FROM payments 
+            WHERE payment_status = 'completed' 
+            AND item_type = 'prescription'
+            AND DATE(payment_date) = CURDATE()
+        ");
+        $stmt->execute();
+        $stats['dispensary_income_today'] = $stmt->fetch()['total'];
+
+        // Dispensary/Pharmacy Income - This Month
+        $stmt = $this->pdo->prepare("
+            SELECT COALESCE(SUM(amount), 0) as total 
+            FROM payments 
+            WHERE payment_status = 'completed' 
+            AND item_type = 'prescription'
+            AND MONTH(payment_date) = MONTH(CURDATE()) 
+            AND YEAR(payment_date) = YEAR(CURDATE())
+        ");
+        $stmt->execute();
+        $stats['dispensary_income_month'] = $stmt->fetch()['total'];
+
+        // Dispensary/Pharmacy Income - Total
+        $stmt = $this->pdo->prepare("
+            SELECT COALESCE(SUM(amount), 0) as total 
+            FROM payments 
+            WHERE payment_status = 'completed' 
+            AND item_type = 'prescription'
+        ");
+        $stmt->execute();
+        $stats['dispensary_income_total'] = $stmt->fetch()['total'];
+
+        // Total Revenue - Today
+        $stmt = $this->pdo->prepare("
+            SELECT COALESCE(SUM(amount), 0) as total 
+            FROM payments 
+            WHERE payment_status = 'completed' 
+            AND DATE(payment_date) = CURDATE()
+        ");
+        $stmt->execute();
+        $stats['revenue_today'] = $stmt->fetch()['total'];
+
+        // Total Revenue - This Month
+        $stmt = $this->pdo->prepare("
+            SELECT COALESCE(SUM(amount), 0) as total 
+            FROM payments 
+            WHERE payment_status = 'completed' 
+            AND MONTH(payment_date) = MONTH(CURDATE()) 
+            AND YEAR(payment_date) = YEAR(CURDATE())
+        ");
+        $stmt->execute();
+        $stats['revenue_month'] = $stmt->fetch()['total'];
+
+        // Revenue breakdown by service type
+        $stmt = $this->pdo->prepare("
+            SELECT 
+                CASE 
+                    WHEN payment_type = 'consultation' THEN 'Consultation'
+                    WHEN item_type = 'prescription' THEN 'Pharmacy'
+                    WHEN item_type = 'lab_order' THEN 'Lab'
+                    WHEN item_type = 'radiology_order' THEN 'Radiology'
+                    WHEN item_type = 'service' OR item_type = 'service_order' THEN 'IPD'
+                    ELSE 'Other'
+                END as service_type,
+                COALESCE(SUM(amount), 0) as total
+            FROM payments 
+            WHERE payment_status = 'completed'
+            AND MONTH(payment_date) = MONTH(CURDATE()) 
+            AND YEAR(payment_date) = YEAR(CURDATE())
+            GROUP BY service_type
+        ");
+        $stmt->execute();
+        $revenue_breakdown = $stmt->fetchAll(PDO::FETCH_KEY_PAIR);
+        $stats['revenue_consultation'] = $revenue_breakdown['Consultation'] ?? 0;
+        $stats['revenue_pharmacy'] = $revenue_breakdown['Pharmacy'] ?? 0;
+        $stats['revenue_lab'] = $revenue_breakdown['Lab'] ?? 0;
+        $stats['revenue_radiology'] = $revenue_breakdown['Radiology'] ?? 0;
+        $stats['revenue_ipd'] = $revenue_breakdown['IPD'] ?? 0;
+
+        // Completed payments count
+        $stmt = $this->pdo->query("SELECT COUNT(*) as total FROM payments WHERE payment_status = 'completed'");
+        $stats['completed_payments'] = $stmt->fetch()['total'];
+
+        // =================== APPOINTMENTS ===================
+        // Note: This system doesn't have a separate appointments table
+        // Using patient_visits as a proxy for appointments
+        $stmt = $this->pdo->prepare("
+            SELECT COUNT(*) as total 
+            FROM patient_visits 
+            WHERE DATE(visit_date) = CURDATE()
+        ");
+        $stmt->execute();
+        $stats['appointments_today'] = $stmt->fetch()['total'];
+
+        // Pending appointments (visits without completed consultations)
+        $stmt = $this->pdo->prepare("
+            SELECT COUNT(DISTINCT pv.id) as total 
+            FROM patient_visits pv 
+            LEFT JOIN consultations c ON pv.id = c.visit_id AND c.status = 'completed'
+            WHERE c.id IS NULL 
+            AND DATE(pv.visit_date) >= CURDATE()
+        ");
+        $stmt->execute();
+        $stats['pending_appointments'] = $stmt->fetch()['total'];
+
+        // =================== LAB DEPARTMENT ===================
+        // Pending lab test orders
+        $stmt = $this->pdo->query("
+            SELECT COUNT(*) as total 
+            FROM lab_test_orders 
+            WHERE status IN ('pending', 'sample_collected', 'in_progress')
+        ");
+        $stats['pending_lab_orders'] = $stmt->fetch()['total'];
+
+        // Completed tests today
+        $stmt = $this->pdo->prepare("
+            SELECT COUNT(*) as total 
+            FROM lab_results 
+            WHERE DATE(completed_at) = CURDATE()
+        ");
+        $stmt->execute();
+        $stats['lab_completed_today'] = $stmt->fetch()['total'];
+
+        // =================== RADIOLOGY DEPARTMENT ===================
+        // Pending radiology orders
+        $stmt = $this->pdo->query("
+            SELECT COUNT(*) as total 
+            FROM radiology_test_orders 
+            WHERE status IN ('pending', 'scheduled', 'in_progress')
+        ");
+        $stats['pending_radiology_orders'] = $stmt->fetch()['total'];
+
+        // Completed radiology tests today
+        $stmt = $this->pdo->prepare("
+            SELECT COUNT(*) as total 
+            FROM radiology_results 
+            WHERE DATE(completed_at) = CURDATE()
+        ");
+        $stmt->execute();
+        $stats['radiology_completed_today'] = $stmt->fetch()['total'];
+
+        // =================== PHARMACY DEPARTMENT ===================
+        // Pending prescriptions
+        $stmt = $this->pdo->query("
+            SELECT COUNT(*) as total 
+            FROM prescriptions 
+            WHERE status IN ('pending', 'partial')
+        ");
+        $stats['pending_prescriptions'] = $stmt->fetch()['total'];
+
+        // Dispensed prescriptions today
+        $stmt = $this->pdo->prepare("
+            SELECT COUNT(*) as total 
+            FROM prescriptions 
+            WHERE status = 'dispensed' 
+            AND DATE(dispensed_at) = CURDATE()
+        ");
+        $stmt->execute();
+        $stats['dispensed_today'] = $stmt->fetch()['total'];
+
+        // =================== IPD DEPARTMENT ===================
+        // Active admissions
+        $stmt = $this->pdo->query("
+            SELECT COUNT(*) as total 
+            FROM ipd_admissions 
+            WHERE status = 'active'
+        ");
+        $stats['active_admissions'] = $stmt->fetch()['total'];
+
+        // New admissions today
+        $stmt = $this->pdo->prepare("
+            SELECT COUNT(*) as total 
+            FROM ipd_admissions 
+            WHERE DATE(admission_datetime) = CURDATE()
+        ");
+        $stmt->execute();
+        $stats['admissions_today'] = $stmt->fetch()['total'];
+
+        // Bed statistics
+        $stmt = $this->pdo->query("
+            SELECT 
+                COUNT(*) as total_beds,
+                SUM(CASE WHEN status = 'available' THEN 1 ELSE 0 END) as available_beds,
+                SUM(CASE WHEN status = 'occupied' THEN 1 ELSE 0 END) as occupied_beds
+            FROM ipd_beds 
+            WHERE is_active = 1
+        ");
+        $beds = $stmt->fetch();
+        $stats['total_beds'] = $beds['total_beds'] ?? 0;
+        $stats['available_beds'] = $beds['available_beds'] ?? 0;
+        $stats['occupied_beds'] = $beds['occupied_beds'] ?? 0;
+        
+        // Calculate bed occupancy percentage
+        if ($stats['total_beds'] > 0) {
+            $stats['bed_occupancy_percent'] = round(($stats['occupied_beds'] / $stats['total_beds']) * 100, 1);
+        } else {
+            $stats['bed_occupancy_percent'] = 0;
+        }
+
         return $stats;
+    }
+
+    private function getRecentActivity() {
+        $activities = [];
+
+        // Recent patient registrations
+        $stmt = $this->pdo->query("
+            SELECT 
+                'patient_registration' as activity_type,
+                CONCAT(first_name, ' ', last_name) as description,
+                created_at as timestamp
+            FROM patients
+            ORDER BY created_at DESC
+            LIMIT 3
+        ");
+        $activities = array_merge($activities, $stmt->fetchAll(PDO::FETCH_ASSOC));
+
+        // Recent consultation completions
+        $stmt = $this->pdo->query("
+            SELECT 
+                'consultation' as activity_type,
+                CONCAT('Consultation with Dr. ', u.first_name, ' ', u.last_name, ' for ', p.first_name, ' ', p.last_name) as description,
+                c.created_at as timestamp
+            FROM consultations c
+            JOIN users u ON c.doctor_id = u.id
+            JOIN patients p ON c.patient_id = p.id
+            WHERE c.status = 'completed'
+            ORDER BY c.created_at DESC
+            LIMIT 3
+        ");
+        $activities = array_merge($activities, $stmt->fetchAll(PDO::FETCH_ASSOC));
+
+        // Recent medicine stock updates (using medicine_batches)
+        $stmt = $this->pdo->query("
+            SELECT 
+                'stock_update' as activity_type,
+                CONCAT('Stock updated: ', m.name, ' (', mb.quantity_received, ' units added)') as description,
+                mb.created_at as timestamp
+            FROM medicine_batches mb
+            JOIN medicines m ON mb.medicine_id = m.id
+            ORDER BY mb.created_at DESC
+            LIMIT 2
+        ");
+        $activities = array_merge($activities, $stmt->fetchAll(PDO::FETCH_ASSOC));
+
+        // Recent payment transactions
+        $stmt = $this->pdo->query("
+            SELECT 
+                'payment' as activity_type,
+                CONCAT('Payment received: Tsh ', FORMAT(amount, 0), ' from ', p.first_name, ' ', p.last_name) as description,
+                pay.payment_date as timestamp
+            FROM payments pay
+            JOIN patients p ON pay.patient_id = p.id
+            WHERE pay.payment_status = 'completed'
+            ORDER BY pay.payment_date DESC
+            LIMIT 2
+        ");
+        $activities = array_merge($activities, $stmt->fetchAll(PDO::FETCH_ASSOC));
+
+        // Sort all activities by timestamp and limit to 10
+        usort($activities, function($a, $b) {
+            return strtotime($b['timestamp']) - strtotime($a['timestamp']);
+        });
+
+        return array_slice($activities, 0, 10);
     }
 }
 ?>
