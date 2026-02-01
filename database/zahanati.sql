@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: localhost:3306
--- Generation Time: Jan 27, 2026 at 08:08 PM
+-- Generation Time: Jan 28, 2026 at 12:06 PM
 -- Server version: 8.0.43-0ubuntu0.24.04.2
 -- PHP Version: 8.3.6
 
@@ -20,6 +20,49 @@ SET time_zone = "+00:00";
 --
 -- Database: `zahanati`
 --
+
+-- --------------------------------------------------------
+
+--
+-- Stand-in structure for view `active_patient_queue`
+-- (See below for the actual view)
+--
+CREATE TABLE `active_patient_queue` (
+`age` bigint
+,`blood_pressure_diastolic` int
+,`blood_pressure_systolic` int
+,`completed_lab_tests` bigint
+,`consultation_id` int
+,`consultation_status` enum('pending','in_progress','completed','cancelled')
+,`doctor_name` varchar(101)
+,`gender` enum('male','female','other')
+,`partial_prescriptions` bigint
+,`patient_id` int
+,`patient_name` varchar(101)
+,`pending_lab_tests` bigint
+,`pending_prescriptions` bigint
+,`phone` varchar(20)
+,`pulse_rate` int
+,`registration_number` varchar(20)
+,`registration_paid` decimal(32,2)
+,`registration_time` timestamp
+,`temperature` decimal(4,1)
+,`visit_date` date
+,`visit_id` int
+,`visit_type` enum('consultation','lab_only','minor_service','ipd','medicine_pickup')
+);
+
+-- --------------------------------------------------------
+
+--
+-- Stand-in structure for view `common_diagnoses`
+-- (See below for the actual view)
+--
+CREATE TABLE `common_diagnoses` (
+`diagnosis` text
+,`occurrence_count` bigint
+,`unique_patients` bigint
+);
 
 -- --------------------------------------------------------
 
@@ -84,6 +127,21 @@ INSERT INTO `consultation_overrides` (`id`, `patient_id`, `visit_id`, `doctor_id
 (4, 67, 83, 9, 'Insurance pending verification', 'payment_bypass', '2026-01-26 09:07:56'),
 (5, 76, 89, 9, 'Medical Emergency - Life threatening condition', 'payment_bypass', '2026-01-26 09:16:22'),
 (6, 44, 93, 9, 'Insurance pending verification', 'payment_bypass', '2026-01-26 12:57:11');
+
+-- --------------------------------------------------------
+
+--
+-- Stand-in structure for view `daily_revenue_summary`
+-- (See below for the actual view)
+--
+CREATE TABLE `daily_revenue_summary` (
+`collected_by_name` varchar(101)
+,`payment_method` enum('cash','card','mobile_money','insurance','cheque','transfer','other')
+,`payment_type` varchar(50)
+,`revenue_date` date
+,`total_amount` decimal(32,2)
+,`transaction_count` bigint
+);
 
 -- --------------------------------------------------------
 
@@ -199,9 +257,16 @@ CREATE TABLE `ipd_admissions` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 --
--- Note: Triggers removed due to hosting restrictions
--- The total_days field will be calculated in the application code instead
+-- Triggers `ipd_admissions`
 --
+DELIMITER $$
+CREATE TRIGGER `calculate_admission_days_insert` BEFORE INSERT ON `ipd_admissions` FOR EACH ROW BEGIN
+  SET NEW.total_days = DATEDIFF(COALESCE(NEW.discharge_datetime, CURDATE()), NEW.admission_datetime)$$
+DELIMITER ;
+DELIMITER $$
+CREATE TRIGGER `calculate_admission_days_update` BEFORE UPDATE ON `ipd_admissions` FOR EACH ROW BEGIN
+  SET NEW.total_days = DATEDIFF(COALESCE(NEW.discharge_datetime, CURDATE()), NEW.admission_datetime)$$
+DELIMITER ;
 
 -- --------------------------------------------------------
 
@@ -937,6 +1002,41 @@ CREATE TABLE `medicine_dispensing` (
 -- --------------------------------------------------------
 
 --
+-- Stand-in structure for view `medicine_prescription_stats`
+-- (See below for the actual view)
+--
+CREATE TABLE `medicine_prescription_stats` (
+`generic_name` varchar(100)
+,`id` int
+,`name` varchar(100)
+,`times_prescribed` bigint
+,`total_quantity_dispensed` decimal(32,0)
+,`total_revenue` decimal(42,2)
+);
+
+-- --------------------------------------------------------
+
+--
+-- Stand-in structure for view `medicine_stock_status`
+-- (See below for the actual view)
+--
+CREATE TABLE `medicine_stock_status` (
+`active_batches` bigint
+,`generic_name` varchar(100)
+,`id` int
+,`name` varchar(100)
+,`nearest_expiry` date
+,`reorder_level` int
+,`stock_alert` varchar(13)
+,`strength` varchar(50)
+,`total_stock` decimal(32,0)
+,`unit` varchar(20)
+,`unit_price` decimal(10,2)
+);
+
+-- --------------------------------------------------------
+
+--
 -- Table structure for table `patients`
 --
 
@@ -961,6 +1061,23 @@ CREATE TABLE `patients` (
   `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
   `updated_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+-- --------------------------------------------------------
+
+--
+-- Stand-in structure for view `patient_latest_visit`
+-- (See below for the actual view)
+--
+CREATE TABLE `patient_latest_visit` (
+`created_at` timestamp
+,`patient_id` int
+,`status` enum('active','completed','cancelled')
+,`updated_at` timestamp
+,`visit_date` date
+,`visit_id` int
+,`visit_number` int
+,`visit_type` enum('consultation','lab_only','minor_service','ipd','medicine_pickup')
+);
 
 -- --------------------------------------------------------
 
@@ -1302,6 +1419,24 @@ CREATE TABLE `service_orders` (
 -- --------------------------------------------------------
 
 --
+-- Stand-in structure for view `staff_performance`
+-- (See below for the actual view)
+--
+CREATE TABLE `staff_performance` (
+`consultations_completed` bigint
+,`id` int
+,`patients_registered` bigint
+,`payments_collected` bigint
+,`prescriptions_written` bigint
+,`role` enum('admin','receptionist','doctor','lab_technician','accountant','pharmacist','radiologist','nurse')
+,`staff_name` varchar(101)
+,`tests_completed` bigint
+,`total_collected` decimal(32,2)
+);
+
+-- --------------------------------------------------------
+
+--
 -- Table structure for table `users`
 --
 
@@ -1326,14 +1461,14 @@ CREATE TABLE `users` (
 
 INSERT INTO `users` (`id`, `username`, `password_hash`, `email`, `role`, `first_name`, `last_name`, `phone`, `specialization`, `is_active`, `created_at`, `updated_at`) VALUES
 (1, 'admin', '$2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 'admin@clinic.local', 'admin', 'System', 'Administrator', '0700000001', NULL, 1, '2025-10-11 03:12:35', '2025-10-11 03:12:35'),
-(8, 'receptionist', '$2y$10$1sL5S.nhj4AMTQTcYZxMwOpn3tz1JgA/OLgdH1Zz5ESELsPWO7daO', 'hodi@gmail.com', 'receptionist', 'hodi', 'hodi', '083456879', NULL, 1, '2026-01-08 15:58:53', '2026-01-09 08:04:54'),
+(8, 'hodi', '$2y$10$1sL5S.nhj4AMTQTcYZxMwOpn3tz1JgA/OLgdH1Zz5ESELsPWO7daO', 'hodi@gmail.com', 'receptionist', 'hodi', 'hodi', '083456879', NULL, 1, '2026-01-08 15:58:53', '2026-01-09 08:04:54'),
 (9, 'doctor', '$2y$10$5OpGgpEujYIvjI0PkRdqP./FoCyaYb54UAEWRM8fsfDCrnGTz73.W', 'doctor@gmail.com', 'doctor', 'doctor', 'doctor', '0711345678', NULL, 1, '2026-01-08 16:03:35', '2026-01-08 16:03:35'),
 (10, 'lab', '$2y$10$D66EHAWpLyuNg83Y3LUg6eSa58NtJKrWm/vGY7EX1vklhZIrhSEPe', 'lab@gmail.com', 'lab_technician', 'lab', 'lab', '0711145678', NULL, 1, '2026-01-08 16:06:02', '2026-01-08 16:06:02'),
-(11, 'pharmacist', '$2y$10$VuttxXU17hmI4wJ2wUTDbO6dWZdf7cNbjCV5ciUzn/8OsyQALJKxy', 'aa@gmail.com', 'pharmacist', 'phamarc', 'phamarc', '3456453', NULL, 1, '2026-01-14 19:13:27', '2026-01-14 19:13:27'),
-(12, 'accountant', '$2y$10$SoZpg3inUZZh6V5.pimoge5znViepQwM6oe5kBYwG6fNjRVPDGKnm', 'cash@gmail.com', 'accountant', 'cash', 'cash', '233454535', NULL, 1, '2026-01-14 19:16:41', '2026-01-14 19:16:41'),
+(11, 'pharmacy', '$2y$10$VuttxXU17hmI4wJ2wUTDbO6dWZdf7cNbjCV5ciUzn/8OsyQALJKxy', 'aa@gmail.com', 'pharmacist', 'phamarc', 'phamarc', '3456453', NULL, 1, '2026-01-14 19:13:27', '2026-01-14 19:13:27'),
+(12, 'cash', '$2y$10$SoZpg3inUZZh6V5.pimoge5znViepQwM6oe5kBYwG6fNjRVPDGKnm', 'cash@gmail.com', 'accountant', 'cash', 'cash', '233454535', NULL, 1, '2026-01-14 19:16:41', '2026-01-14 19:16:41'),
 (13, 'system_collector', '', 'system@zahanati.local', 'admin', 'System', 'Collector', NULL, NULL, 1, '2026-01-16 10:24:27', '2026-01-16 10:39:16'),
-(1000000, 'radiologist', '$2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 'radiologist@hospital.com', 'radiologist', 'Sarah', 'Johnson', NULL, NULL, 1, '2026-01-26 05:00:41', '2026-01-26 05:00:41'),
-(1000001, 'nurse', '$2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 'nurse@hospital.com', 'nurse', 'Mary', 'Williams', NULL, NULL, 1, '2026-01-26 05:00:41', '2026-01-26 05:00:41');
+(1000000, 'radiologist1', '$2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 'radiologist@hospital.com', 'radiologist', 'Sarah', 'Johnson', NULL, NULL, 1, '2026-01-26 05:00:41', '2026-01-26 05:00:41'),
+(1000001, 'nurse1', '$2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 'nurse@hospital.com', 'nurse', 'Mary', 'Williams', NULL, NULL, 1, '2026-01-26 05:00:41', '2026-01-26 05:00:41');
 
 -- --------------------------------------------------------
 
@@ -1402,12 +1537,65 @@ CREATE TABLE `workflow_overrides` (
 -- --------------------------------------------------------
 
 --
--- Note: Database VIEWs and TRIGGERs removed due to hosting restrictions
--- Your shared hosting does not have CREATE VIEW or CREATE TRIGGER privileges
--- The application will work without these features
+-- Structure for view `active_patient_queue`
 --
+DROP TABLE IF EXISTS `active_patient_queue`;
+
+CREATE ALGORITHM=UNDEFINED DEFINER=`root`@`localhost` SQL SECURITY DEFINER VIEW `active_patient_queue`  AS SELECT `v`.`id` AS `visit_id`, `v`.`visit_type` AS `visit_type`, `v`.`visit_date` AS `visit_date`, `p`.`id` AS `patient_id`, `p`.`registration_number` AS `registration_number`, concat(`p`.`first_name`,' ',`p`.`last_name`) AS `patient_name`, `p`.`phone` AS `phone`, `p`.`gender` AS `gender`, timestampdiff(YEAR,`p`.`date_of_birth`,curdate()) AS `age`, `vs`.`temperature` AS `temperature`, `vs`.`pulse_rate` AS `pulse_rate`, `vs`.`blood_pressure_systolic` AS `blood_pressure_systolic`, `vs`.`blood_pressure_diastolic` AS `blood_pressure_diastolic`, `c`.`id` AS `consultation_id`, `c`.`status` AS `consultation_status`, concat(`u`.`first_name`,' ',`u`.`last_name`) AS `doctor_name`, sum((case when ((`pay`.`payment_status` = 'paid') and (`pay`.`payment_type` = 'registration')) then `pay`.`amount` else 0 end)) AS `registration_paid`, count(distinct (case when (`lo`.`status` in ('pending','sample_collected','in_progress')) then `lo`.`id` end)) AS `pending_lab_tests`, count(distinct (case when (`lo`.`status` = 'completed') then `lo`.`id` end)) AS `completed_lab_tests`, count(distinct (case when (`pr`.`status` = 'pending') then `pr`.`id` end)) AS `pending_prescriptions`, count(distinct (case when (`pr`.`status` = 'partial') then `pr`.`id` end)) AS `partial_prescriptions`, `v`.`created_at` AS `registration_time` FROM (((((((`patient_visits` `v` join `patients` `p` on((`v`.`patient_id` = `p`.`id`))) left join `vital_signs` `vs` on((`v`.`id` = `vs`.`visit_id`))) left join `consultations` `c` on(((`v`.`id` = `c`.`visit_id`) and (`c`.`status` <> 'cancelled')))) left join `users` `u` on((`c`.`doctor_id` = `u`.`id`))) left join `payments` `pay` on((`v`.`id` = `pay`.`visit_id`))) left join `lab_test_orders` `lo` on(((`v`.`id` = `lo`.`visit_id`) and (`lo`.`status` <> 'cancelled')))) left join `prescriptions` `pr` on(((`v`.`id` = `pr`.`visit_id`) and (`pr`.`status` <> 'cancelled')))) WHERE (`v`.`status` = 'active') GROUP BY `v`.`id`, `v`.`visit_type`, `v`.`visit_date`, `p`.`id`, `p`.`registration_number`, `p`.`first_name`, `p`.`last_name`, `p`.`phone`, `p`.`gender`, `p`.`date_of_birth`, `vs`.`temperature`, `vs`.`pulse_rate`, `vs`.`blood_pressure_systolic`, `vs`.`blood_pressure_diastolic`, `c`.`id`, `c`.`status`, `u`.`first_name`, `u`.`last_name`, `v`.`created_at` ORDER BY `v`.`created_at` ASC ;
 
 -- --------------------------------------------------------
+
+--
+-- Structure for view `common_diagnoses`
+--
+DROP TABLE IF EXISTS `common_diagnoses`;
+
+CREATE ALGORITHM=UNDEFINED DEFINER=`root`@`localhost` SQL SECURITY DEFINER VIEW `common_diagnoses`  AS SELECT `consultations`.`diagnosis` AS `diagnosis`, count(0) AS `occurrence_count`, count(distinct `consultations`.`patient_id`) AS `unique_patients` FROM `consultations` WHERE ((`consultations`.`diagnosis` is not null) AND (`consultations`.`diagnosis` <> '') AND (`consultations`.`status` = 'completed')) GROUP BY `consultations`.`diagnosis` ORDER BY count(0) DESC ;
+
+-- --------------------------------------------------------
+
+--
+-- Structure for view `daily_revenue_summary`
+--
+DROP TABLE IF EXISTS `daily_revenue_summary`;
+
+CREATE ALGORITHM=UNDEFINED DEFINER=`root`@`localhost` SQL SECURITY DEFINER VIEW `daily_revenue_summary`  AS SELECT cast(`payments`.`payment_date` as date) AS `revenue_date`, `payments`.`payment_type` AS `payment_type`, `payments`.`payment_method` AS `payment_method`, count(0) AS `transaction_count`, sum(`payments`.`amount`) AS `total_amount`, concat(`uc`.`first_name`,' ',`uc`.`last_name`) AS `collected_by_name` FROM (`payments` join `users` `uc` on((`payments`.`collected_by` = `uc`.`id`))) WHERE (`payments`.`payment_status` = 'paid') GROUP BY cast(`payments`.`payment_date` as date), `payments`.`payment_type`, `payments`.`payment_method`, `uc`.`first_name`, `uc`.`last_name` ORDER BY cast(`payments`.`payment_date` as date) DESC, `payments`.`payment_type` ASC ;
+
+-- --------------------------------------------------------
+
+--
+-- Structure for view `medicine_prescription_stats`
+--
+DROP TABLE IF EXISTS `medicine_prescription_stats`;
+
+CREATE ALGORITHM=UNDEFINED DEFINER=`root`@`localhost` SQL SECURITY DEFINER VIEW `medicine_prescription_stats`  AS SELECT `m`.`id` AS `id`, `m`.`name` AS `name`, `m`.`generic_name` AS `generic_name`, count(`pr`.`id`) AS `times_prescribed`, sum(`pr`.`quantity_dispensed`) AS `total_quantity_dispensed`, sum((`pr`.`quantity_dispensed` * `m`.`unit_price`)) AS `total_revenue` FROM (`medicines` `m` join `prescriptions` `pr` on((`m`.`id` = `pr`.`medicine_id`))) WHERE (`pr`.`status` in ('dispensed','partial')) GROUP BY `m`.`id`, `m`.`name`, `m`.`generic_name` ORDER BY count(`pr`.`id`) DESC ;
+
+-- --------------------------------------------------------
+
+--
+-- Structure for view `medicine_stock_status`
+--
+DROP TABLE IF EXISTS `medicine_stock_status`;
+
+CREATE ALGORITHM=UNDEFINED DEFINER=`root`@`localhost` SQL SECURITY DEFINER VIEW `medicine_stock_status`  AS SELECT `m`.`id` AS `id`, `m`.`name` AS `name`, `m`.`generic_name` AS `generic_name`, `m`.`strength` AS `strength`, `m`.`unit` AS `unit`, `m`.`unit_price` AS `unit_price`, `m`.`reorder_level` AS `reorder_level`, sum(`mb`.`quantity_remaining`) AS `total_stock`, count(distinct `mb`.`id`) AS `active_batches`, min((case when (`mb`.`status` = 'active') then `mb`.`expiry_date` end)) AS `nearest_expiry`, (case when (sum(`mb`.`quantity_remaining`) <= `m`.`reorder_level`) then 'LOW_STOCK' when (min((case when (`mb`.`status` = 'active') then `mb`.`expiry_date` end)) <= (curdate() + interval 3 month)) then 'EXPIRING_SOON' else 'OK' end) AS `stock_alert` FROM (`medicines` `m` left join `medicine_batches` `mb` on(((`m`.`id` = `mb`.`medicine_id`) and (`mb`.`status` = 'active')))) WHERE (`m`.`is_active` = 1) GROUP BY `m`.`id`, `m`.`name`, `m`.`generic_name`, `m`.`strength`, `m`.`unit`, `m`.`unit_price`, `m`.`reorder_level` ;
+
+-- --------------------------------------------------------
+
+--
+-- Structure for view `patient_latest_visit`
+--
+DROP TABLE IF EXISTS `patient_latest_visit`;
+
+CREATE ALGORITHM=UNDEFINED DEFINER=`root`@`localhost` SQL SECURITY DEFINER VIEW `patient_latest_visit`  AS SELECT `pv`.`patient_id` AS `patient_id`, `pv`.`id` AS `visit_id`, `pv`.`visit_number` AS `visit_number`, `pv`.`status` AS `status`, `pv`.`visit_type` AS `visit_type`, `pv`.`visit_date` AS `visit_date`, `pv`.`created_at` AS `created_at`, `pv`.`updated_at` AS `updated_at` FROM (`patient_visits` `pv` join (select `patient_visits`.`patient_id` AS `patient_id`,max(`patient_visits`.`created_at`) AS `latest` from `patient_visits` group by `patient_visits`.`patient_id`) `latest` on(((`latest`.`patient_id` = `pv`.`patient_id`) and (`latest`.`latest` = `pv`.`created_at`)))) ;
+
+-- --------------------------------------------------------
+
+--
+-- Structure for view `staff_performance`
+--
+DROP TABLE IF EXISTS `staff_performance`;
+
+CREATE ALGORITHM=UNDEFINED DEFINER=`root`@`localhost` SQL SECURITY DEFINER VIEW `staff_performance`  AS SELECT `u`.`id` AS `id`, concat(`u`.`first_name`,' ',`u`.`last_name`) AS `staff_name`, `u`.`role` AS `role`, count(distinct (case when (`u`.`role` = 'receptionist') then `v`.`id` end)) AS `patients_registered`, count(distinct (case when (`u`.`role` = 'receptionist') then `p`.`id` end)) AS `payments_collected`, sum((case when ((`u`.`role` = 'receptionist') and (`p`.`payment_status` = 'paid')) then `p`.`amount` else 0 end)) AS `total_collected`, count(distinct (case when (`u`.`role` = 'doctor') then `c`.`id` end)) AS `consultations_completed`, count(distinct (case when (`u`.`role` = 'doctor') then `pr`.`id` end)) AS `prescriptions_written`, count(distinct (case when (`u`.`role` = 'lab_technician') then `lr`.`id` end)) AS `tests_completed` FROM (((((`users` `u` left join `patient_visits` `v` on((`u`.`id` = `v`.`registered_by`))) left join `payments` `p` on((`u`.`id` = `p`.`collected_by`))) left join `consultations` `c` on(((`u`.`id` = `c`.`doctor_id`) and (`c`.`status` = 'completed')))) left join `prescriptions` `pr` on((`u`.`id` = `pr`.`doctor_id`))) left join `lab_results` `lr` on((`u`.`id` = `lr`.`technician_id`))) WHERE (`u`.`is_active` = 1) GROUP BY `u`.`id`, `u`.`first_name`, `u`.`last_name`, `u`.`role` ;
 
 --
 -- Indexes for dumped tables

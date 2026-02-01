@@ -1,46 +1,47 @@
 <?php $title = "Register New Patient"; ?>
 
-<div class="max-w-6xl mx-auto">
+<div class="max-w-6xl mx-auto px-3 sm:px-4">
     <!-- Header with Back Button -->
-    <div class="mb-6 flex justify-between items-center">
-        <h1 class="text-3xl font-bold text-gray-900">Register New Patient</h1>
-    <a href="<?php echo htmlspecialchars($BASE_PATH); ?>/receptionist/patients" class="inline-flex items-center px-4 py-2 bg-gray-600 text-white rounded-md hover:bg-gray-700 transition-colors">
+    <div class="mb-4 sm:mb-6 flex flex-col sm:flex-row justify-between items-start sm:items-center space-y-3 sm:space-y-0">
+        <h1 class="text-2xl sm:text-3xl font-bold text-gray-900">Register New Patient</h1>
+        <a href="<?php echo htmlspecialchars($BASE_PATH); ?>/receptionist/patients" class="inline-flex items-center px-3 sm:px-4 py-2 bg-gray-600 text-white rounded-md hover:bg-gray-700 transition-colors text-sm sm:text-base">
             <i class="fas fa-arrow-left mr-2"></i>
-            Back to Patients
+            <span class="hidden sm:inline">Back to Patients</span>
+            <span class="sm:hidden">Back</span>
         </a>
     </div>
 
     <!-- Registration Form -->
-    <div class="bg-white rounded-lg shadow-md p-6">
+    <div class="bg-white rounded-lg shadow-md p-4 sm:p-6">
     <?php if (!empty($_SESSION['success'])): ?>
-        <div class="mb-4 p-4 bg-green-50 border-l-4 border-green-400 text-green-700">
+        <div class="mb-4 p-3 sm:p-4 bg-green-50 border-l-4 border-green-400 text-green-700 text-sm sm:text-base">
             <?php echo htmlspecialchars($_SESSION['success']); unset($_SESSION['success']); ?>
         </div>
     <?php endif; ?>
     <?php if (!empty($_SESSION['error'])): ?>
-        <div class="mb-4 p-4 bg-red-50 border-l-4 border-red-400 text-red-700">
+        <div class="mb-4 p-3 sm:p-4 bg-red-50 border-l-4 border-red-400 text-red-700 text-sm sm:text-base">
             <?php echo htmlspecialchars($_SESSION['error']); unset($_SESSION['error']); ?>
         </div>
     <?php endif; ?>
 
-    <form id="patientRegistrationForm" method="POST" action="<?php echo htmlspecialchars($BASE_PATH); ?>/receptionist/register_patient" class="space-y-6">
+    <form id="patientRegistrationForm" method="POST" action="<?php echo htmlspecialchars($BASE_PATH); ?>/receptionist/register_patient" class="space-y-4 sm:space-y-6">
             <!-- CSRF Token -->
             <input type="hidden" name="csrf_token" value="<?php echo $_SESSION['csrf_token'] ?? ''; ?>">
 
             <!-- Patient Information Section -->
-            <div class="border-b pb-6">
-                <h3 class="text-xl font-semibold text-gray-900 mb-4 flex items-center">
-                    <i class="fas fa-user mr-3 text-blue-600"></i>Patient Information
+            <div class="border-b pb-4 sm:pb-6">
+                <h3 class="text-lg sm:text-xl font-semibold text-gray-900 mb-3 sm:mb-4 flex items-center">
+                    <i class="fas fa-user mr-2 sm:mr-3 text-blue-600"></i>Patient Information
                 </h3>
                 
-                <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
                     <!-- First Name -->
                     <div>
                         <label for="first_name" class="block text-sm font-medium text-gray-700 mb-1">
                             First Name <span class="text-red-500">*</span>
                         </label>
                         <input type="text" id="first_name" name="first_name" required
-                               class="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors">
+                               class="w-full px-3 py-2.5 sm:py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors text-base">
                         <span class="error-message text-red-500 text-xs mt-1 hidden"></span>
                     </div>
 
@@ -50,7 +51,7 @@
                             Last Name <span class="text-red-500">*</span>
                         </label>
                         <input type="text" id="last_name" name="last_name" required
-                               class="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors">
+                               class="w-full px-3 py-2.5 sm:py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors text-base">
                         <span class="error-message text-red-500 text-xs mt-1 hidden"></span>
                     </div>
 
@@ -60,7 +61,7 @@
                             Date of Birth
                         </label>
                         <input type="date" id="date_of_birth" name="date_of_birth"
-                               class="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors">
+                               class="w-full px-3 py-2.5 sm:py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors text-base">
                     </div>
 
                     <!-- Gender -->
@@ -69,7 +70,7 @@
                             Gender
                         </label>
                         <select id="gender" name="gender"
-                                class="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors">
+                                class="w-full px-3 py-2.5 sm:py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors text-base">
                             <option value="">Select Gender</option>
                             <option value="male">Male</option>
                             <option value="female">Female</option>

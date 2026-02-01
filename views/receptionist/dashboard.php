@@ -1,96 +1,99 @@
-<div class="space-y-6">
+<div class="space-y-4 sm:space-y-6">
     <!-- Header Section -->
-    <div class="flex items-center justify-between mb-6">
+    <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-4 sm:mb-6 space-y-4 sm:space-y-0">
         <div>
-            <h1 class="text-3xl font-bold text-gray-900 flex items-center">
-                <i class="fas fa-hospital-user mr-3 text-blue-600"></i>
-                Receptionist Dashboard
+            <h1 class="text-2xl sm:text-3xl font-bold text-gray-900 flex items-center">
+                <i class="fas fa-hospital-user mr-2 sm:mr-3 text-blue-600"></i>
+                <span class="hidden sm:inline">Receptionist Dashboard</span>
+                <span class="sm:hidden">Dashboard</span>
             </h1>
-            <p class="text-gray-600 mt-1">Manage patients, appointments, and front desk operations</p>
+            <p class="text-gray-600 mt-1 text-sm sm:text-base hidden sm:block">Manage patients, appointments, and front desk operations</p>
             <!-- Live Status Bar -->
-            <div class="flex items-center mt-2 space-x-4">
+            <div class="flex flex-wrap items-center mt-2 gap-2 sm:gap-4">
                 <div class="flex items-center">
-                    <div class="w-2 h-2 bg-green-500 rounded-full mr-2 animate-pulse"></div>
-                    <span class="text-xs text-green-600 font-medium">System Online</span>
+                    <div class="w-2 h-2 bg-green-500 rounded-full mr-1 sm:mr-2 animate-pulse"></div>
+                    <span class="text-xs text-green-600 font-medium">Online</span>
                 </div>
                 <div class="flex items-center">
-                    <div class="w-2 h-2 bg-blue-500 rounded-full mr-2"></div>
+                    <div class="w-2 h-2 bg-blue-500 rounded-full mr-1 sm:mr-2"></div>
                     <span class="text-xs text-blue-600 font-medium">
-                        <?php echo isset($sidebar_data['pending_patients']) ? $sidebar_data['pending_patients'] : 0; ?> Pending Patients
+                        <?php echo isset($sidebar_data['pending_patients']) ? $sidebar_data['pending_patients'] : 0; ?> <span class="hidden sm:inline">Pending</span><span class="sm:hidden">P</span>
                     </span>
                 </div>
                 <div class="flex items-center">
-                    <div class="w-2 h-2 bg-yellow-500 rounded-full mr-2"></div>
+                    <div class="w-2 h-2 bg-yellow-500 rounded-full mr-1 sm:mr-2"></div>
                     <span class="text-xs text-yellow-600 font-medium">
-                        <?php echo isset($sidebar_data['upcoming_appointments']) ? $sidebar_data['upcoming_appointments'] : 0; ?> Today's Appointments
+                        <?php echo isset($sidebar_data['upcoming_appointments']) ? $sidebar_data['upcoming_appointments'] : 0; ?> <span class="hidden sm:inline">Today's Appointments</span><span class="sm:hidden">Appt</span>
                     </span>
                 </div>
             </div>
         </div>
-        <div class="flex items-center space-x-4">
-            <div class="text-right">
-                <div class="text-sm text-gray-500"><?php echo date('l, F j, Y'); ?></div>
+        <div class="flex flex-col sm:flex-row items-start sm:items-center gap-3 sm:gap-4">
+            <div class="text-left sm:text-right">
+                <div class="text-xs sm:text-sm text-gray-500"><?php echo date('l, F j, Y'); ?></div>
                 <div class="text-xs text-gray-400" id="current-time"><?php echo date('h:i A'); ?></div>
             </div>
             <!-- Quick Action Buttons -->
-            <button onclick="openEmergencyModal()" class="bg-red-500 hover:bg-red-600 text-white px-3 py-2 rounded-lg text-sm font-medium">
-                <i class="fas fa-exclamation-triangle mr-2"></i>Emergency
-            </button>
-            <button onclick="openReportsModal()" class="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-lg">
-                <i class="fas fa-chart-bar mr-2"></i>Reports
-            </button>
+            <div class="flex gap-2 w-full sm:w-auto">
+                <button onclick="openEmergencyModal()" class="flex-1 sm:flex-none bg-red-500 hover:bg-red-600 text-white px-3 py-2 rounded-lg text-xs sm:text-sm font-medium">
+                    <i class="fas fa-exclamation-triangle sm:mr-2"></i><span class="hidden sm:inline">Emergency</span>
+                </button>
+                <button onclick="openReportsModal()" class="flex-1 sm:flex-none bg-blue-500 hover:bg-blue-600 text-white px-3 sm:px-4 py-2 rounded-lg text-xs sm:text-sm">
+                    <i class="fas fa-chart-bar sm:mr-2"></i><span class="hidden sm:inline">Reports</span>
+                </button>
+            </div>
         </div>
     </div>
 
     <!-- Statistics Cards -->
-    <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
         <!-- Pending Patients -->
-        <div class="bg-gradient-to-r from-blue-500 to-blue-600 rounded-lg shadow-lg p-6 text-white transform hover:scale-105 transition-all duration-300 cursor-pointer group" onclick="window.location.href='<?php echo htmlspecialchars($BASE_PATH); ?>/receptionist/patients'">
+        <div class="bg-gradient-to-r from-blue-500 to-blue-600 rounded-lg shadow-lg p-4 sm:p-6 text-white transform hover:scale-105 transition-all duration-300 cursor-pointer group" onclick="window.location.href='<?php echo htmlspecialchars($BASE_PATH); ?>/receptionist/patients'">
             <div class="flex items-center justify-between">
-                <div>
-                    <p class="text-blue-100 text-sm font-medium">Pending Patients</p>
-                    <p class="text-3xl font-bold"><?php echo isset($sidebar_data['pending_patients']) ? $sidebar_data['pending_patients'] : 0; ?></p>
-                    <div class="flex items-center mt-2">
-                        <i class="fas fa-clock mr-2 text-blue-200"></i>
-                        <span class="text-sm text-blue-200">Requires attention</span>
+                <div class="flex-1">
+                    <p class="text-blue-100 text-xs sm:text-sm font-medium">Pending Patients</p>
+                    <p class="text-2xl sm:text-3xl font-bold"><?php echo isset($sidebar_data['pending_patients']) ? $sidebar_data['pending_patients'] : 0; ?></p>
+                    <div class="flex items-center mt-1 sm:mt-2">
+                        <i class="fas fa-clock mr-1 sm:mr-2 text-blue-200 text-xs sm:text-sm"></i>
+                        <span class="text-xs sm:text-sm text-blue-200">Requires attention</span>
                     </div>
                 </div>
-                <div class="bg-blue-400 bg-opacity-30 rounded-full p-3 group-hover:bg-opacity-50 transition-all">
-                    <i class="fas fa-user-clock text-2xl"></i>
+                <div class="bg-blue-400 bg-opacity-30 rounded-full p-2 sm:p-3 group-hover:bg-opacity-50 transition-all">
+                    <i class="fas fa-user-clock text-xl sm:text-2xl"></i>
                 </div>
             </div>
         </div>
 
         <!-- Today's Appointments -->
-        <div class="bg-gradient-to-r from-green-500 to-green-600 rounded-lg shadow-lg p-6 text-white transform hover:scale-105 transition-all duration-300 cursor-pointer group" onclick="window.location.href='<?php echo htmlspecialchars($BASE_PATH); ?>/receptionist/appointments'">
+        <div class="bg-gradient-to-r from-green-500 to-green-600 rounded-lg shadow-lg p-4 sm:p-6 text-white transform hover:scale-105 transition-all duration-300 cursor-pointer group" onclick="window.location.href='<?php echo htmlspecialchars($BASE_PATH); ?>/receptionist/appointments'">
             <div class="flex items-center justify-between">
-                <div>
-                    <p class="text-green-100 text-sm font-medium">Today's Appointments</p>
-                    <p class="text-3xl font-bold"><?php echo isset($sidebar_data['upcoming_appointments']) ? $sidebar_data['upcoming_appointments'] : 0; ?></p>
-                    <div class="flex items-center mt-2">
-                        <i class="fas fa-calendar-check mr-2 text-green-200"></i>
-                        <span class="text-sm text-green-200">Scheduled</span>
+                <div class="flex-1">
+                    <p class="text-green-100 text-xs sm:text-sm font-medium">Today's Appointments</p>
+                    <p class="text-2xl sm:text-3xl font-bold"><?php echo isset($sidebar_data['upcoming_appointments']) ? $sidebar_data['upcoming_appointments'] : 0; ?></p>
+                    <div class="flex items-center mt-1 sm:mt-2">
+                        <i class="fas fa-calendar-check mr-1 sm:mr-2 text-green-200 text-xs sm:text-sm"></i>
+                        <span class="text-xs sm:text-sm text-green-200">Scheduled</span>
                     </div>
                 </div>
-                <div class="bg-green-400 bg-opacity-30 rounded-full p-3 group-hover:bg-opacity-50 transition-all">
-                    <i class="fas fa-calendar-alt text-2xl"></i>
+                <div class="bg-green-400 bg-opacity-30 rounded-full p-2 sm:p-3 group-hover:bg-opacity-50 transition-all">
+                    <i class="fas fa-calendar-alt text-xl sm:text-2xl"></i>
                 </div>
             </div>
         </div>
 
         <!-- Low Stock Medicines -->
-        <div class="bg-gradient-to-r from-yellow-500 to-orange-500 rounded-lg shadow-lg p-6 text-white transform hover:scale-105 transition-all duration-300 cursor-pointer group" onclick="window.location.href='<?php echo htmlspecialchars($BASE_PATH); ?>/receptionist/medicine'">>
+        <div class="bg-gradient-to-r from-yellow-500 to-orange-500 rounded-lg shadow-lg p-4 sm:p-6 text-white transform hover:scale-105 transition-all duration-300 cursor-pointer group" onclick="window.location.href='<?php echo htmlspecialchars($BASE_PATH); ?>/receptionist/medicine'">>
             <div class="flex items-center justify-between">
-                <div>
-                    <p class="text-yellow-100 text-sm font-medium">Low Stock Alert</p>
-                    <p class="text-3xl font-bold"><?php echo isset($sidebar_data['low_stock_medicines']) ? $sidebar_data['low_stock_medicines'] : 0; ?></p>
-                    <div class="flex items-center mt-2">
-                        <i class="fas fa-exclamation-triangle mr-2 text-yellow-200"></i>
-                        <span class="text-sm text-yellow-200">Needs reorder</span>
+                <div class="flex-1">
+                    <p class="text-yellow-100 text-xs sm:text-sm font-medium">Low Stock Alert</p>
+                    <p class="text-2xl sm:text-3xl font-bold"><?php echo isset($sidebar_data['low_stock_medicines']) ? $sidebar_data['low_stock_medicines'] : 0; ?></p>
+                    <div class="flex items-center mt-1 sm:mt-2">
+                        <i class="fas fa-exclamation-triangle mr-1 sm:mr-2 text-yellow-200 text-xs sm:text-sm"></i>
+                        <span class="text-xs sm:text-sm text-yellow-200">Needs reorder</span>
                     </div>
                 </div>
-                <div class="bg-yellow-400 bg-opacity-30 rounded-full p-3 group-hover:bg-opacity-50 transition-all">
-                    <i class="fas fa-pills text-2xl"></i>
+                <div class="bg-yellow-400 bg-opacity-30 rounded-full p-2 sm:p-3 group-hover:bg-opacity-50 transition-all">
+                    <i class="fas fa-pills text-xl sm:text-2xl"></i>
                 </div>
             </div>
             <?php if (isset($sidebar_data['low_stock_medicines']) && $sidebar_data['low_stock_medicines'] > 0): ?>
@@ -102,101 +105,102 @@
         </div>
 
         <!-- Payment Collection -->
-        <div class="bg-gradient-to-r from-purple-500 to-purple-600 rounded-lg shadow-lg p-6 text-white transform hover:scale-105 transition-all duration-300 cursor-pointer group" onclick="window.location.href='/KJ/receptionist/payments'">
+        <div class="bg-gradient-to-r from-purple-500 to-purple-600 rounded-lg shadow-lg p-4 sm:p-6 text-white transform hover:scale-105 transition-all duration-300 cursor-pointer group" onclick="window.location.href='/KJ/receptionist/payments'">
             <div class="flex items-center justify-between">
-                <div>
-                    <p class="text-purple-100 text-sm font-medium">Payments Today</p>
-                    <p class="text-3xl font-bold"><?php 
+                <div class="flex-1 min-w-0">
+                    <p class="text-purple-100 text-xs sm:text-sm font-medium">Payments Today</p>
+                    <p class="text-xl sm:text-3xl font-bold truncate"><?php 
                         $amount = $payments_today['total_today'] ?: 0;
                         echo 'Tsh ' . number_format($amount, 0, '.', ','); 
                     ?></p>
-                    <div class="flex items-center mt-2">
-                        <i class="fas fa-money-bill-wave mr-2 text-purple-200"></i>
-                        <span class="text-sm text-purple-200">
+                    <div class="flex items-center mt-1 sm:mt-2">
+                        <i class="fas fa-money-bill-wave mr-1 sm:mr-2 text-purple-200 text-xs sm:text-sm"></i>
+                        <span class="text-xs sm:text-sm text-purple-200 truncate">
                             <?php 
                             $change = round($percentage_change, 1);
                             if ($change > 0) {
-                                echo "+{$change}% vs yesterday";
+                                echo "+{$change}% <span class='hidden sm:inline'>vs yesterday</span>";
                             } elseif ($change < 0) {
-                                echo "{$change}% vs yesterday";
+                                echo "{$change}% <span class='hidden sm:inline'>vs yesterday</span>";
                             } else {
-                                echo "No change vs yesterday";
+                                echo "No change";
                             }
                             ?>
                         </span>
                     </div>
                 </div>
-                <div class="bg-purple-400 bg-opacity-30 rounded-full p-3 group-hover:bg-opacity-50 transition-all">
-                    <i class="fas fa-credit-card text-2xl"></i>
+                <div class="bg-purple-400 bg-opacity-30 rounded-full p-2 sm:p-3 group-hover:bg-opacity-50 transition-all flex-shrink-0">
+                    <i class="fas fa-credit-card text-xl sm:text-2xl"></i>
                 </div>
             </div>
         </div>
     </div>
 
     <!-- Quick Actions Panel -->
-    <div class="bg-white rounded-lg shadow-lg p-6">
-        <h3 class="text-lg font-semibold text-gray-900 mb-4 flex items-center">
-            <i class="fas fa-bolt mr-3 text-yellow-500"></i>
+    <div class="bg-white rounded-lg shadow-lg p-4 sm:p-6">
+        <h3 class="text-base sm:text-lg font-semibold text-gray-900 mb-3 sm:mb-4 flex items-center">
+            <i class="fas fa-bolt mr-2 sm:mr-3 text-yellow-500"></i>
             Quick Actions
         </h3>
-        <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
-            <a href="<?php echo BASE_PATH; ?>/receptionist/register_patient" class="bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white p-4 rounded-lg text-center transition-all duration-300 transform hover:scale-105 shadow-lg">
-                <i class="fas fa-user-plus text-2xl mb-2"></i>
-                <div class="font-medium">Register Patient</div>
-                <div class="text-xs mt-1 opacity-80">Add new patient</div>
+        <div class="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-4">
+            <a href="<?php echo BASE_PATH; ?>/receptionist/register_patient" class="bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white p-3 sm:p-4 rounded-lg text-center transition-all duration-300 transform hover:scale-105 shadow-lg">
+                <i class="fas fa-user-plus text-xl sm:text-2xl mb-1 sm:mb-2"></i>
+                <div class="font-medium text-sm sm:text-base">Register Patient</div>
+                <div class="text-xs mt-1 opacity-80 hidden sm:block">Add new patient</div>
             </a>
-            <a href="<?php echo BASE_PATH; ?>/receptionist/appointments" class="bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white p-4 rounded-lg text-center transition-all duration-300 transform hover:scale-105 shadow-lg">
-                <i class="fas fa-calendar-plus text-2xl mb-2"></i>
-                <div class="font-medium">New Appointment</div>
-                <div class="text-xs mt-1 opacity-80">Schedule visit</div>
+            <a href="<?php echo BASE_PATH; ?>/receptionist/appointments" class="bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white p-3 sm:p-4 rounded-lg text-center transition-all duration-300 transform hover:scale-105 shadow-lg">
+                <i class="fas fa-calendar-plus text-xl sm:text-2xl mb-1 sm:mb-2"></i>
+                <div class="font-medium text-sm sm:text-base">New Appointment</div>
+                <div class="text-xs mt-1 opacity-80 hidden sm:block">Schedule visit</div>
             </a>
-            <a href="<?php echo BASE_PATH; ?>/receptionist/payments" class="bg-gradient-to-r from-purple-500 to-purple-600 hover:from-purple-600 hover:to-purple-700 text-white p-4 rounded-lg text-center transition-all duration-300 transform hover:scale-105 shadow-lg">
-                <i class="fas fa-credit-card text-2xl mb-2"></i>
-                <div class="font-medium">Process Payment</div>
-                <div class="text-xs mt-1 opacity-80">Collect fees</div>
+            <a href="<?php echo BASE_PATH; ?>/receptionist/payments" class="bg-gradient-to-r from-purple-500 to-purple-600 hover:from-purple-600 hover:to-purple-700 text-white p-3 sm:p-4 rounded-lg text-center transition-all duration-300 transform hover:scale-105 shadow-lg">
+                <i class="fas fa-credit-card text-xl sm:text-2xl mb-1 sm:mb-2"></i>
+                <div class="font-medium text-sm sm:text-base">Process Payment</div>
+                <div class="text-xs mt-1 opacity-80 hidden sm:block">Collect fees</div>
             </a>
-            <a href="<?php echo BASE_PATH; ?>/receptionist/patients" class="bg-gradient-to-r from-yellow-500 to-orange-500 hover:from-yellow-600 hover:to-orange-600 text-white p-4 rounded-lg text-center transition-all duration-300 transform hover:scale-105 shadow-lg">
-                <i class="fas fa-search text-2xl mb-2"></i>
-                <div class="font-medium">Search Patient</div>
-                <div class="text-xs mt-1 opacity-80">Find records</div>
+            <a href="<?php echo BASE_PATH; ?>/receptionist/patients" class="bg-gradient-to-r from-yellow-500 to-orange-500 hover:from-yellow-600 hover:to-orange-600 text-white p-3 sm:p-4 rounded-lg text-center transition-all duration-300 transform hover:scale-105 shadow-lg">
+                <i class="fas fa-search text-xl sm:text-2xl mb-1 sm:mb-2"></i>
+                <div class="font-medium text-sm sm:text-base">Search Patient</div>
+                <div class="text-xs mt-1 opacity-80 hidden sm:block">Find records</div>
             </a>
         </div>
     </div>
 
     <!-- Main Content Grid -->
-    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6">
         <!-- Today's Appointments (Left Column - 2/3 width) -->
         <div class="lg:col-span-2">
             <div class="bg-white rounded-lg shadow-lg">
-                <div class="px-6 py-4 border-b border-gray-200 bg-gradient-to-r from-green-50 to-blue-50">
+                <div class="px-4 sm:px-6 py-3 sm:py-4 border-b border-gray-200 bg-gradient-to-r from-green-50 to-blue-50">
                     <div class="flex items-center justify-between">
-                        <h3 class="text-lg font-semibold text-gray-900 flex items-center">
-                            <i class="fas fa-calendar-day mr-3 text-green-600"></i>
-                            Today's Appointments
+                        <h3 class="text-base sm:text-lg font-semibold text-gray-900 flex items-center">
+                            <i class="fas fa-calendar-day mr-2 sm:mr-3 text-green-600"></i>
+                            <span class="hidden sm:inline">Today's Appointments</span>
+                            <span class="sm:hidden">Appointments</span>
                         </h3>
-                        <span class="bg-green-100 text-green-800 px-3 py-1 rounded-full text-sm font-medium">
-                            <?php echo count($appointments); ?> Scheduled
+                        <span class="bg-green-100 text-green-800 px-2 sm:px-3 py-1 rounded-full text-xs sm:text-sm font-medium">
+                            <?php echo count($appointments); ?> <span class="hidden sm:inline">Scheduled</span>
                         </span>
                     </div>
                 </div>
-                <div class="p-6">
+                <div class="p-3 sm:p-6">
                     <?php if (empty($appointments)): ?>
-                    <div class="text-center py-8">
-                        <i class="fas fa-calendar-times text-4xl text-gray-300 mb-4"></i>
-                        <p class="text-gray-500 text-lg">No appointments scheduled for today</p>
-                        <p class="text-gray-400 text-sm mt-2">Schedule new appointments to get started</p>
-                        <a href="<?php echo BASE_PATH; ?>/receptionist/appointments" class="inline-block mt-4 bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors">
+                    <div class="text-center py-6 sm:py-8">
+                        <i class="fas fa-calendar-times text-3xl sm:text-4xl text-gray-300 mb-3 sm:mb-4"></i>
+                        <p class="text-gray-500 text-base sm:text-lg">No appointments scheduled for today</p>
+                        <p class="text-gray-400 text-xs sm:text-sm mt-2">Schedule new appointments to get started</p>
+                        <a href="<?php echo BASE_PATH; ?>/receptionist/appointments" class="inline-block mt-3 sm:mt-4 bg-blue-500 hover:bg-blue-600 text-white px-3 sm:px-4 py-2 rounded-lg text-xs sm:text-sm font-medium transition-colors">
                             <i class="fas fa-plus mr-2"></i>Schedule Appointment
                         </a>
                     </div>
                     <?php else: ?>
-                    <div class="space-y-4">
+                    <div class="space-y-3 sm:space-y-4">
                         <?php foreach ($appointments as $appointment): ?>
-                        <div class="bg-gradient-to-r from-gray-50 to-blue-50 border border-gray-200 rounded-lg p-4 hover:shadow-md transition-all duration-300">
-                            <div class="flex items-center justify-between">
+                        <div class="bg-gradient-to-r from-gray-50 to-blue-50 border border-gray-200 rounded-lg p-3 sm:p-4 hover:shadow-md transition-all duration-300">
+                            <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between space-y-2 sm:space-y-0">
                                 <div class="flex items-center">
-                                    <div class="w-12 h-12 bg-gradient-to-r from-blue-500 to-blue-600 rounded-full flex items-center justify-center mr-4 shadow-lg">
-                                        <i class="fas fa-user text-white text-lg"></i>
+                                    <div class="w-10 h-10 sm:w-12 sm:h-12 bg-gradient-to-r from-blue-500 to-blue-600 rounded-full flex items-center justify-center mr-3 sm:mr-4 shadow-lg flex-shrink-0">
+                                        <i class="fas fa-user text-white text-base sm:text-lg"></i>
                                     </div>
                                     <div>
                                         <p class="font-semibold text-gray-900 text-lg">

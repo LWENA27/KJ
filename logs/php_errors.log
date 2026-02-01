@@ -371,3 +371,7 @@
 [27-Jan-2026 14:50:20 UTC] PHP Deprecated:  htmlspecialchars(): Passing null to parameter #1 ($string) of type string is deprecated in /var/www/html/KJ/views/ipd/dashboard.php on line 131
 [27-Jan-2026 14:50:20 UTC] PHP Warning:  Undefined array key "patient_number" in /var/www/html/KJ/views/ipd/dashboard.php on line 131
 [27-Jan-2026 14:50:20 UTC] PHP Deprecated:  htmlspecialchars(): Passing null to parameter #1 ($string) of type string is deprecated in /var/www/html/KJ/views/ipd/dashboard.php on line 131
+[01-Feb-2026 12:14:09 UTC] PHP Warning:  Undefined variable $patient in /var/www/html/KJ/views/receptionist/patients.php on line 593
+[01-Feb-2026 12:14:09 UTC] PHP Warning:  Trying to access array offset on null in /var/www/html/KJ/views/receptionist/patients.php on line 593
+[01-Feb-2026 12:24:46 UTC] PHP Warning:  Undefined variable $patient in /var/www/html/KJ/views/receptionist/patients.php on line 593
+[01-Feb-2026 12:24:46 UTC] PHP Warning:  Trying to access array offset on null in /var/www/html/KJ/views/receptionist/patients.php on line 593

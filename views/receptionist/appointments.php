@@ -1,21 +1,22 @@
 <!-- Page Header with Professional Gradient -->
-<div class="bg-green rounded-lg shadow-xl p-6 mb-6">
-    <div class="flex items-center justify-between">
+<div class="bg-green rounded-lg shadow-xl p-4 sm:p-6 mb-4 sm:mb-6">
+    <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
         <div class="text-green">
-            <h1 class="text-3xl font-bold flex items-center">
-                <i class="fas fa-calendar-check mr-3 text-green"></i>
-                Appointments Management
+            <h1 class="text-2xl sm:text-3xl font-bold flex items-center">
+                <i class="fas fa-calendar-check mr-2 sm:mr-3 text-green"></i>
+                <span class="hidden sm:inline">Appointments Management</span>
+                <span class="sm:hidden">Appointments</span>
             </h1>
-            <p class="text-green mt-2 text-lg">Schedule and manage patient appointments</p>
+            <p class="text-green mt-1 sm:mt-2 text-sm sm:text-lg">Schedule and manage patient appointments</p>
         </div>
-        <a href="<?php echo BASE_PATH; ?>/receptionist/appointments" class="bg-white text-green-700 hover:bg-green-50 px-6 py-3 rounded-lg font-medium transition-all duration-300 transform hover:scale-105 shadow-lg">
+        <a href="<?php echo BASE_PATH; ?>/receptionist/appointments" class="bg-white text-green-700 hover:bg-green-50 px-4 sm:px-6 py-2 sm:py-3 rounded-lg font-medium transition-all duration-300 shadow-lg text-sm sm:text-base w-full sm:w-auto text-center">
             <i class="fas fa-plus mr-2"></i>New Appointment
         </a>
     </div>
 </div>
 
 <!-- Quick Stats Cards -->
-<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
+<div class="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-6 mb-4 sm:mb-6">
     <?php
     $totalAppointments = count($appointments);
     $todayAppointments = count(array_filter($appointments, fn($a) => date('Y-m-d', strtotime($a['appointment_date'] ?? $a['visit_date'] ?? $a['created_at'])) === date('Y-m-d')));
@@ -23,21 +24,24 @@
     $completedAppointments = count(array_filter($appointments, fn($a) => $a['status'] === 'completed'));
     
     $cards = [
-        ['label' => 'Total Appointments', 'count' => $totalAppointments, 'color' => 'from-blue-500 to-blue-600', 'icon' => 'fas fa-calendar-alt'],
-        ['label' => 'Today\'s Appointments', 'count' => $todayAppointments, 'color' => 'from-green-500 to-green-600', 'icon' => 'fas fa-calendar-day'],
-        ['label' => 'Scheduled', 'count' => $scheduledAppointments, 'color' => 'from-yellow-500 to-yellow-600', 'icon' => 'fas fa-clock'],
-        ['label' => 'Completed', 'count' => $completedAppointments, 'color' => 'from-purple-500 to-purple-600', 'icon' => 'fas fa-check-circle']
+        ['label' => 'Total Appointments', 'short_label' => 'Total', 'count' => $totalAppointments, 'color' => 'from-blue-500 to-blue-600', 'icon' => 'fas fa-calendar-alt'],
+        ['label' => 'Today\'s Appointments', 'short_label' => 'Today', 'count' => $todayAppointments, 'color' => 'from-green-500 to-green-600', 'icon' => 'fas fa-calendar-day'],
+        ['label' => 'Scheduled', 'short_label' => 'Scheduled', 'count' => $scheduledAppointments, 'color' => 'from-yellow-500 to-yellow-600', 'icon' => 'fas fa-clock'],
+        ['label' => 'Completed', 'short_label' => 'Completed', 'count' => $completedAppointments, 'color' => 'from-purple-500 to-purple-600', 'icon' => 'fas fa-check-circle']
     ];
     
     foreach ($cards as $card): ?>
-        <div class="bg-white rounded-lg shadow-lg p-6 hover:shadow-xl transition-all duration-300 transform hover:scale-105">
-            <div class="flex items-center justify-between">
-                <div>
-                    <p class="text-sm font-medium text-gray-600 mb-1"><?php echo $card['label']; ?></p>
-                    <p class="text-3xl font-bold text-gray-900"><?php echo $card['count']; ?></p>
+        <div class="bg-white rounded-lg shadow-lg p-3 sm:p-6 hover:shadow-xl transition-all duration-300">
+            <div class="flex flex-col sm:flex-row items-center sm:justify-between">
+                <div class="text-center sm:text-left w-full">
+                    <p class="text-xs sm:text-sm font-medium text-gray-600 mb-1 truncate">
+                        <span class="hidden sm:inline"><?php echo $card['label']; ?></span>
+                        <span class="sm:hidden"><?php echo $card['short_label']; ?></span>
+                    </p>
+                    <p class="text-2xl sm:text-3xl font-bold text-gray-900"><?php echo $card['count']; ?></p>
                 </div>
-                <div class="w-14 h-14 bg-gradient-to-br <?php echo $card['color']; ?> rounded-xl flex items-center justify-center shadow-lg">
-                    <i class="<?php echo $card['icon']; ?> text-white text-xl"></i>
+                <div class="hidden sm:flex w-12 h-12 sm:w-14 sm:h-14 bg-gradient-to-br <?php echo $card['color']; ?> rounded-xl items-center justify-center shadow-lg mt-2 sm:mt-0">
+                    <i class="<?php echo $card['icon']; ?> text-white text-lg sm:text-xl"></i>
                 </div>
             </div>
         </div>
@@ -70,7 +74,8 @@
             </a>
         </div>
     <?php else: ?>
-        <div class="overflow-x-auto">
+        <!-- Desktop Table View (hidden on mobile) -->
+        <div class="hidden md:block overflow-x-auto">
             <table class="w-full">
                 <thead class="bg-gradient-to-r from-gray-50 to-gray-100">
                     <tr>
@@ -149,14 +154,14 @@
                         </td>
                         <td class="px-6 py-4 whitespace-nowrap">
                             <div class="flex items-center gap-2">
-                                <a href="#" class="bg-blue-100 hover:bg-blue-200 text-blue-700 px-3 py-1 rounded-lg text-sm font-medium transition-all duration-300 transform hover:scale-105" title="Edit Appointment">
+                                <a href="#" class="bg-blue-100 hover:bg-blue-200 text-blue-700 px-3 py-1 rounded-lg text-sm font-medium transition-all duration-300" title="Edit Appointment">
                                     <i class="fas fa-edit"></i>
                                 </a>
-                                <a href="<?= htmlspecialchars($BASE_PATH) ?>/receptionist/view_patient?id=<?= $appointment['patient_id'] ?>" class="bg-green-100 hover:bg-green-200 text-green-700 px-3 py-1 rounded-lg text-sm font-medium transition-all duration-300 transform hover:scale-105" title="View Patient">
+                                <a href="<?= htmlspecialchars($BASE_PATH) ?>/receptionist/view_patient?id=<?= $appointment['patient_id'] ?>" class="bg-green-100 hover:bg-green-200 text-green-700 px-3 py-1 rounded-lg text-sm font-medium transition-all duration-300" title="View Patient">
                                     <i class="fas fa-eye"></i>
                                 </a>
                                 <?php if ($appointment['status'] === 'scheduled'): ?>
-                                <a href="#" class="bg-red-100 hover:bg-red-200 text-red-700 px-3 py-1 rounded-lg text-sm font-medium transition-all duration-300 transform hover:scale-105" title="Cancel Appointment">
+                                <a href="#" class="bg-red-100 hover:bg-red-200 text-red-700 px-3 py-1 rounded-lg text-sm font-medium transition-all duration-300" title="Cancel Appointment">
                                     <i class="fas fa-times"></i>
                                 </a>
                                 <?php endif; ?>
@@ -166,6 +171,91 @@
                     <?php endforeach; ?>
                 </tbody>
             </table>
+        </div>
+
+        <!-- Mobile Card View (visible only on mobile) -->
+        <div class="md:hidden space-y-4 p-4">
+            <?php foreach ($appointments as $appointment): 
+                $apt = $appointment['appointment_date'] ?? $appointment['visit_date'] ?? $appointment['created_at'];
+                switch ($appointment['status']) {
+                    case 'scheduled':
+                        $statusClass = 'bg-yellow-100 text-yellow-800 border-yellow-300';
+                        $icon = 'fas fa-clock';
+                        break;
+                    case 'in_progress':
+                        $statusClass = 'bg-blue-100 text-blue-800 border-blue-300';
+                        $icon = 'fas fa-play-circle';
+                        break;
+                    case 'completed':
+                        $statusClass = 'bg-green-100 text-green-800 border-green-300';
+                        $icon = 'fas fa-check-circle';
+                        break;
+                    case 'cancelled':
+                        $statusClass = 'bg-red-100 text-red-800 border-red-300';
+                        $icon = 'fas fa-times-circle';
+                        break;
+                    default:
+                        $statusClass = 'bg-gray-100 text-gray-800 border-gray-300';
+                        $icon = 'fas fa-question-circle';
+                }
+            ?>
+            <div class="bg-white rounded-lg shadow-md p-4 border border-gray-200">
+                <!-- Patient Info -->
+                <div class="flex items-center mb-3 pb-3 border-b border-gray-200">
+                    <div class="w-12 h-12 bg-gradient-to-br from-green-500 to-green-600 rounded-full flex items-center justify-center text-white font-bold shadow-lg mr-3 flex-shrink-0">
+                        <?php echo strtoupper(substr($appointment['first_name'], 0, 1) . substr($appointment['last_name'], 0, 1)); ?>
+                    </div>
+                    <div class="flex-1 min-w-0">
+                        <div class="text-sm font-semibold text-gray-900 truncate">
+                            <?php echo htmlspecialchars($appointment['first_name'] . ' ' . $appointment['last_name']); ?>
+                        </div>
+                        <div class="text-xs text-gray-600">
+                            <i class="fas fa-id-badge mr-1"></i>
+                            ID: #<?php echo str_pad($appointment['patient_id'], 4, '0', STR_PAD_LEFT); ?>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Appointment Details -->
+                <div class="space-y-2 mb-3">
+                    <div class="flex items-center text-sm">
+                        <i class="fas fa-user-md text-blue-500 mr-2 w-5"></i>
+                        <span class="text-gray-700">Dr. <?php echo htmlspecialchars($appointment['doctor_first'] . ' ' . $appointment['doctor_last']); ?></span>
+                    </div>
+                    <div class="flex items-center text-sm">
+                        <i class="fas fa-calendar text-green-500 mr-2 w-5"></i>
+                        <span class="text-gray-700"><?php echo date('M j, Y', strtotime($apt)); ?></span>
+                    </div>
+                    <div class="flex items-center text-sm">
+                        <i class="fas fa-clock text-purple-500 mr-2 w-5"></i>
+                        <span class="text-gray-700"><?php echo date('H:i', strtotime($apt)); ?></span>
+                    </div>
+                </div>
+
+                <!-- Status Badge -->
+                <div class="mb-3">
+                    <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium border <?php echo $statusClass; ?>">
+                        <i class="<?php echo $icon; ?> mr-1"></i>
+                        <?php echo ucfirst(str_replace('_', ' ', $appointment['status'])); ?>
+                    </span>
+                </div>
+
+                <!-- Action Buttons -->
+                <div class="flex gap-2 pt-3 border-t border-gray-200">
+                    <a href="#" class="flex-1 bg-blue-100 hover:bg-blue-200 text-blue-700 px-3 py-2 rounded-lg text-sm font-medium text-center transition-all duration-300">
+                        <i class="fas fa-edit mr-1"></i>Edit
+                    </a>
+                    <a href="<?= htmlspecialchars($BASE_PATH) ?>/receptionist/view_patient?id=<?= $appointment['patient_id'] ?>" class="flex-1 bg-green-100 hover:bg-green-200 text-green-700 px-3 py-2 rounded-lg text-sm font-medium text-center transition-all duration-300">
+                        <i class="fas fa-eye mr-1"></i>View
+                    </a>
+                    <?php if ($appointment['status'] === 'scheduled'): ?>
+                    <a href="#" class="flex-1 bg-red-100 hover:bg-red-200 text-red-700 px-3 py-2 rounded-lg text-sm font-medium text-center transition-all duration-300">
+                        <i class="fas fa-times mr-1"></i>Cancel
+                    </a>
+                    <?php endif; ?>
+                </div>
+            </div>
+            <?php endforeach; ?>
         </div>
     <?php endif; ?>
 </div>
