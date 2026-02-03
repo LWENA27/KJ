@@ -531,21 +531,49 @@ class AdminController extends BaseController {
         $stats = [];
 
         // Total users
-        $stmt = $this->pdo->query("SELECT COUNT(*) as total FROM users");
+        $stmt = $this->pdo->query("SELECT COUNT(*) as total FROM users WHERE is_active = 1");
         $stats['total_users'] = $stmt->fetch()['total'];
+        
+        // Total inactive users
+        $stmt = $this->pdo->query("SELECT COUNT(*) as total FROM users WHERE is_active = 0");
+        $stats['inactive_users'] = $stmt->fetch()['total'];
 
         // Total patients
         $stmt = $this->pdo->query("SELECT COUNT(*) as total FROM patients");
         $stats['total_patients'] = $stmt->fetch()['total'];
+        
+        // Patients registered today
+        $stmt = $this->pdo->query("SELECT COUNT(*) as total FROM patients WHERE DATE(created_at) = CURDATE()");
+        $stats['today_patients'] = $stmt->fetch()['total'];
+        
+        // Patients registered this week
+        $stmt = $this->pdo->query("SELECT COUNT(*) as total FROM patients WHERE YEARWEEK(created_at, 1) = YEARWEEK(CURDATE(), 1)");
+        $stats['week_patients'] = $stmt->fetch()['total'];
+        
+        // Patients registered this month
+        $stmt = $this->pdo->query("SELECT COUNT(*) as total FROM patients WHERE YEAR(created_at) = YEAR(CURDATE()) AND MONTH(created_at) = MONTH(CURDATE())");
+        $stats['month_patients'] = $stmt->fetch()['total'];
 
         // Today's consultations
         $stmt = $this->pdo->prepare("SELECT COUNT(*) as total FROM consultations c LEFT JOIN patient_visits pv ON c.visit_id = pv.id WHERE DATE(COALESCE(c.follow_up_date, pv.visit_date, c.created_at)) = CURDATE()");
         $stmt->execute();
         $stats['today_consultations'] = $stmt->fetch()['total'];
+        
+        // Total consultations
+        $stmt = $this->pdo->query("SELECT COUNT(*) as total FROM consultations");
+        $stats['total_consultations'] = $stmt->fetch()['total'];
 
         // Total medicines
-        $stmt = $this->pdo->query("SELECT COUNT(*) as total FROM medicines");
+        $stmt = $this->pdo->query("SELECT COUNT(*) as total FROM medicines WHERE is_active = 1");
         $stats['total_medicines'] = $stmt->fetch()['total'];
+        
+        // Total medicine stock value
+        $stmt = $this->pdo->query("
+            SELECT COALESCE(SUM(mb.quantity_remaining * mb.cost_price), 0) as total_value
+            FROM medicine_batches mb
+            WHERE mb.expiry_date > CURDATE()
+        ");
+        $stats['medicine_stock_value'] = $stmt->fetch()['total_value'];
 
         // Low stock medicines (using medicine_batches with reorder level)
         $stmt = $this->pdo->query("
@@ -560,11 +588,109 @@ class AdminController extends BaseController {
         ");
         $result = $stmt->fetch();
         $stats['low_stock'] = $result ? $result['total'] : 0;
+        
+        // Expired medicines
+        $stmt = $this->pdo->query("
+            SELECT COUNT(DISTINCT m.id) as total
+            FROM medicines m
+            INNER JOIN medicine_batches mb ON m.id = mb.medicine_id
+            WHERE mb.expiry_date < CURDATE() AND mb.quantity_remaining > 0
+        ");
+        $result = $stmt->fetch();
+        $stats['expired_medicines'] = $result ? $result['total'] : 0;
 
         // Pending payments
         $stmt = $this->pdo->query("SELECT COUNT(*) as total FROM payments WHERE payment_status = 'pending'");
         $result = $stmt->fetch();
         $stats['pending_payments'] = $result ? $result['total'] : 0;
+        
+        // Today's revenue
+        $stmt = $this->pdo->query("
+            SELECT COALESCE(SUM(amount), 0) as total
+            FROM payments
+            WHERE payment_status = 'paid' AND DATE(payment_date) = CURDATE()
+        ");
+        $stats['today_revenue'] = $stmt->fetch()['total'];
+        
+        // This month's revenue
+        $stmt = $this->pdo->query("
+            SELECT COALESCE(SUM(amount), 0) as total
+            FROM payments
+            WHERE payment_status = 'paid' 
+            AND YEAR(payment_date) = YEAR(CURDATE()) 
+            AND MONTH(payment_date) = MONTH(CURDATE())
+        ");
+        $stats['month_revenue'] = $stmt->fetch()['total'];
+        
+        // Total revenue (all time)
+        $stmt = $this->pdo->query("
+            SELECT COALESCE(SUM(amount), 0) as total
+            FROM payments
+            WHERE payment_status = 'paid'
+        ");
+        $stats['total_revenue'] = $stmt->fetch()['total'];
+        
+        // User breakdown by role
+        $stmt = $this->pdo->query("
+            SELECT role, COUNT(*) as count
+            FROM users
+            WHERE is_active = 1
+            GROUP BY role
+            ORDER BY count DESC
+        ");
+        $stats['users_by_role'] = $stmt->fetchAll();
+        
+        // Recent patients (last 10)
+        $stmt = $this->pdo->query("
+            SELECT id, first_name, last_name, registration_number, created_at
+            FROM patients
+            ORDER BY created_at DESC
+            LIMIT 10
+        ");
+        $stats['recent_patients'] = $stmt->fetchAll();
+        
+        // Recent consultations (last 10)
+        $stmt = $this->pdo->query("
+            SELECT c.id, c.created_at,
+                   p.first_name as patient_first, p.last_name as patient_last,
+                   u.first_name as doctor_first, u.last_name as doctor_last,
+                   c.status
+            FROM consultations c
+            LEFT JOIN patient_visits pv ON c.visit_id = pv.id
+            LEFT JOIN patients p ON pv.patient_id = p.id
+            LEFT JOIN users u ON c.doctor_id = u.id
+            ORDER BY c.created_at DESC
+            LIMIT 10
+        ");
+        $stats['recent_consultations'] = $stmt->fetchAll();
+        
+        // Recent payments (last 10)
+        $stmt = $this->pdo->query("
+            SELECT p.id, p.amount, p.payment_method, p.payment_date, p.payment_type,
+                   pt.first_name, pt.last_name
+            FROM payments p
+            LEFT JOIN patient_visits pv ON p.visit_id = pv.id
+            LEFT JOIN patients pt ON pv.patient_id = pt.id
+            WHERE p.payment_status = 'paid'
+            ORDER BY p.payment_date DESC
+            LIMIT 10
+        ");
+        $stats['recent_payments'] = $stmt->fetchAll();
+        
+        // IPD Statistics
+        $stmt = $this->pdo->query("SELECT COUNT(*) as total FROM ipd_admissions WHERE status = 'admitted'");
+        $stats['active_ipd'] = $stmt->fetch()['total'];
+        
+        $stmt = $this->pdo->query("SELECT COUNT(*) as total FROM ipd_beds WHERE status = 'available'");
+        $stats['available_beds'] = $stmt->fetch()['total'];
+        
+        // Lab tests today
+        $stmt = $this->pdo->query("SELECT COUNT(*) as total FROM lab_tests WHERE DATE(created_at) = CURDATE()");
+        $stats['today_lab_tests'] = $stmt->fetch()['total'];
+        
+        // Radiology tests today
+        $stmt = $this->pdo->query("SELECT COUNT(*) as total FROM radiology_test_orders WHERE DATE(created_at) = CURDATE()");
+        $stats['today_radiology'] = $stmt->fetch()['total'];
 
         return $stats;
     }

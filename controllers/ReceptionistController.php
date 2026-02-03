@@ -1270,7 +1270,9 @@ class ReceptionistController extends BaseController
 
     public function reports()
     {
-        // Daily revenue report
+        $user_id = $_SESSION['user_id'];
+
+        // Daily revenue report - Only payments collected by this receptionist
         $daily_revenue_stmt = $this->pdo->prepare("
             SELECT 
                 DATE(payment_date) as date,
@@ -1278,39 +1280,42 @@ class ReceptionistController extends BaseController
                 SUM(amount) as total_amount
             FROM payments 
             WHERE payment_date >= DATE_SUB(CURDATE(), INTERVAL 30 DAY)
+            AND collected_by = ?
             GROUP BY DATE(payment_date)
             ORDER BY date DESC
         ");
-        $daily_revenue_stmt->execute();
+        $daily_revenue_stmt->execute([$user_id]);
         $daily_revenue = $daily_revenue_stmt->fetchAll();
 
-        // Patient statistics
+        // Visit statistics - Only visits checked in by this receptionist
+        $visit_stats_stmt = $this->pdo->prepare("
+            SELECT 
+                COUNT(*) as total_visits,
+                COUNT(CASE WHEN DATE(visit_date) = CURDATE() THEN 1 END) as today,
+                COUNT(CASE WHEN DATE(visit_date) >= DATE_SUB(CURDATE(), INTERVAL 7 DAY) THEN 1 END) as this_week,
+                COUNT(CASE WHEN DATE(visit_date) >= DATE_SUB(CURDATE(), INTERVAL 30 DAY) THEN 1 END) as this_month,
+                COUNT(CASE WHEN visit_type = 'consultation' THEN 1 END) as consultation_visits,
+                COUNT(CASE WHEN visit_type = 'lab_only' THEN 1 END) as lab_visits
+            FROM patient_visits
+            WHERE registered_by = ?
+        ");
+        $visit_stats_stmt->execute([$user_id]);
+        $visit_stats = $visit_stats_stmt->fetch();
+
+        // Patient statistics - Based on visits registered by this receptionist
         $patient_stats_stmt = $this->pdo->prepare("
             SELECT 
-                COUNT(*) as total_patients,
-                COUNT(CASE WHEN DATE(created_at) = CURDATE() THEN 1 END) as new_today,
-                COUNT(CASE WHEN DATE(created_at) >= DATE_SUB(CURDATE(), INTERVAL 7 DAY) THEN 1 END) as new_week,
-                COUNT(CASE WHEN DATE(created_at) >= DATE_SUB(CURDATE(), INTERVAL 30 DAY) THEN 1 END) as new_month
-            FROM patients
+                COUNT(DISTINCT patient_id) as total_patients,
+                COUNT(DISTINCT CASE WHEN DATE(visit_date) = CURDATE() THEN patient_id END) as new_today,
+                COUNT(DISTINCT CASE WHEN DATE(visit_date) >= DATE_SUB(CURDATE(), INTERVAL 7 DAY) THEN patient_id END) as new_week,
+                COUNT(DISTINCT CASE WHEN DATE(visit_date) >= DATE_SUB(CURDATE(), INTERVAL 30 DAY) THEN patient_id END) as new_month
+            FROM patient_visits
+            WHERE registered_by = ?
         ");
-        $patient_stats_stmt->execute();
+        $patient_stats_stmt->execute([$user_id]);
         $patient_stats = $patient_stats_stmt->fetch();
 
-        // Appointment statistics
-        $appointment_stats_stmt = $this->pdo->prepare("
-            SELECT 
-                COUNT(*) as total_appointments,
-                COUNT(CASE WHEN DATE(COALESCE(c.follow_up_date, pv.visit_date, c.created_at)) = CURDATE() THEN 1 END) as today,
-                COUNT(CASE WHEN DATE(COALESCE(c.follow_up_date, pv.visit_date, c.created_at)) >= DATE_SUB(CURDATE(), INTERVAL 7 DAY) THEN 1 END) as this_week,
-                COUNT(CASE WHEN c.status = 'completed' THEN 1 END) as completed,
-                COUNT(CASE WHEN c.status = 'cancelled' THEN 1 END) as cancelled
-            FROM consultations c
-            LEFT JOIN patient_visits pv ON c.visit_id = pv.id
-        ");
-        $appointment_stats_stmt->execute();
-        $appointment_stats = $appointment_stats_stmt->fetch();
-
-        // Payment method breakdown
+        // Payment method breakdown - Only this receptionist's payments
         $payment_methods_stmt = $this->pdo->prepare("
             SELECT 
                 payment_method,
@@ -1318,54 +1323,71 @@ class ReceptionistController extends BaseController
                 SUM(amount) as total_amount
             FROM payments 
             WHERE payment_date >= DATE_SUB(CURDATE(), INTERVAL 30 DAY)
+            AND collected_by = ?
             GROUP BY payment_method
             ORDER BY total_amount DESC
         ");
-        $payment_methods_stmt->execute();
+        $payment_methods_stmt->execute([$user_id]);
         $payment_methods = $payment_methods_stmt->fetchAll();
 
-        // Top doctors by consultations
-        $top_doctors_stmt = $this->pdo->prepare("
+        // Recent patients checked in by this receptionist
+        $recent_patients_stmt = $this->pdo->prepare("
             SELECT 
-                CONCAT(u.first_name, ' ', u.last_name) as doctor_name,
-                COUNT(c.id) as appointment_count,
-                COUNT(CASE WHEN c.status = 'completed' THEN 1 END) as completed_count
-            FROM users u
-            LEFT JOIN consultations c ON u.id = c.doctor_id
-            WHERE u.role = 'doctor'
-            GROUP BY u.id, u.first_name, u.last_name
-            ORDER BY appointment_count DESC
-            LIMIT 5
+                p.id,
+                p.registration_number,
+                CONCAT(p.first_name, ' ', p.last_name) as patient_name,
+                p.phone,
+                pv.visit_date as created_at,
+                COUNT(pv2.id) as total_visits
+            FROM patient_visits pv
+            INNER JOIN patients p ON pv.patient_id = p.id
+            LEFT JOIN patient_visits pv2 ON p.id = pv2.patient_id
+            WHERE pv.registered_by = ?
+            GROUP BY p.id, p.registration_number, p.first_name, p.last_name, p.phone, pv.visit_date
+            ORDER BY pv.visit_date DESC
+            LIMIT 10
         ");
-        $top_doctors_stmt->execute();
-        $top_doctors = $top_doctors_stmt->fetchAll();
+        $recent_patients_stmt->execute([$user_id]);
+        $recent_patients = $recent_patients_stmt->fetchAll();
 
-        // Medicine inventory status (using medicine_batches)
-        $medicine_stats_stmt = $this->pdo->prepare("
+        // Recent payments collected by this receptionist
+        $recent_payments_stmt = $this->pdo->prepare("
             SELECT 
-                COUNT(DISTINCT m.id) as total_medicines,
-                COUNT(DISTINCT CASE WHEN total_stock <= 10 THEN m.id END) as low_stock,
-                COUNT(DISTINCT CASE WHEN earliest_expiry <= DATE_ADD(CURDATE(), INTERVAL 30 DAY) THEN m.id END) as expiring_soon,
-                COALESCE(SUM(total_stock * m.unit_price), 0) as total_inventory_value
-            FROM medicines m
-            LEFT JOIN (
-                SELECT medicine_id, 
-                       SUM(quantity_remaining) as total_stock,
-                       MIN(expiry_date) as earliest_expiry
-                FROM medicine_batches
-                GROUP BY medicine_id
-            ) mb ON m.id = mb.medicine_id
+                pay.id,
+                pay.payment_date,
+                pay.amount,
+                pay.payment_method,
+                pay.payment_type,
+                CONCAT(p.first_name, ' ', p.last_name) as patient_name,
+                p.registration_number
+            FROM payments pay
+            INNER JOIN patients p ON pay.patient_id = p.id
+            WHERE pay.collected_by = ?
+            ORDER BY pay.payment_date DESC
+            LIMIT 10
         ");
-        $medicine_stats_stmt->execute();
-        $medicine_stats = $medicine_stats_stmt->fetch();
+        $recent_payments_stmt->execute([$user_id]);
+        $recent_payments = $recent_payments_stmt->fetchAll();
+
+        // Performance summary for this receptionist
+        $performance_stmt = $this->pdo->prepare("
+            SELECT 
+                (SELECT COUNT(DISTINCT patient_id) FROM patient_visits WHERE registered_by = ?) as total_patients_registered,
+                (SELECT COUNT(*) FROM patient_visits WHERE registered_by = ?) as total_visits_checked_in,
+                (SELECT COUNT(*) FROM payments WHERE collected_by = ?) as total_payments_processed,
+                (SELECT COALESCE(SUM(amount), 0) FROM payments WHERE collected_by = ?) as total_revenue_collected
+        ");
+        $performance_stmt->execute([$user_id, $user_id, $user_id, $user_id]);
+        $performance = $performance_stmt->fetch();
 
         $this->render('receptionist/reports', [
             'daily_revenue' => $daily_revenue,
             'patient_stats' => $patient_stats,
-            'appointment_stats' => $appointment_stats,
+            'visit_stats' => $visit_stats,
             'payment_methods' => $payment_methods,
-            'top_doctors' => $top_doctors,
-            'medicine_stats' => $medicine_stats,
+            'recent_patients' => $recent_patients,
+            'recent_payments' => $recent_payments,
+            'performance' => $performance,
             'sidebar_data' => $this->getSidebarData()
         ]);
     }
